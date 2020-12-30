@@ -1,0 +1,183 @@
+/**************** Layout ****************/
+
+@media screen and (min-width: 800px) { main .content, footer .content {
+        width: 800px;
+        margin-left: calc(50% - 400px);
+}}
+@media screen and (min-width: 1024px) { header .content {
+        width: 1024px;
+        margin-left: calc(50% - 512px);
+}}
+@media screen and (min-width: 1024px) { main .content div.wider {
+        margin-left: -100px;
+        margin-right: -100px;
+}}
+
+
+main {
+    min-height: calc(100% - 10em);
+}
+
+main .content {
+    padding: 1em;
+    position: static;
+}
+
+/**************** header and footer ****************/
+
+header {
+    background: #136490;
+    color: #fff;
+}
+footer {
+    background: #136490;
+    color: #000;
+}
+
+
+header {
+    font-family: "Ubuntu Condensed", "Ubuntu", Verdana, sans-serif;
+    height: 40px; /* larger on larger screens though! */
+    line-height: 35px;
+}
+header .content {
+    display: flex;
+    justify-content: space-between;
+    align-items: stretch;
+    height: 100%;
+}
+header .content > * {
+    display: inline-block;
+    flex: 1 1 auto;
+    box-sizing: border-box;
+    text-align: center;
+}
+header a {
+    border-radius: 2px;
+    transition: background 0.25s;
+}
+header a:link, header a:visited, header a:active {
+    color: inherit;
+    outline: none;
+}
+header a:hover {
+    text-decoration: none;
+    background: rgba(255, 255, 255, 0.1);
+}
+header .appname {
+    display: none;
+}
+@media screen and (min-width: 400px) { header .appname {
+        display: inline;
+}}
+@media screen and (min-width: 600px) { header {
+        height: 50px;
+        font-family: "Ubuntu", Verdana, sans-serif;
+        line-height: 45px;
+}}
+
+
+footer .content {
+    display: flex;
+    padding: 3em 1em;
+    justify-content: space-around;
+}
+footer .content > img {
+    flex-grow: 0;
+    width: 10vw;
+    height: 10vw;
+    max-width: 96px;
+    max-height: 96px;
+    margin-right: 5vw;
+}
+footer .content > div {
+    flex-grow: 1;
+}
+footer a:link, footer a:visited, footer a:active {
+    color: inherit;
+}
+footer > .content > div > * {
+    display: block;
+}
+
+/**************** Special buttons ****************/
+
+
+main a.demobutton {
+    background: rgba(255, 255, 255, 0.3);
+    color: #2399DA;
+}
+
+
+/**************** Pricing cards ****************/
+.pricing-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-evenly;
+    align-items: stretch;
+}
+
+.pricing-box {
+    display: inline-block;
+    vertical-align: top;
+    background: #fafafa;
+    color: #000;
+    border-radius: 2px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+    min-width: 250px;
+    max-width: 250px;
+    padding: 0.1em 1em;
+    margin: 1em;
+    text-align: left;
+    text-decoration: none;
+    position: relative;
+    top: 0;
+    transition: background 0.2s;
+}
+a.pricing-box {
+    text-decoration: none;
+    color: #000;
+}
+a.pricing-box:hover {
+    text-decoration: none;
+    top: -1px;
+    background: #fff;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+}
+.pricing-box h3 {
+    font-size: 150%;
+    color: #2399DA;
+    text-align: center;
+}
+.pricing-box i.fas {
+    margin-right: 0.3em;
+}
+.pricing-box .price {
+    display: block;
+    text-align: center;
+    color: #B48B1C;
+}
+.pricing-box .price b {
+    font-size: 120%;
+}
+.pricing-box .action {
+    display: block;
+    text-align: center;
+    font-size: 120%;
+    padding: 1em 0;
+    color: #000;
+}
+.pricing-box button {
+    text-align: left;
+    padding:1em;
+    width:100%;
+    background: #fff;
+    color: #B48B1C;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+}
+.pricing-box button:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+}
+.pricing-box.future {
+    color: #999;
+}

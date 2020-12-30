@@ -1,0 +1,470 @@
+/**************** Main layout ****************/
+
+html {
+    height: 100%;
+}
+
+body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+main, header, footer {
+    position: static;
+    box-sizing: border-box;
+    width: 100%;
+    border: 0;
+    margin: 0;
+    overflow-x: hidden;
+}
+main .content, header .content, footer .content {
+    position: static;
+    box-sizing: border-box;
+    width: 100%;
+    border: 0;
+    margin: 0;
+}
+
+main .content {
+    position: absolute;
+    top: 0px; bottom: 0; left: 0; right: 0;
+    padding: 0; margin: 0;  /* override centering for static position */
+}
+#canvas {
+    position: absolute;
+    top: 0; bottom: 0; left: 0; right: 0; height: 100%; width: 100%;
+    border: 0; margin: 0; padding: 0; outline: none;
+    box-shadow: 0 0 4px rgba(0, 0, 0, 0.4);
+    border-radius: 2px;
+}
+@media screen and (min-width: 1024px) { main .content {
+        left: calc(50% - 512px); right: calc(50% - 512px); width: 1024px;
+}}
+
+
+/**************** Basic things ****************/
+
+body {
+    font-family: "Ubuntu", Verdana, sans-serif;
+    background: #fff;
+    color: #222;
+    font-weight: normal;
+}
+
+p {
+    line-height: 140%;
+}
+
+a:link, a:visited, a:active {
+    color: #765A0F;
+    text-decoration: none;
+}
+p a:link, p a:visited, p a:active, li a:link, li a:visited, li a:active {
+    text-decoration: none;
+}
+a:hover, p a:hover {
+    color: #B48B1C;
+    text-decoration: underline;
+}
+
+h1, h2, h3, h4 {
+    color: #2399DA;
+}
+h1 {
+    color: #000;
+}
+h1 { font-size: 220%; }
+h2 { font-size: 170%; }
+h3 { font-size: 120%; }
+h2 > a:link, h2 > a:visited, h2 > a:active, h3 > a:link, h3 > a:visited, h3 > a:active {
+    color: inherit;
+}
+h2 > a:hover, h3 > a:hover {
+    text-decoration: none;
+}
+h2 > a:hover::after, h3 > a:hover::after {
+    content: " \00B6";
+    color: rgba(0, 0, 0, 0.3);
+    font-size: 80%;
+}
+
+hr {
+    height: 1px;
+    background: #ccc;
+    border: none;
+}
+
+code, .monospace {
+    font-family: Consolas,"Andale Mono WT","Andale Mono","Lucida Console","Lucida Sans Typewriter","DejaVu Sans Mono","Bitstream Vera Sans Mono","Liberation Mono","Nimbus Mono L",Monaco,"Courier New",Courier,monospace;
+}
+
+code {
+    font-size: 90%;
+    color: #444;
+    background: #fff;
+    padding: 1px 5px;
+    white-space: nowrap;
+    border: solid 1px #e1e4e5;
+}
+
+button, a.button {
+    display: inline-block;
+    background: #eee;
+    color: #000;
+    padding: 0.3em 0.4em;
+    border-radius: 4px;
+    border: 1px solid #bbb;
+    transition: background 0.2s;
+}
+button:hover, a.button:hover {
+    text-decoration: none;
+    background: #f5f5f5;
+}
+button:disabled, button:disabled:hover {
+    background: #ddd;
+    color: #888;
+}
+
+main a.ctabutton {
+    display: inline-block;
+    border: none;
+    border-radius: 4px;
+    background: #2399DA;
+    color: #fff;
+    padding: 1em;
+    box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.4);
+    transition: box-shadow 0.1s;
+    font-size: 120%;
+    margin: 0.5em;
+}
+main a.ctabutton:hover {
+    text-decoration: none;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.4);
+}
+
+
+/**************** Popup Menu ****************/
+
+.dialog.verticalmenu {
+    background: #fff;
+    padding: 0;
+    border: none;
+}
+.verticalmenu a, .dialog.verticalmenu .loggedinas {
+    user-select: none;
+    -moz-user-select: none;
+    display: block;
+    box-sizing: border-box;
+    color: #222;
+    border: 1px solid #bbb;
+    margin: 0;
+    margin-top: -1px;
+    margin-left: -1px;
+    padding: 0.5em;
+}
+.dialog.verticalmenu .loggedinas {
+    text-align: center;
+    font-size: 90%;
+    color: #999;
+}
+.verticalmenu a:hover, .verticalmenu a.fas {
+    text-decoration: none;
+    background: rgba(127, 127, 127, 0.1);
+}
+.dialog.verticalmenu .menu {
+    display: flex;
+    justify-content: space-between;
+    align-items: stretch;
+    margin: 0;
+}
+.verticalmenu .menu a, .verticalmenu .menu input {
+    display: inline-block;
+    flex: 1 1 auto;
+    text-align: center;
+}
+
+.verticalmenu .grid5 {
+    display: grid;
+    grid-template-columns: auto auto auto auto auto;
+    grid-gap: 0;
+    margin: 0;
+    justify-items: stretch;
+    align-items: stretch;
+}
+.verticalmenu .grid5 > * {
+    text-align: center;
+}
+
+/**************** Tooltip ****************/
+
+.tooltipdiv {
+    position: absolute;
+    pointer-events: none;
+    display: block;
+    opacity: 0;
+    padding: 0.4em;
+    background: #fff;
+    border: 1px solid #eee;
+    border-radius: 2px;
+    box-shadow: 2px 4px 8px rgba(0, 0, 0, 0.25);
+    transition: opacity 0.2s, left 0.2s, right 0.2s;
+}
+
+/**************** Dialogs ****************/
+
+/* To do layout of input elements based on a 12-grid (dode as in dodecahedron) */
+.dode1, .dode2, .dode3, .dode4, .dode5, .dode6, .dode7, .dode8, .dode9, .dode10, .dode11 {
+    display: inline-block;
+    margin-left: 8px !important;
+    margin-right: 0 !important;
+}
+.dode1 { width: calc(8% - 8px); }
+.dode2 { width: calc(16% - 8px); }
+.dode3 { width: calc(24% - 8px); }
+.dode4 { width: calc(32% - 8px); }
+.dode5 { width: calc(40% - 8px); }
+.dode6 { width: calc(48% - 8px); }
+.dode7 { width: calc(56% - 8px); }
+.dode8 { width: calc(64% - 8px); }
+.dode9 { width: calc(72% - 8px); }
+.dode10 { width: calc(80% - 8px); }
+.dode11 { width: calc(88% - 8px); }
+.dode12 { width: 96%; }
+
+.dialog-cover {
+    position: fixed;
+    top: 0; bottom: 0; left: 0; right: 0;
+    z-index: 999;
+    /* display: none; */
+    pointer-events: none;
+    background: rgba(0, 0, 0, 0.0);
+    transition: background 0.2s;
+}
+
+.dialog {
+    box-sizing: border-box;
+    outline: none;
+    background: #fff;
+    border: 6px solid #333333;
+    position: absolute;
+    left: 5%;
+    right: 5%;
+    top: 5%;
+    max-height: 95vh;
+    overflow-y: auto;
+    overflow-x: hidden;  /* prevent horizontal swiping */
+    display: none;
+    border-radius: 2px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+    user-select: auto;
+    z-index: 1000;
+    padding: 0;
+}
+.dialog h2, .dialog h3 {
+    color: #000;  /* override red headers */
+}
+@media screen and (min-height: 600px) { .dialog {
+    max-height: 90vh;
+}}
+@media screen and (min-width: 800px) { .dialog {
+    left: calc(50% - 400px);
+    right: calc(50% - 400px);
+}}
+.dialog > p, .dialog > h1, .dialog > h2, .dialog > input, .dialog > label, .dialog > button, .dialog > table, .dialog > div {
+    margin: 8px;
+    margin-top: 0;
+}
+
+.dialog h1 {
+    position: -webkit-sticky; /* Safari */
+    position: sticky;  /* Does not scroll along */
+    user-select: none;
+    -moz-user-select: none;
+    z-index: 99;
+    top: 0;
+    margin: 0;
+    margin-bottom: 10px;
+    padding-bottom: 0;
+    line-height: 150%;
+    font-size: 1.2em;
+    background: #333333;
+    color: #fff;
+}
+.dialog h1 > i.fas {
+    color: #fff;
+}
+.dialog h2 {
+    font-size: 1.1em;
+    margin-top: 10px;
+    user-select: none;
+    -moz-user-select: none;
+}
+.dialog .info {
+    background: #333333;
+    margin: 0;
+    padding-top: 2px;
+    color: #ccc;
+    font-size: 70%;
+    font-family: "Ubuntu Condensed", "Ubuntu", Verdana, sans-serif;
+}
+@media screen and (min-width: 800px) {
+    .dialog .info {
+        font-size: 90%;
+    }
+    .dialog h1 {
+        font-size: 1.5em;
+    }
+}
+
+.dialog input[type=text], .dialog input[type=date], .dialog input[type=time], .dialog input[type=number] {
+    font-size: 16px; /* at least 16 to prevent mobile browser zooming */
+    box-sizing: border-box;
+    border: 1px solid #bbb;
+    border-radius: 4px;
+    background: #fff;
+    color: #000;
+    padding: 0.3em 0.4em;
+}
+.dialog input:focus {
+    outline: none;
+    box-shadow: 0 0 4px rgba(0, 0, 0, 0.4);
+}
+.dialog input:focus[type=range] {
+    box-shadow: none;
+}
+
+.dialog .formlayout {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    max-width: 400px;
+    grid-gap: 5px 1em;
+    justify-items: stretch;
+    align-items: center;
+}
+.dialog .formlayout > div:nth-child(odd) {
+    justify-self: end;
+    height: 1.5em;
+}
+
+.dialog h1 button {
+    font-size: 100%;
+    color: #fff;
+    padding: 3px 0.5em 5px 0.5em;  /* Note: match with h1 padding-bottom */
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+    border: 1px solid #eee;
+    border-bottom: 0;
+    border-left: 0;
+    float: right;
+    min-width: 2.5em;
+}
+.dialog h1 button:last-child {
+    border-left: 1px solid #eee;
+}
+.dialog h1 button:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+.dialog h1 button:disabled {
+    color: #777;
+    background: none;
+}
+
+
+/* --- dialog table --- */
+
+.dialog table {
+    border-collapse: collapse;
+    min-width: calc(100% - 16px);
+    font-size: 85%;
+}
+.dialog table td, .dialog table th {
+    text-align: left;
+    padding: 0.4em 0.4em;
+    white-space: nowrap;
+    /*border-bottom: 1px solid #777;*/
+}
+.dialog table td:first-child, .dialog table th:first-child {
+    text-align: right;
+}
+.dialog table th {
+    background: rgb(220,220,220);
+    color: #000;
+    font-weight: normal;
+    border-bottom: 1px solid #aaa;
+}
+.dialog table.darkheaders th {
+   background: rgb(220,220,220);
+   color: #000;
+   font-weight: bold;
+   border: none;
+}
+.dialog table th:nth-child(2)  {
+   max-width: 0;  /*  Make contribution not count, but overflow: colspan without colspan */
+}
+.dialog table th:last-child {
+    width: 100%;
+}
+
+.dialog table th.pad1::before { content: '\00A0\00A0\00A0'; }
+.dialog table th.pad2::before { content: '\00A0\00A0\00A0\00A0\00A0\00A0'; }
+.dialog table th.pad3::before { content: '\00A0\00A0\00A0\00A0\00A0\00A0\00A0\00A0\00A0'; }
+.dialog table th.pad4::before { content: '\00A0\00A0\00A0\00A0\00A0\00A0\00A0\00A0\00A0\00A0\00A0\00A0'; }
+
+.dialog table td.t1 {
+    padding-right: 0;
+}
+.dialog table td.t2 {
+    padding-left: 0.2em;
+}
+.dialog table td.t1::after {
+    content: ' -';
+}
+
+.dialog table tr {
+    background-color: rgb(250,250,250);
+}
+.dialog table tr:nth-child(even) {
+    background-color: rgb(240,240,240);
+}
+.dialog table tr.blank_row {
+    background-color: initial;
+    height: 1.5em;
+}
+@media screen and (min-width: 800px) { .dialog table {
+        font-size: 100%;
+}}
+
+.guide-content {
+    padding: 1em;
+}
+.guide-subtitle {
+    box-sizing: border-box;
+    user-select: none;
+    -moz-user-select: none;
+    position: absolute;
+    bottom: 0.5em;
+    height: 3em;
+    left: 5%;
+    width: 90%;
+    border-radius: 8px;
+    padding: 0.4em;
+    background: rgba(0, 0, 0, 0.9);
+    color: #fff;
+    font-size: 80%;
+    text-align: center;
+}
+@media screen and (min-width: 400px) {.guide-subtitle {
+        font-size: 95%;
+}}
+@media screen and (min-width: 800px) {.guide-subtitle {
+        left: calc(50% - 250px);
+        width: 500px;
+        font-size: 130%;
+}}
+.guide-highlighter {
+    position: absolute;
+    box-shadow: 0 0 10px 10px rgba(244,191,62, 0.7);
+    pointer-events: none;
+}

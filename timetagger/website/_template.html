@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{{ title }}</title>
+  <meta name="description" content="{{ description }}">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#fff">
+  <link rel="manifest" href="timetagger_manifest.json">
+  <link rel="icon" sizes="192x192" href="timetagger192.png">
+  <link rel="apple-touch-icon" href="timetagger192noalpha.png">
+
+  <style>
+  {{ embedded_style }}
+  </style>
+
+  <script>
+  {{ embedded_script }}
+  </script>
+
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="pagestyle.css">
+  <script src='auth.js'></script>
+
+  <script>
+  function _adjust_menu() {
+    if (auth.get_auth_info()) {
+        var el;
+        el = document.getElementById('loginbutton');
+        el.innerHTML = "Account";
+        el.setAttribute("href", "/account");
+        el = document.getElementById('signupbutton');
+        el.innerHTML = "<b>to App</b>";
+        el.setAttribute("href", "/app");
+    }
+  }
+  // Detect features
+  window.browser_supported = false;
+  if (window.crypto && window.crypto.getRandomValues &&
+      window.atob && window.history && window.Uint8Array &&
+      window.localStorage && window.indexedDB
+      ) {
+      window.browser_supported = true;  // probably
+  }
+  // Update menu content
+  window.addEventListener("load", function() {
+    var menu = document.getElementById("header-content");
+    if (!window.browser_supported) {
+        menu.innerHTML = "This browser is not supported, please use (a modern version of) Firefox, Chrome, Safari, or Edge.";
+    }
+  });
+  </script>
+
+</head>
+
+<body>
+
+<header>
+    <div class='content' id='header-content'>
+        <a href='/'>
+            <img style='width:32px; height:32px;vertical-align:middle;' src='timetagger192w.png' />
+            <span class='appname'>&nbsp;TimeTagger</span>
+            </a>
+        <span></span><span></span>
+        <a href='/support'>Support</a>
+        <a id='loginbutton' href='/login'>Log in</a>
+        <a class='signupbutton' id='signupbutton' href='/signup'><b>Sign up</b></a>
+    </div>
+</header>
+
+<script>
+_adjust_menu(); // if we'd do it on page load, the text flickers.
+</script>
+
+<main>
+    <div class='content' id='main-content'>
+        {{ main }}
+    </div>
+</main>
+
+<footer>
+    <div class='content' id='footer-content'>
+        <img src='timetagger192.png' />
+        <div>
+            <a href='/'>Home</a>
+            <a href='/support'>Support</a>
+            <a href='/terms'>Terms</a>
+            <a href='/privacy'>Privacy</a>
+            <a href='/about'>About</a>
+        </div><div>
+            <a href='/app'>App</a>
+            <a href='/demo'>Demo</a>
+            <a href='/sandbox'>Sandbox</a>
+        </div><div>
+            <a href='/signup'>Sign up</a>
+            <a href='/login'>Log in</a>
+            <a href='/logout'>Log out</a>
+            <a href='/account'>Account</a>
+        </div>
+    </div>
+</footer>
+
+
+<iframe id="authframe" src="about:blank" title="background auth refresher"
+    style="border: none; position: absolute; top: 0; width: 1px; height: 1px;">
+</iframe>
+
+</body>
+</html>
