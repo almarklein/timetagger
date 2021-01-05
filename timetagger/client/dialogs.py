@@ -288,31 +288,6 @@ class BaseDialog:
             self.close()
 
 
-class AppWelcomeDialog(BaseDialog):
-    """Dialog to show a welcome to new users."""
-
-    EXIT_ON_CLICK_OUTSIDE = True
-
-    def open(self):
-        """Show/open the dialog ."""
-        html = """
-            <h1>Welcome
-                <button type='button'>close <i class='fas'>\uf00d</i></button>
-            </h1>
-            <p>
-            Welcome to TimeTagger! We'll try to make tracking time as smooth
-            and fun as it can be.
-            </p><p>
-            To get started, press that play button on the left!
-            </p>
-        """
-        self.maindiv.innerHTML = html
-
-        close_but = self.maindiv.children[0].children[-1]
-        close_but.onclick = self.close
-        super().open(None)
-
-
 class DemoInfoDialog(BaseDialog):
     """Dialog to show as the demo starts up."""
 
@@ -367,6 +342,25 @@ class SandboxInfoDialog(BaseDialog):
         """
         self.maindiv.innerHTML = html
 
+        close_but = self.maindiv.children[0].children[-1]
+        close_but.onclick = self.close
+        super().open(None)
+
+
+class NotificationDialog(BaseDialog):
+    """Dialog to show a message to the user."""
+
+    EXIT_ON_CLICK_OUTSIDE = True
+
+    def open(self, message):
+        """Show/open the dialog ."""
+        html = f"""
+            <h1>Notification
+                <button type='button'>close <i class='fas'>\uf00d</i></button>
+            </h1>
+            <p>{message}</p>
+        """
+        self.maindiv.innerHTML = html
         close_but = self.maindiv.children[0].children[-1]
         close_but.onclick = self.close
         super().open(None)

@@ -86,6 +86,7 @@ class TimeTaggerCanvas(BaseCanvas):
 
         self.range = TimeRange(self)
 
+        self.notification_dialog = dialogs.NotificationDialog(self)
         self.guide = dialogs.GuideDialog(self)
         self.menu_dialog = dialogs.MenuDialog(self)
         self.timeselection_dialog = dialogs.TimeSelectionDialog(self)
@@ -111,6 +112,14 @@ class TimeTaggerCanvas(BaseCanvas):
             if x1 <= x <= x2:
                 if y1 <= y <= y2:
                     return widget
+
+    def notify_once(self, message):
+        """Notify the user once (for each session)."""
+        cache = self._notification_cache or {}
+        self._notification_cache = cache
+        if message not in cache:
+            cache[message] = True
+            self.notification_dialog.open(message)
 
     def now(self):
         if self._now is not None:

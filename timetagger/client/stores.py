@@ -841,7 +841,11 @@ class ConnectedDataStore(BaseDataStore):
             for key, item in items.items():
                 self._to_push[kind].setdefault(key, item)
             self._set_state("error")  # is usually less bad than the fail's below
-            console.warn(res.status + " (" + res.statusText + ") " + await res.text())
+            text = await res.text()
+            console.warn(res.status + " (" + res.statusText + ") " + text)
+            # Also notify the user for 402 errors
+            if res.status == 402 and window.canvas:
+                window.canvas.notify_once(text)
 
         else:
             # Success, but it can still mean that some records failed. In this
