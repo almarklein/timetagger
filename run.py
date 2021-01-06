@@ -21,7 +21,7 @@ assets.update(create_assets_from_dir(resource_filename("timetagger.client", ".")
 assets.update(create_assets_from_dir(resource_filename("timetagger.static", ".")))
 assets.update(create_assets_from_dir(resource_filename("timetagger.images", ".")))
 
-# Uncomment the line below to include the time-tagger.com website
+# Uncomment the line below to include the TimeTagger website
 # assets.update(create_assets_from_dir(resource_filename("timetagger.website", "/")))
 
 # Turn asset dict into a handler. This feature of Asgineer provides

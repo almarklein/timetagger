@@ -1545,7 +1545,7 @@ class ReportDialog(BaseDialog):
         doc.addImage(img, "PNG", width - margin - 20, margin, 20, 20)
         doc.setFontSize(12)
         doc.text(
-            "time-tagger.com",
+            "TimeTagger",
             width - margin,
             margin + 22,
             {"align": "right", "baseline": "top"},
