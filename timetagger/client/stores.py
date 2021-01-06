@@ -68,7 +68,8 @@ if this_is_js():  # pragma: no cover
 
 else:
     from random import random
-    from client import dt
+    from . import dt
+    from . import utils
 
     to_int = int
     to_float = float
@@ -456,7 +457,7 @@ class RecordStore(BaseStore):
                     record = self._items[key]
                     t1 = max(record.t1, bin_t1)
                     t2 = min(record.t2, bin_t2)
-                    tagz = self.tags_from_record(record).join(" ")
+                    tagz = " ".join(self.tags_from_record(record))
                     stats[tagz] = stats.get(tagz, 0) + (t2 - t1)
             else:
                 # Iterate over sub-bins
@@ -597,7 +598,7 @@ class RecordStore(BaseStore):
         for record in self._running_records.values():
             if now > t1 and record.t1 < t2:
                 deltat = max(0, min(t2, now) - max(t1, record.t1))
-                tagz = self.tags_from_record(record).join(" ")
+                tagz = " ".join(self.tags_from_record(record))
                 stats[tagz] = stats.get(tagz, 0) + deltat
         return stats
 
@@ -627,7 +628,7 @@ class RecordStore(BaseStore):
                         max(bin_t1, record.t1), t1
                     )
                     if deltat > 0:  # else no overlap
-                        tagz = self.tags_from_record(record).join(" ")
+                        tagz = " ".join(self.tags_from_record(record))
                         stats[tagz] = stats.get(tagz, 0) + deltat
             else:
                 subheaplayer = self._heap[level - 1]

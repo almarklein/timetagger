@@ -17,9 +17,9 @@ logger = logging.getLogger("asgineer")
 
 # Create dict with assets
 assets = {}
-assets.update(create_assets_from_dir(resource_filename("timetagger.client", "/")))
-assets.update(create_assets_from_dir(resource_filename("timetagger.static", "/")))
-assets.update(create_assets_from_dir(resource_filename("timetagger.images", "/")))
+assets.update(create_assets_from_dir(resource_filename("timetagger.client", ".")))
+assets.update(create_assets_from_dir(resource_filename("timetagger.static", ".")))
+assets.update(create_assets_from_dir(resource_filename("timetagger.images", ".")))
 
 # Uncomment the line below to include the time-tagger.com website
 # assets.update(create_assets_from_dir(resource_filename("timetagger.website", "/")))

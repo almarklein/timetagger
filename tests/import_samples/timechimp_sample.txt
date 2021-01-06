@@ -1,0 +1,16 @@
+Week	Date	Customer	Project	Task	User	Time	Billable	Status	Notes	Tags	StartEnd	Amount	HourlyRate	UserTags	CustomerRelationId	RegisteredBy	RegisteredDate
+2019-18	30/04/2019	banana tree	Intern	Mails verwerken	Banana Tree	1	0	Open				0	0			Banana Tree	30/04/2019 11:17
+2019-17	26/04/2019	banana tree	Intern	Mails verwerken	Banana Tree	1	0	Open				0	0			Banana Tree	26/04/2019 08:40
+2019-17	26/04/2019	banana tree	Intern	Administratie	Banana Tree	1	0	Open				0	0			Banana Tree	26/04/2019 08:42
+2019-17	26/04/2019	banana tree	Intern	Projectmanagement	Banana Tree	3	0	Open				0	0			Banana Tree	26/04/2019 08:42
+2019-17	26/04/2019	banana tree	Intern	Pauze	Banana Tree	1	0	Open				0	0			Banana Tree	26/04/2019 08:40
+2019-17	26/04/2019	banana tree	Intern	Wekelijks onderhoud	Banana Tree	1	0	Open				0	0			Banana Tree	26/04/2019 08:42
+2019-17	26/04/2019	banana tree	Opleiding	Studietijd	Banana Tree	1	0	Open				0	0			Banana Tree	26/04/2019 08:43
+2019-17	26/04/2019	banana tree	Relatiebeheer	Oriënterende afspraak	Banana Tree	1	0	Open				0	0			Banana Tree	26/04/2019 08:42
+2019-17	25/04/2019	banana tree	Intern	Mails verwerken	Banana Tree	1	0	Open				0	0			Banana Tree	26/04/2019 08:40
+2019-17	25/04/2019	banana tree	Intern	Projectmanagement	Banana Tree	1	0	Open				0	0			Banana Tree	26/04/2019 08:42
+2019-17	25/04/2019	banana tree	Intern	Pauze	Banana Tree	1	0	Open				0	0			Banana Tree	26/04/2019 08:40
+2019-17	25/04/2019	banana tree	MBSR 8-weekse	Training geven	Banana Tree	3	1	Open				0	0			Banana Tree	26/04/2019 08:42
+2019-17	25/04/2019	banana tree	MBSR 8-weekse	Training/Workshop voorbereiden	Banana Tree	0	0	Open				0	0			Banana Tree	26/04/2019 08:41
+2019-17	25/04/2019	ArtEZ	Studentencoaching	Coaching	Banana Tree	1	1	Open				0	0		1	Banana Tree	26/04/2019 08:41
+2019-17	24/04/2019	ArtEZ	Studentencoaching	Coaching	Banana Tree	2	1	Open				0	0		1	Banana Tree	26/04/2019 08:41
