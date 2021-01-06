@@ -54,7 +54,13 @@ def swait(co):
 
 def swait_multiple(cos):
     """Sync-wait for the given coroutines."""
-    asyncio.get_event_loop().run_until_complete(asyncio.wait(cos))
+    if not isinstance(cos, (tuple, list)):
+        raise TypeError("Need list if coroutines.")
+    elif not len(cos):
+        raise ValueError("list of coroutines must not be empty")
+    asyncio.get_event_loop().run_until_complete(
+        asyncio.gather(*cos, return_exceptions=True)
+    )
 
 
 # %% Sync -> Async

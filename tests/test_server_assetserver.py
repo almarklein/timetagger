@@ -1,12 +1,23 @@
-from asgineer.testutils import MockTestServer
+from pkg_resources import resource_filename
 
+from timetagger.server import create_assets_from_dir
+import asgineer
+
+from asgineer.testutils import MockTestServer
 from _common import run_tests
-from server import assetserver
+
+
+# Create asset server
+assets = {}
+assets.update(create_assets_from_dir(resource_filename("timetagger.client", ".")))
+assets.update(create_assets_from_dir(resource_filename("timetagger.static", ".")))
+assets.update(create_assets_from_dir(resource_filename("timetagger.images", ".")))
+asset_handler = asgineer.utils.make_asset_handler(assets, max_age=0)
 
 
 def test_assets():
 
-    with MockTestServer(assetserver.asset_handler) as p:
+    with MockTestServer(asset_handler) as p:
 
         # Get root
         r = p.get("")
@@ -38,13 +49,13 @@ def test_assets():
         assert not r.body
 
         # Test known file asset
-        r = p.get("timeturtle16.png")
+        r = p.get("timetagger192.png")
         assert r.status == 200
         assert r.headers["content-type"] == "image/png"
         assert r.headers["etag"]
         assert r.headers["cache-control"]
         # Test caching with etag
-        r = p.get("timeturtle16.png", headers={"if-none-match": r.headers["etag"]})
+        r = p.get("timetagger192.png", headers={"if-none-match": r.headers["etag"]})
         assert r.status == 304
         assert not r.body
 

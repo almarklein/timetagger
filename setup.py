@@ -7,6 +7,10 @@ with open("timetagger/__init__.py") as fh:
     VERSION = re.search(r"__version__ = \"(.*?)\"", fh.read()).group(1)
 
 
+with open("requirements.txt") as fh:
+    runtime_deps = [x.strip() for x in fh.read().splitlines() if x.strip()]
+
+
 setup(
     name="timetagger",
     version=VERSION,
@@ -18,7 +22,7 @@ setup(
         "timetagger.static": ["*"],
     },
     python_requires=">=3.6.0",
-    install_requires=["asgineer", "itemdb", "pscript", "jinja2", "markdown"],
+    install_requires=runtime_deps,
     license="GPL-3.0",
     description="An open source time tracker - tag your time, and see where it has gone",
     long_description=open("README.md").read(),
