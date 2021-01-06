@@ -65,7 +65,7 @@ jobs:
         run: |
             python -m pip install --upgrade pip
             pip install -U -r requirements.txt
-            pip install pytest
+            pip install pytest requests
             python setup.py install
             rm -rf ./timetagger ./build ./egg-info
       - name: Lint
