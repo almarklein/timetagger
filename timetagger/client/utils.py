@@ -2,7 +2,7 @@
 Utilities.
 """
 
-# from pscript import this_is_js
+from pscript import this_is_js
 from pscript.stubs import window, perf_counter, RawJS, Math
 
 
@@ -34,7 +34,8 @@ def _get_hsluv2rgb():
     return hsluv2rgb
 
 
-hsluv2rgb = _get_hsluv2rgb()
+if this_is_js():
+    hsluv2rgb = _get_hsluv2rgb()
 
 
 def fit_font_size(ctx, available_width, font, text, maxsize=100):
@@ -127,8 +128,8 @@ def convert_text_to_valid_tag(s):
     tag_name = "#"
     last_char = "-"
     for i in range(len(s)):
-        if is_valid_tag_charcode(s.charCodeAt(i)):
-            c = s.charAt(i)
+        if is_valid_tag_charcode(ord(s[i])):
+            c = s[i]
         else:
             c = "-"
             if last_char == "-":
@@ -161,32 +162,38 @@ def get_tags_and_parts_from_string(s=""):
     tag_end = 0
 
     for i in range(len(s) + 1):
-        cc = s.charCodeAt(i) or 35  # trick to always push
+        cc = ord(s[i]) if i < len(s) else 35
         if tag_start < 0:
             if cc == 35:  # hash symbol (#)
                 tag_start = i
-                text = s.slice(tag_end, i)
+                text = s[tag_end:i]
                 if len(text) > 0:
                     if len(parts) > 0 and parts[-1][0] != "#":
                         parts[-1] = parts[-1] + text
                     else:
-                        parts.push(text)
+                        parts.append(text)
         else:
             if not is_valid_tag_charcode(cc):
-                text = s.slice(tag_start, i)
+                text = s[tag_start:i]
                 if len(text) > 1:  # dont count the # symbol
-                    tag = text.toLowerCase()
-                    parts.push(tag)
+                    tag = text.lower()
+                    parts.append(tag)
                     tags[tag] = tag
                 if cc == 35:
-                    parts.push(" ")  # add a space #between#tags
+                    parts.append(" ")  # add a space #between#tags
                     tag_start = i
                 else:
                     tag_start = -1
                     tag_end = i
     if len(parts) > 0:
-        parts[-1] = parts[-1].trimEnd()
+        last = parts[-1].rstrip()
+        if len(last) > 0:
+            parts[-1] = last
+        else:
+            parts.pop(-1)
     tags = tags.values()
+    if not this_is_js():
+        tags = list(tags)
     tags.sort()
     return tags, parts
 
