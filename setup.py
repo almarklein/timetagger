@@ -16,7 +16,7 @@ setup(
     version=VERSION,
     packages=find_packages(exclude=["tests", "tests.*", "examples", "examples.*"]),
     package_data={
-        f"timetagger.x": ["*"] for x in ["client", "images", "static", "website"]
+        f"timetagger.{x}": ["*"] for x in ["client", "images", "static", "website"]
     },
     python_requires=">=3.6.0",
     install_requires=runtime_deps,
