@@ -57,11 +57,13 @@ jobs:
 
       - name: Install dependencies (lint and docs)
         if: matrix.dolint == 1
+        shell: bash
         run: |
             python -m pip install --upgrade pip
             pip install black flake8
       - name: Install dependencies (unit tests)
         if: matrix.tests == 1
+        shell: bash
         run: |
             python -m pip install --upgrade pip
             pip install -U -r requirements.txt
@@ -70,11 +72,13 @@ jobs:
             rm -rf ./timetagger ./build ./egg-info
       - name: Lint
         if: matrix.dolint == 1
+        shell: bash
         run: |
             black --check .
             flake8 .
       - name: Test with pytest
         if: matrix.tests == 1
+        shell: bash
         run: |
             python -c "import sys; print(sys.version, '\n', sys.prefix)";
             pytest -v .
