@@ -27,7 +27,8 @@ def test_demo_record_store():
 
     # There are now records for only one year
     # Note that this test fails early januari :P
-    assert len(ds.records.get_records(0, 1e15)) > 25
+    if datetime.date.today().month > 1:
+        assert len(ds.records.get_records(0, 1e15)) > 25
     assert len(ds.records.get_records(0, 1e15)) < 2000
 
     # Build other years

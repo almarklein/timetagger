@@ -46,7 +46,7 @@ def to_jsonable(x):
 
 # ----- COMMON PART (don't change this comment)
 
-RECORD_SPEC = dict(key=to_str, mt=to_int, t1=to_int, t2=to_int, pr=to_str, ds=to_str)
+RECORD_SPEC = dict(key=to_str, mt=to_int, t1=to_int, t2=to_int, ds=to_str)
 RECORD_REQ = ["key", "mt", "t1", "t2"]
 
 SETTING_SPEC = dict(key=to_str, mt=to_int, value=to_jsonable)

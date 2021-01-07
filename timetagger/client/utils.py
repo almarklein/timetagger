@@ -60,7 +60,6 @@ def hue_from_name(name):
     PSCRIPT_OVERLOAD = False  # noqa
 
     if _lasthashedhue[0] != name:
-        # todo: can we do something about subnames?
         subnames = [name]
         color = 0
         for level in range(len(subnames)):
@@ -290,102 +289,6 @@ def create_pointer_event(node, e):
     )
 
 
-def make_context_sketchy(ctx):
-    """Monkeypatch the context to make it draw sketchy lines and rects."""
-    if not ctx._ori_moveTo:
-        ctx._ori_moveTo = ctx.moveTo
-        ctx._ori_lineTo = ctx.lineTo
-        ctx._ori_save = ctx.save
-
-    sf = 1.1  # noqa - sketch factor (1 means max 0.5 deviation)
-    x0, y0 = 0, 0
-
-    # Reproducable random numbers. Reproducable as in per-draw, but also
-    # in between sessions with same data.
-    # fmt: off
-    random_numbers = [
-        "0.6864", "0.5246", "0.9662", "0.0383", "0.4372", "0.9839",
-        "0.7125", "0.6176", "0.2168", "0.7509", "0.0421", "0.2139",
-        "0.2523", "0.0405", "0.1295", "0.5129", "0.7558", "0.8359",
-        "0.0608", "0.0312", "0.6027", "0.0477", "0.2813", "0.4590",
-        "0.3101", "0.1960", "0.2398", "0.6336", "0.8915", "0.3562",
-        "0.3547", "0.1306", "0.6243", "0.2477", "0.5941", "0.5062",
-        "0.4328", "0.9814", "0.7330", "0.9415", "0.7504", "0.3423",
-        "0.8648", "0.2390", "0.4278", "0.8097", "0.2248", "0.3141",
-        "0.0949", "0.5548", "0.8897", "0.8784", "0.3927", "0.0059",
-        "0.3573", "0.6784", "0.3396", "0.6834", "0.4273", "0.0958",
-        "0.9172", "0.6826", "0.2923", "0.8015",
-    ]
-    # fmt: on
-
-    random_index = 0
-
-    def random():
-        nonlocal random_index
-        random_index = RawJS("(random_index + 1) % random_numbers.length")
-        return random_numbers[random_index]
-
-    def save():
-        nonlocal random_index
-        random_index = 0
-        ctx._ori_save()
-
-    def moveTo(x, y, straight):
-        nonlocal x0, y0
-        RawJS(
-            """
-        if (straight) { return ctx._ori_moveTo(x, y); }
-        ctx._ori_moveTo(x + sf * (random() - 0.5),
-                            y + sf * (random() - 0.5));
-        """
-        )
-        x0, y0 = x, y
-
-    def lineTo(x, y, straight):
-        nonlocal x0, y0
-        RawJS(
-            """
-        if (straight) { return ctx._ori_lineTo(x, y); }
-        var d = Math.sqrt(Math.pow(x-x0, 2) + Math.pow(y-y0,2));
-        var n = Math.max(1, Math.ceil(d/25));
-        for (var i=1; i<=n; i++) {
-            var f = i/n;
-            var x1 = (1-f) * x0 + f * x;
-            var y1 = (1-f) * y0 + f * y;
-            ctx._ori_lineTo(x1 + sf * (random() - 0.5),
-                            y1 + sf * (random() - 0.5));
-        }
-        """
-        )
-        x0, y0 = x, y
-
-    def strokeRect(x, y, w, h):
-        PSCRIPT_OVERLOAD = False  # noqa
-        ctx.beginPath()
-        ctx.moveTo(x, y)
-        ctx.lineTo(x + w, y)
-        ctx.lineTo(x + w, y + h)
-        ctx.lineTo(x, y + h)
-        ctx.lineTo(x, y)
-        ctx.stroke()
-
-    def fillRect(x, y, w, h):
-        PSCRIPT_OVERLOAD = False  # noqa
-        ctx.beginPath()
-        ctx.moveTo(x, y)
-        ctx.lineTo(x + w, y)
-        ctx.lineTo(x + w, y + h)
-        ctx.lineTo(x, y + h)
-        ctx.lineTo(x, y)
-        ctx.fill()
-
-    ctx.moveTo = moveTo
-    ctx.lineTo = lineTo
-    ctx.strokeRect = strokeRect
-    ctx.fillRect = fillRect
-    ctx.save = save
-
-
 class Picker:
     """A class that helps with picking."""
 
@@ -414,8 +317,6 @@ class Picker:
 class BaseCanvas:
     """A Canvas wrapper that automatically resizes and takes high-res into account."""
 
-    _SKETCHY = False
-
     def __init__(self, node):
         self.node = node
         self.node.js = self
@@ -436,10 +337,6 @@ class BaseCanvas:
 
         # Do draws on a regular interval
         self._draw_tick()
-
-        # Sketchy style
-        if self._SKETCHY:
-            make_context_sketchy(self.node.getContext("2d"))
 
     def _init_events(self):
 
@@ -671,6 +568,8 @@ class BaseCanvas:
                 self._tooltipdiv.style.right = self.w - rect[0] + 10 + "px"
 
     def register_tooltip(self, x1, y1, x2, y2, text):
+        """ Register a tooltip at the given position.
+        """
         ob = {"rect": [x1, y1, x2, y2], "text": text}
         self._tooltips.register(x1, y1, x2, y2, ob)
 

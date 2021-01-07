@@ -308,14 +308,11 @@ class DemoInfoDialog(BaseDialog):
         """
         self.maindiv.innerHTML = html
 
-        # guide_but = self.maindiv.children[-2]
-        # close_but1 = self.maindiv.children[-1]
         close_but = self.maindiv.children[0].children[-2]
         guide_but = self.maindiv.children[0].children[-1]
 
         guide_but.onclick = self.close_and_show_guide
         close_but.onclick = self.close
-        # close_but2.onclick = self.close
         super().open(None)
 
     def close_and_show_guide(self):
@@ -367,7 +364,7 @@ class NotificationDialog(BaseDialog):
 
 
 class MenuDialog(BaseDialog):
-    """Dialog to show a popup menu in the demo and tracker."""
+    """Dialog to show a popup menu."""
 
     EXIT_ON_CLICK_OUTSIDE = True
 
@@ -433,7 +430,6 @@ class MenuDialog(BaseDialog):
         container = self.maindiv
         for icon, isvalid, title, func in [
             ("\uf05a", store_valid, "Guide", self._show_guide),
-            # ("\uf15c", False, "Show report", self._open_report),
             ("\uf013", store_valid, "Settings", self._show_settings),
             ("\uf02c", store_valid, "Manage tags", self._manage_tags),
             ("\uf56f", store_valid, "Import", self._import),
@@ -589,6 +585,9 @@ class TimeSelectionDialog(BaseDialog):
 
 
 class StartStopEdit:
+    """ Helper class to allow the user to set the start and stop time of a record.
+    """
+
     def __init__(self, node, callback, t1, t2):
         self.node = node
         self.callback = callback
@@ -956,8 +955,9 @@ class RecordDialog(BaseDialog):
 
         # Almost done
         super().open(callback)
-        # todo: detect/guess if this is desktop. If so, focus on ds!
-        # self._ds_input.focus()  # annoying on mobile
+        # Focus on ds if this looks like desktop; it's anoying on mobile
+        if window.innerWidth >= 800:
+            self._ds_input.focus()
 
     def _on_user_edit(self):
         self._query_tags()
@@ -978,7 +978,6 @@ class RecordDialog(BaseDialog):
     def _query_tags(self):
         """Get all current tags. If different, update suggestions. """
         tags, _ = utils.get_tags_and_parts_from_string(self._ds_input.value)
-        # todo: cache
         if len(tags) == 0:
             html = "No tags.<br><br>"
         else:

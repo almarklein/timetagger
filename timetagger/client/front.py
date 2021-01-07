@@ -71,9 +71,6 @@ class TimeTaggerCanvas(BaseCanvas):
     application object.
     """
 
-    # I kinda like the sketchy look, but it slows things down on mobile :/
-    _SKETCHY = False
-
     def __init__(self, canvas):
         super().__init__(canvas)
 
@@ -193,10 +190,9 @@ class TimeTaggerCanvas(BaseCanvas):
         # Update the range if it is animating
         self.range.animation_update()
 
-        # Clear / draw background (fillRect oversize to account for sketchy edges)
-        # ctx.clearRect(0, 0, self.w, self.h)
+        # Clear / draw background
         ctx.fillStyle = COLORS.background1
-        ctx.fillRect(-5, -5, self.w + 10, self.h + 10)
+        ctx.fillRect(0, 0, self.w, self.h)
 
         if window.store.get_auth and not window.store.get_auth():
             # We need to be logged in, but we are not
@@ -1630,7 +1626,7 @@ class RecordsWidget(Widget):
             ctx.textAlign = "right"
             ctx.fillText(duration_text, x4 - 8, ty1 + 23)
 
-            # Print desciption
+            # Show desciption
             ctx.textAlign = "left"
             max_x = x4 - ctx.measureText(duration_text).width - 8
             space_width = ctx.measureText(" ").width + 2
@@ -2259,7 +2255,7 @@ class RecordsWidget(Widget):
                 t1, t2 = self._pointer_startrange
                 dy = self._pointer_startpos[key][1] - y
                 nsecs = t2 - t1
-                npixels = self.rect[3] - 30 - 5  # todo: xxxxxx
+                npixels = self.rect[3] - 30 - 5
                 dsecs = nsecs * dy / npixels  # relative to start pos
                 # Inertia
                 self._pointer_inertia.push((dsecs, perf_counter()))
@@ -2298,7 +2294,7 @@ class RecordsWidget(Widget):
             # Calculate how to change the range
             t1, t2 = self._pointer_startrange
             nsecs_before = nsecs_after = t2 - t1
-            npixels = self.rect[3] - 30 - 5  # todo: xxxxxx
+            npixels = self.rect[3] - 30 - 5
             if len(self._pointer_pos.keys()) > 1:
                 factor = 9
                 dy = std_pos1[1] - std_pos2[1]
