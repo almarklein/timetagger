@@ -726,7 +726,7 @@ class ConnectedDataStore(BaseDataStore):
     def get_auth(self):
         """Get an auth info object that is guaranteed to match the email
         that the store had from the beginning. It gets automatically refreshed
-        to include the latest jwt. Can return None, in which case the store is
+        to include the latest authtoken. Can return None, in which case the store is
         not usable.
         """
         if dt.now() - self._last_auth_get > 1.0:
@@ -792,20 +792,20 @@ class ConnectedDataStore(BaseDataStore):
             await self._load_from_cache()
         # Push to server, then pull
         for kind in ["settings", "records"]:
-            await self._push(kind, auth.jwt)
-        await self._pull(auth.jwt)
+            await self._push(kind, auth.token)
+        await self._pull(auth.token)
         # Save to local cache
         await self._save_to_cache()
 
     async def _force_reset(self):
         # Set the reset flag at the server. Intended for testing.
-        jwt = self.get_auth().jwt
+        authtoken = self.get_auth().token
         url = location.protocol + "//" + location.hostname + ":" + location.port
         url = url.rstrip(":") + "/api/v1/forcereset"
-        init = dict(method="PUT", headers={"jwt": jwt})
+        init = dict(method="PUT", headers={"authtoken": authtoken})
         await window.fetch(url, init)
 
-    async def _push(self, kind, jwt):
+    async def _push(self, kind, authtoken):
 
         # Build url
         url = location.protocol + "//" + location.hostname + ":" + location.port
@@ -819,7 +819,9 @@ class ConnectedDataStore(BaseDataStore):
 
         # Fetch and wait for response
         init = dict(
-            method="PUT", body=JSON.stringify(items.values()), headers={"jwt": jwt}
+            method="PUT",
+            body=JSON.stringify(items.values()),
+            headers={"authtoken": authtoken},
         )
         try:
             res = await window.fetch(url, init)
@@ -852,14 +854,14 @@ class ConnectedDataStore(BaseDataStore):
                 self._set_state("warning")
                 console.warn(f"Server dropped a {kind}: {err}")
 
-    async def _pull(self, jwt):
+    async def _pull(self, authtoken):
 
         # Build url
         url = location.protocol + "//" + location.hostname + ":" + location.port
         url = url.rstrip(":") + "/api/v1/updates?since=" + self._server_time
 
         # Fetch and wait for response
-        init = dict(method="GET", headers={"jwt": jwt})
+        init = dict(method="GET", headers={"authtoken": authtoken})
         try:
             res = await window.fetch(url, init)
         except Exception as err:
@@ -970,7 +972,12 @@ class DemoDataStore(BaseDataStore):
                 "#client2 #meeting",
                 "#client2 #admin",
             ],
-            ["#client2 #code", "#client2 #design", "#client2 #meeting", "#client2 #admin"],
+            [
+                "#client2 #code",
+                "#client2 #design",
+                "#client2 #meeting",
+                "#client2 #admin",
+            ],
             [
                 "#client3 #meeting",
                 "#client3 #code",

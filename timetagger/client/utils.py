@@ -568,8 +568,7 @@ class BaseCanvas:
                 self._tooltipdiv.style.right = self.w - rect[0] + 10 + "px"
 
     def register_tooltip(self, x1, y1, x2, y2, text):
-        """ Register a tooltip at the given position.
-        """
+        """Register a tooltip at the given position."""
         ob = {"rect": [x1, y1, x2, y2], "text": text}
         self._tooltips.register(x1, y1, x2, y2, ob)
 

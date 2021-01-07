@@ -585,8 +585,7 @@ class TimeSelectionDialog(BaseDialog):
 
 
 class StartStopEdit:
-    """ Helper class to allow the user to set the start and stop time of a record.
-    """
+    """Helper class to allow the user to set the start and stop time of a record."""
 
     def __init__(self, node, callback, t1, t2):
         self.node = node
