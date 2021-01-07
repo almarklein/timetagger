@@ -1,4 +1,6 @@
-# Stub auth functions
+"""
+Stub auth functions
+"""
 
 
 def get_auth_info():

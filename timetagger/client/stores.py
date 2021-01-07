@@ -130,7 +130,7 @@ _min_heap_bin_size = 2 ** 17  # about 1.5 day
 
 # ----- COMMON PART (don't change this comment)
 
-RECORD_SPEC = dict(key=to_str, mt=to_int, t1=to_int, t2=to_int, pr=to_str, ds=to_str)
+RECORD_SPEC = dict(key=to_str, mt=to_int, t1=to_int, t2=to_int, ds=to_str)
 RECORD_REQ = ["key", "mt", "t1", "t2"]
 
 SETTING_SPEC = dict(key=to_str, mt=to_int, value=to_jsonable)
@@ -654,9 +654,6 @@ class BaseDataStore:
             "visibilitychange", lambda: self.sync_soon(1.0), False
         )
 
-    def has_pro_features(self):
-        return True  # Demo, sandbox etc.
-
     def reset(self):
         # The sub stores
         self.settings = SettingsStore(self)
@@ -726,13 +723,10 @@ class ConnectedDataStore(BaseDataStore):
         self._pull_statuses = [0, 0, 0, 0, 0]
         self._auth = window.auth.get_auth_info()
 
-    def has_pro_features(self):
-        return bool(self._has_pro)
-
     def get_auth(self):
         """Get an auth info object that is guaranteed to match the email
         that the store had from the beginning. It gets automatically refreshed
-        to include the latest jwt. Can return None, in which case the store is
+        to include the latest authtoken. Can return None, in which case the store is
         not usable.
         """
         if dt.now() - self._last_auth_get > 1.0:
@@ -763,7 +757,6 @@ class ConnectedDataStore(BaseDataStore):
                 if ob and ob.server_time:
                     self._log_load("cache", ob)
                     self._server_time = ob.server_time
-                    self._has_pro = ob.has_pro
                     self.settings._put_received(*ob.settings)
                     self.records._put_received(*ob.records)
                     for item in ob.settings:
@@ -781,7 +774,6 @@ class ConnectedDataStore(BaseDataStore):
                 dump = {
                     "key": self._auth.email,
                     "server_time": self._server_time,
-                    "has_pro": self._has_pro,
                     "settings": self.settings.get_dump(),
                     "records": self.records.get_dump(),
                 }
@@ -800,20 +792,20 @@ class ConnectedDataStore(BaseDataStore):
             await self._load_from_cache()
         # Push to server, then pull
         for kind in ["settings", "records"]:
-            await self._push(kind, auth.jwt)
-        await self._pull(auth.jwt)
+            await self._push(kind, auth.token)
+        await self._pull(auth.token)
         # Save to local cache
         await self._save_to_cache()
 
     async def _force_reset(self):
         # Set the reset flag at the server. Intended for testing.
-        jwt = self.get_auth().jwt
+        authtoken = self.get_auth().token
         url = location.protocol + "//" + location.hostname + ":" + location.port
         url = url.rstrip(":") + "/api/v1/forcereset"
-        init = dict(method="PUT", headers={"jwt": jwt})
+        init = dict(method="PUT", headers={"authtoken": authtoken})
         await window.fetch(url, init)
 
-    async def _push(self, kind, jwt):
+    async def _push(self, kind, authtoken):
 
         # Build url
         url = location.protocol + "//" + location.hostname + ":" + location.port
@@ -827,7 +819,9 @@ class ConnectedDataStore(BaseDataStore):
 
         # Fetch and wait for response
         init = dict(
-            method="PUT", body=JSON.stringify(items.values()), headers={"jwt": jwt}
+            method="PUT",
+            body=JSON.stringify(items.values()),
+            headers={"authtoken": authtoken},
         )
         try:
             res = await window.fetch(url, init)
@@ -860,14 +854,14 @@ class ConnectedDataStore(BaseDataStore):
                 self._set_state("warning")
                 console.warn(f"Server dropped a {kind}: {err}")
 
-    async def _pull(self, jwt):
+    async def _pull(self, authtoken):
 
         # Build url
         url = location.protocol + "//" + location.hostname + ":" + location.port
         url = url.rstrip(":") + "/api/v1/updates?since=" + self._server_time
 
         # Fetch and wait for response
-        init = dict(method="GET", headers={"jwt": jwt})
+        init = dict(method="GET", headers={"authtoken": authtoken})
         try:
             res = await window.fetch(url, init)
         except Exception as err:
@@ -893,7 +887,6 @@ class ConnectedDataStore(BaseDataStore):
                     await self._clear_cache()
                     self.reset()
                 self._server_time = ob.server_time
-                self._has_pro = ob.has_pro
                 # The odds of something going wrong here are tiny ...
                 # but if they happen, we're out of sync with the server :(
                 try:
@@ -969,29 +962,34 @@ class DemoDataStore(BaseDataStore):
             ["#unpaid #traveling"],
             ["#unpaid #reading"],
             ["#unpaid #admin"],
-            ["#NiceCorp #meeting", "#NiceCorp #consulting", "#NiceCorp #admin"],
-            ["#NiceCorp #meeting", "#NiceCorp #admin"],
+            ["#client1 #meeting", "#client1 #consulting", "#client1 #admin"],
+            ["#client1 #meeting", "#client1 #admin"],
             [
-                "#FunOrg #code #writing",
-                "#FunOrg #code",
-                "#FunOrg #code #debugging",
-                "#FunOrg #design",
-                "#FunOrg #meeting",
-                "#FunOrg #admin",
-            ],
-            ["#FunOrg #code", "#FunOrg #design", "#FunOrg #meeting", "#FunOrg #admin"],
-            [
-                "#FriendlyCorp #meeting",
-                "#FriendlyCorp #code",
-                "#FriendlyCorp #training",
+                "#client2 #code #writing",
+                "#client2 #code",
+                "#client2 #code #debugging",
+                "#client2 #design",
+                "#client2 #meeting",
+                "#client2 #admin",
             ],
             [
-                "#FriendlyCorp #meeting",
-                "#FriendlyCorp #training",
-                "#FriendlyCorp #coaching",
+                "#client2 #code",
+                "#client2 #design",
+                "#client2 #meeting",
+                "#client2 #admin",
             ],
-            ["#AwesomeCompany #consulting", "#AwesomeCompany #admin"],
-            ["#AwesomeCompany #consulting", "#AwesomeCompany #training"],
+            [
+                "#client3 #meeting",
+                "#client3 #code",
+                "#client3 #training",
+            ],
+            [
+                "#client3 #meeting",
+                "#client3 #training",
+                "#client3 #coaching",
+            ],
+            ["#client4 #consulting", "#client4 #admin"],
+            ["#client4 #consulting", "#client4 #training"],
         ]
 
     def _create_one_year_of_data(self, y):
@@ -1029,20 +1027,15 @@ class DemoDataStore(BaseDataStore):
                 # Is this date ok?
                 if this_is_js():  # pragma: no cover
                     weekday = Date(f"{sy}-{sm}-{sd}").getDay()  # 0 is Sunday
-                    if (
-                        window.demodeltatime
-                        and y == nowyear
-                        and m == nowmonth
-                        and d == nowday
-                    ):
-                        # Reproducable demo data, e.g. for making screenshots
+                    # Put some predictable stuff on today, whatever day it is.
+                    if y == nowyear and m == nowmonth and d == nowday:
                         for start, stop, tag in [
-                            ("08:51", "10:19", "#FunOrg #code"),
-                            ("10:19", "10:52", "#FunOrg #design"),
+                            ("08:51", "10:19", "#client1 #code"),
+                            ("10:19", "10:52", "#client1 #design"),
                             ("10:59", "11:47", "#unpaid #reading"),
-                            ("12:51", "13:36", "#FunOrg #design"),
-                            ("13:36", "14:28", "#FriendlyCorp #meeting"),
-                            ("14:34", "16:11", "#FriendlyCorp #code"),
+                            ("12:51", "13:36", "#client1 #design"),
+                            ("13:36", "14:28", "#client3 #meeting"),
+                            ("14:34", "16:11", "#client3 #code"),
                         ]:
                             t1 = dt.to_time_int(f"{sy}-{sm}-{sd}T{start}:00")
                             t2 = dt.to_time_int(f"{sy}-{sm}-{sd}T{stop}:00")

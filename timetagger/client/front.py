@@ -71,9 +71,6 @@ class TimeTaggerCanvas(BaseCanvas):
     application object.
     """
 
-    # I kinda like the sketchy look, but it slows things down on mobile :/
-    _SKETCHY = False
-
     def __init__(self, canvas):
         super().__init__(canvas)
 
@@ -87,7 +84,6 @@ class TimeTaggerCanvas(BaseCanvas):
         self.range = TimeRange(self)
 
         self.notification_dialog = dialogs.NotificationDialog(self)
-        self.guide = dialogs.GuideDialog(self)
         self.menu_dialog = dialogs.MenuDialog(self)
         self.timeselection_dialog = dialogs.TimeSelectionDialog(self)
         self.settings_dialog = dialogs.SettingsDialog(self)
@@ -177,8 +173,6 @@ class TimeTaggerCanvas(BaseCanvas):
 
     def on_draw(self, ctx):
 
-        self.guide.clear()
-
         # Set current moment as consistent reference for "now"
         self._now = dt.now()
 
@@ -193,10 +187,9 @@ class TimeTaggerCanvas(BaseCanvas):
         # Update the range if it is animating
         self.range.animation_update()
 
-        # Clear / draw background (fillRect oversize to account for sketchy edges)
-        # ctx.clearRect(0, 0, self.w, self.h)
+        # Clear / draw background
         ctx.fillStyle = COLORS.background1
-        ctx.fillRect(-5, -5, self.w + 10, self.h + 10)
+        ctx.fillRect(0, 0, self.w, self.h)
 
         if window.store.get_auth and not window.store.get_auth():
             # We need to be logged in, but we are not
@@ -299,9 +292,9 @@ class TimeRange:
         # The animate variable is normally None. During animation, it is a tuple
         self._animate = None
 
-        # Init time
-        self._t1 = self._canvas.now() - 4 * 3600
-        self._t2 = self._t1 + 6 * 3600
+        # Init time to the current full day
+        self._t1 = dt.floor(self._canvas.now(), "1D")
+        self._t2 = dt.add(self._t1, "1D")
         self._t1, self._t2 = self.get_snap_range()  # snap non-animated
 
     def get_range(self):
@@ -1022,9 +1015,6 @@ class TopWidget(Widget):
         w = h = BUTTON_RADIUS * 2
         self._picker.register(x - cm, y - cm, x + w + cm, y + h + cm, ob)
         self._canvas.register_tooltip(x, y, x + w, y + h, help)
-        self._canvas.guide.register(
-            x, y, x + w, y + h, action.split("_")[0] + "-button"
-        )
         # Draw it
         return self._draw_button_noreg(ctx, x1, y1, text, action, help, tcolor)
 
@@ -1205,7 +1195,6 @@ class RecordsWidget(Widget):
     def on_draw(self, ctx):
         x1, y1, x2, y2 = self.rect
         self._picker.clear()
-        self._canvas.guide.register(x1, y1, x2, y2, "records")
 
         # If too little space, only draw button to expand
         if x2 - x1 <= 50:
@@ -1630,7 +1619,7 @@ class RecordsWidget(Widget):
             ctx.textAlign = "right"
             ctx.fillText(duration_text, x4 - 8, ty1 + 23)
 
-            # Print desciption
+            # Show desciption
             ctx.textAlign = "left"
             max_x = x4 - ctx.measureText(duration_text).width - 8
             space_width = ctx.measureText(" ").width + 2
@@ -2259,7 +2248,7 @@ class RecordsWidget(Widget):
                 t1, t2 = self._pointer_startrange
                 dy = self._pointer_startpos[key][1] - y
                 nsecs = t2 - t1
-                npixels = self.rect[3] - 30 - 5  # todo: xxxxxx
+                npixels = self.rect[3] - 30 - 5
                 dsecs = nsecs * dy / npixels  # relative to start pos
                 # Inertia
                 self._pointer_inertia.push((dsecs, perf_counter()))
@@ -2298,7 +2287,7 @@ class RecordsWidget(Widget):
             # Calculate how to change the range
             t1, t2 = self._pointer_startrange
             nsecs_before = nsecs_after = t2 - t1
-            npixels = self.rect[3] - 30 - 5  # todo: xxxxxx
+            npixels = self.rect[3] - 30 - 5
             if len(self._pointer_pos.keys()) > 1:
                 factor = 9
                 dy = std_pos1[1] - std_pos2[1]
@@ -2441,7 +2430,6 @@ class AnalyticsWidget(Widget):
 
         x1, y1, x2, y2 = self.rect
         self._picker.clear()
-        self._canvas.guide.register(x1, y1, x2, y2, "analytics")
 
         # If too little space, only draw button to expand
         if x2 - x1 <= 50:
@@ -3025,8 +3013,6 @@ class AnalyticsWidget(Widget):
                     self._canvas._prefer_show_analytics = True
                     self._canvas.on_resize()
                     self.update()
-                elif picked.action == "guide":
-                    self._canvas.guide.open()
                 elif picked.action == "report":
                     t1, t2 = self._canvas.range.get_range()
                     self._canvas.report_dialog.open(t1, t2, self.selected_tags)

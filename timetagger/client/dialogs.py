@@ -298,7 +298,6 @@ class DemoInfoDialog(BaseDialog):
         html = """
             <h1>Demo
                 <button type='button'>close <i class='fas'>\uf00d</i></button>
-                <button type='button'>guide <i class='fas'>\uf05a</i></button>
             </h1>
             <p>
             This demo shows 5 years of randomly generated time tracking data.
@@ -308,19 +307,9 @@ class DemoInfoDialog(BaseDialog):
         """
         self.maindiv.innerHTML = html
 
-        # guide_but = self.maindiv.children[-2]
-        # close_but1 = self.maindiv.children[-1]
-        close_but = self.maindiv.children[0].children[-2]
-        guide_but = self.maindiv.children[0].children[-1]
-
-        guide_but.onclick = self.close_and_show_guide
+        close_but = self.maindiv.children[0].children[-1]
         close_but.onclick = self.close
-        # close_but2.onclick = self.close
         super().open(None)
-
-    def close_and_show_guide(self):
-        self.close()
-        self._canvas.guide.open()
 
 
 class SandboxInfoDialog(BaseDialog):
@@ -367,7 +356,7 @@ class NotificationDialog(BaseDialog):
 
 
 class MenuDialog(BaseDialog):
-    """Dialog to show a popup menu in the demo and tracker."""
+    """Dialog to show a popup menu."""
 
     EXIT_ON_CLICK_OUTSIDE = True
 
@@ -432,8 +421,6 @@ class MenuDialog(BaseDialog):
 
         container = self.maindiv
         for icon, isvalid, title, func in [
-            ("\uf05a", store_valid, "Guide", self._show_guide),
-            # ("\uf15c", False, "Show report", self._open_report),
             ("\uf013", store_valid, "Settings", self._show_settings),
             ("\uf02c", store_valid, "Manage tags", self._manage_tags),
             ("\uf56f", store_valid, "Import", self._import),
@@ -459,10 +446,6 @@ class MenuDialog(BaseDialog):
     def _show_install_instructions(self):
         self.close()
         self._canvas.install_dialog.open()
-
-    def _show_guide(self):
-        self.close()
-        self._canvas.guide.open()
 
     def _open_report(self):
         self.close()
@@ -589,6 +572,8 @@ class TimeSelectionDialog(BaseDialog):
 
 
 class StartStopEdit:
+    """Helper class to allow the user to set the start and stop time of a record."""
+
     def __init__(self, node, callback, t1, t2):
         self.node = node
         self.callback = callback
@@ -956,8 +941,9 @@ class RecordDialog(BaseDialog):
 
         # Almost done
         super().open(callback)
-        # todo: detect/guess if this is desktop. If so, focus on ds!
-        # self._ds_input.focus()  # annoying on mobile
+        # Focus on ds if this looks like desktop; it's anoying on mobile
+        if window.innerWidth >= 800:
+            self._ds_input.focus()
 
     def _on_user_edit(self):
         self._query_tags()
@@ -978,7 +964,6 @@ class RecordDialog(BaseDialog):
     def _query_tags(self):
         """Get all current tags. If different, update suggestions. """
         tags, _ = utils.get_tags_and_parts_from_string(self._ds_input.value)
-        # todo: cache
         if len(tags) == 0:
             html = "No tags.<br><br>"
         else:
@@ -2170,120 +2155,3 @@ class InstallInstructionsDialog(BaseDialog):
         self._cancel_but.onclick = self.close
 
         super().open(callback)
-
-
-guide_items = [
-    """addrecord-button|Welcome to the TimeTagger guide!<br /><br />
-    Click &nbsp;<i class='fas'>\uf144</i>&nbsp; to start the timer,
-    and &nbsp;<i class='fas'>\uf055</i>&nbsp; to manually add a record.
-    """,
-    """nav-button|Use &nbsp;<i class='fas'>\uf073</i>&nbsp; to select a time range,
-    the arrow buttons to move forward/backward in time, and
-    &nbsp;<i class='fas'>\uf015</i>&nbsp; to snap to the current time.
-    """,
-    """records|The area on the left shows your time records.<br><br>
-    You can also navigate the timeline interactively:
-    <ul>
-    <li><b>Touch</b>: use swipe and pinch to pan and zoom.</li>
-    <li><b>Mouse</b>: use the left and right mouse buttons to pan and zoom.</li>
-    <li><b>Scroll</b>: use scroll to pan, hold shift while scrolling to zoom.</li>
-    <li><b>Keyboard</b>: use the up/down arrow keys to pan, left/right to zoom.</li>
-    </ul>
-    """,
-    """analytics|The area on the right shows an overview of your spent time.<br><br>
-    Click &nbsp;<i class='fas'>\uf15c</i>&nbsp; to generate a report.
-    """,
-    """.|<i class='fas'>\uf058</i> That's it. Enjoy TimeTagger!<br><br>
-    You can always access this guide via the menu, or checkout the
-    <a target='new' href='/support#app'>support page</a> for more info.
-    """,
-]
-
-
-def prep_for_instruction_movie():
-    guide_items[0] = guide_items[0].split("<br")[0]
-    guide_items[-1] += "<br><span style='font-size:80%;'>Music from bensound.com</span>"
-
-
-class GuideDialog(BaseDialog):
-    """An interactive user guide."""
-
-    MODAL = False
-
-    def __init__(self, canvas):
-        super().__init__(canvas)
-        self._regions = {}
-        self._highlighter = window.document.createElement("div")
-        self._highlighter.classList.add("guide-highlighter")
-        self._highlighter.style.display = "none"
-        document.getElementById("main-content").appendChild(self._highlighter)
-
-    def open(self, callback=None):
-
-        self.maindiv.innerHTML = f"""
-            <h1><i class='fas'>\uf05a</i> <span>Guide</span>
-                <button type='button'><i class='fas'>\uf00d</i></button>
-                <button type='button'><i class='fas'>\uf0da</i></button>
-                <button type='button'><i class='fas'>\uf0d9</i></button>
-            </h1>
-            <div class='guide-content'></div>
-            """
-
-        self._prev_but = self.maindiv.children[0].children[-1]
-        self._next_but = self.maindiv.children[0].children[-2]
-        self._cancel_but = self.maindiv.children[0].children[-3]
-
-        self._prev_but.onclick = self.show_prev
-        self._next_but.onclick = self.show_next
-        self._cancel_but.onclick = self.close
-
-        self._title_node = self.maindiv.children[0].children[-4]
-        self._content_node = self.maindiv.children[-1]
-
-        super().open(callback)
-        self.i = -1
-        self.show_next()
-
-    def clear(self):
-        self._regions = {}
-
-    def register(self, x1, y1, x2, y2, name):
-        """Register a region of interest for the guide."""
-        rect = self._regions.get(name, None)
-        if rect is not None:
-            x1 = min(rect[0], x1)
-            y1 = min(rect[1], y1)
-            x2 = max(rect[2], x2)
-            y2 = max(rect[3], y2)
-        self._regions[name] = x1, y1, x2, y2
-
-    def close(self, e=None):
-        super().close(e)
-        self.i = -1
-        self._highlighter.style.display = "none"
-
-    def show_prev(self):
-        self._show(self.i - 1)
-
-    def show_next(self):
-        self._show(self.i + 1)
-
-    def _show(self, i):
-
-        self.i = i = max(0, min(len(guide_items) - 1, i))
-
-        self._title_node.innerText = f"Guide {i+1}/{len(guide_items)}"
-
-        highlight, _, text = guide_items[self.i].partition("|")
-        self._content_node.innerHTML = text + "<br><br>"
-        # self._node.style.display = "block"
-
-        rect = self._regions[highlight.strip()] or None
-        if rect:
-            self._highlighter.style.left = rect[0] + "px"
-            self._highlighter.style.top = rect[1] + "px"
-            self._highlighter.style.width = rect[2] - rect[0] + "px"
-            self._highlighter.style.height = rect[3] - rect[1] + "px"
-            self._highlighter.style.display = "block"
-        else:
-            self._highlighter.style.display = "none"
