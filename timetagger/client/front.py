@@ -295,9 +295,9 @@ class TimeRange:
         # The animate variable is normally None. During animation, it is a tuple
         self._animate = None
 
-        # Init time
-        self._t1 = self._canvas.now() - 4 * 3600
-        self._t2 = self._t1 + 6 * 3600
+        # Init time to the current full day
+        self._t1 = dt.floor(self._canvas.now(), "1D")
+        self._t2 = dt.add(self._t1, "1D")
         self._t1, self._t2 = self.get_snap_range()  # snap non-animated
 
     def get_range(self):

@@ -1,6 +1,7 @@
 % TimeTagger - Demo
 % A live demo using simulated data.
 
+
 <script src='utils.js'></script>
 <script src='dt.js'></script>
 <script src='stores.js'></script>
@@ -11,6 +12,11 @@
 
 
 <script>
+
+// Uncomment to run demo at a specific moment in time, nice for making screenshots
+// var demodeltatime = dt.now() - new Date("2001-01-07 16:15").getTime() / 1000;
+// dt.now = function() { return new Date().getTime() / 1000 - demodeltatime};
+
 window.addEventListener("load", function() {
     if (!window.browser_supported) {return;}
     window.store = new window.stores.DemoDataStore();

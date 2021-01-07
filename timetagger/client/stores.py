@@ -1027,13 +1027,8 @@ class DemoDataStore(BaseDataStore):
                 # Is this date ok?
                 if this_is_js():  # pragma: no cover
                     weekday = Date(f"{sy}-{sm}-{sd}").getDay()  # 0 is Sunday
-                    if (
-                        window.demodeltatime
-                        and y == nowyear
-                        and m == nowmonth
-                        and d == nowday
-                    ):
-                        # Reproducable demo data, e.g. for making screenshots
+                    # Put some predictable stuff on today, whatever day it is.
+                    if y == nowyear and m == nowmonth and d == nowday:
                         for start, stop, tag in [
                             ("08:51", "10:19", "#client1 #code"),
                             ("10:19", "10:52", "#client1 #design"),

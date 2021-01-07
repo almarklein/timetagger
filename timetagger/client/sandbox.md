@@ -1,6 +1,7 @@
 % TimeTagger - Sandbox
 % An empty app, not connected to the server, to try things out.
 
+
 <script src='utils.js'></script>
 <script src='dt.js'></script>
 <script src='stores.js'></script>
