@@ -84,7 +84,6 @@ class TimeTaggerCanvas(BaseCanvas):
         self.range = TimeRange(self)
 
         self.notification_dialog = dialogs.NotificationDialog(self)
-        self.guide = dialogs.GuideDialog(self)
         self.menu_dialog = dialogs.MenuDialog(self)
         self.timeselection_dialog = dialogs.TimeSelectionDialog(self)
         self.settings_dialog = dialogs.SettingsDialog(self)
@@ -173,8 +172,6 @@ class TimeTaggerCanvas(BaseCanvas):
         FONT.default = FONT.condensed if self.w < 600 else FONT.wide
 
     def on_draw(self, ctx):
-
-        self.guide.clear()
 
         # Set current moment as consistent reference for "now"
         self._now = dt.now()
@@ -1018,9 +1015,6 @@ class TopWidget(Widget):
         w = h = BUTTON_RADIUS * 2
         self._picker.register(x - cm, y - cm, x + w + cm, y + h + cm, ob)
         self._canvas.register_tooltip(x, y, x + w, y + h, help)
-        self._canvas.guide.register(
-            x, y, x + w, y + h, action.split("_")[0] + "-button"
-        )
         # Draw it
         return self._draw_button_noreg(ctx, x1, y1, text, action, help, tcolor)
 
@@ -1201,7 +1195,6 @@ class RecordsWidget(Widget):
     def on_draw(self, ctx):
         x1, y1, x2, y2 = self.rect
         self._picker.clear()
-        self._canvas.guide.register(x1, y1, x2, y2, "records")
 
         # If too little space, only draw button to expand
         if x2 - x1 <= 50:
@@ -2437,7 +2430,6 @@ class AnalyticsWidget(Widget):
 
         x1, y1, x2, y2 = self.rect
         self._picker.clear()
-        self._canvas.guide.register(x1, y1, x2, y2, "analytics")
 
         # If too little space, only draw button to expand
         if x2 - x1 <= 50:
@@ -3021,8 +3013,6 @@ class AnalyticsWidget(Widget):
                     self._canvas._prefer_show_analytics = True
                     self._canvas.on_resize()
                     self.update()
-                elif picked.action == "guide":
-                    self._canvas.guide.open()
                 elif picked.action == "report":
                     t1, t2 = self._canvas.range.get_range()
                     self._canvas.report_dialog.open(t1, t2, self.selected_tags)

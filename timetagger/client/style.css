@@ -435,36 +435,3 @@ main a.ctabutton:hover {
 @media screen and (min-width: 800px) { .dialog table {
         font-size: 100%;
 }}
-
-.guide-content {
-    padding: 1em;
-}
-.guide-subtitle {
-    box-sizing: border-box;
-    user-select: none;
-    -moz-user-select: none;
-    position: absolute;
-    bottom: 0.5em;
-    height: 3em;
-    left: 5%;
-    width: 90%;
-    border-radius: 8px;
-    padding: 0.4em;
-    background: rgba(0, 0, 0, 0.9);
-    color: #fff;
-    font-size: 80%;
-    text-align: center;
-}
-@media screen and (min-width: 400px) {.guide-subtitle {
-        font-size: 95%;
-}}
-@media screen and (min-width: 800px) {.guide-subtitle {
-        left: calc(50% - 250px);
-        width: 500px;
-        font-size: 130%;
-}}
-.guide-highlighter {
-    position: absolute;
-    box-shadow: 0 0 10px 10px rgba(244,191,62, 0.7);
-    pointer-events: none;
-}
