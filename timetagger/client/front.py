@@ -124,7 +124,6 @@ class TimeTaggerCanvas(BaseCanvas):
         set_colors()
 
         self._now = None
-        self._saturation = 0.9
         self._show_stopwatch = True
 
         self._last_picked_widget = None
@@ -170,9 +169,6 @@ class TimeTaggerCanvas(BaseCanvas):
         if self._now is not None:
             return self._now
         return dt.now()
-
-    def color_from_hue(self, hue, alpha=1, lightness=0.7):
-        return utils.color_from_hue(hue, alpha, lightness, self._saturation)
 
     def on_resize(self):
         """Perform layout; set sizes of widgets. We can go all responsive here."""
@@ -227,9 +223,6 @@ class TimeTaggerCanvas(BaseCanvas):
         self._now = dt.now()
 
         # Also determine current settings
-        prsat = window.store.settings.get_by_key("prsat")
-        if prsat is not None:
-            self._saturation = prsat.get("value", 0.75)
         ob = window.store.settings.get_by_key("stopwatch")
         if ob is not None:
             self._show_stopwatch = ob.get("value", True)
