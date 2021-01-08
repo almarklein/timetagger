@@ -365,7 +365,7 @@ class MenuDialog(BaseDialog):
 
         # Put the menu right next to the menu button
         self.maindiv.style.top = "5px"
-        self.maindiv.style.left = "40px"
+        self.maindiv.style.left = "50px"
 
         self.maindiv.innerHTML = f"""
             <div class='loggedinas'></div>
@@ -894,6 +894,7 @@ class RecordDialog(BaseDialog):
             </h1>
             <h2><i class='fas'>\uf305</i> Description</h2>
             <input type="text" class="dode12" placeholder='{dstext}' />
+            <div style='color:#777;'></div>
             <h2><i class='fas'>\uf292</i> Tags</h2>
             <div></div>
             <h2><i class='fas'>\uf017</i> Time</h2>
@@ -906,8 +907,9 @@ class RecordDialog(BaseDialog):
             _,  # Dialog title
             _,  # Description header
             self._ds_input,
+            self._tag_suggestions_div,
             _,  # Tags header
-            self._tag_suggestions,
+            self._tags_div,
             _,  # Time header
             self._time_node,
             self._footer,
@@ -965,17 +967,21 @@ class RecordDialog(BaseDialog):
         """Get all current tags. If different, update suggestions. """
         tags, _ = utils.get_tags_and_parts_from_string(self._ds_input.value)
         if len(tags) == 0:
-            html = "No tags.<br><br>"
+            tags_html = "No tags."
         else:
-            html = "&nbsp; &nbsp;".join(tags) + "<br><br>"
+            tags_list = [f"<span style='color:#E37108'>{t}</span>" for t in tags]
+            tags_html = "&nbsp; &nbsp;".join(tags_list)
         if self._suggested_tags_html:
-            tags_html = self._suggested_tags_html.copy()
+            suggested_dict = self._suggested_tags_html.copy()
             for tag in tags:
-                tags_html.pop(tag, None)
-            html += "Suggestions:<br>" + "&nbsp; &nbsp;".join(tags_html.values())
+                suggested_dict.pop(tag, None)
+            suggested_list = suggested_dict.values()[:6]
+            suggested_html = "Suggested tags:&nbsp; &nbsp;"
+            suggested_html += "&nbsp; &nbsp;".join(suggested_list)
         else:
-            html += "Use e.g. '&#35;meeting' to add one or more tags."
-        self._tag_suggestions.innerHTML = html
+            suggested_html += "Use e.g. '&#35;meeting' to add one or more tags."
+        self._tag_suggestions_div.innerHTML = suggested_html
+        self._tags_div.innerHTML = tags_html
 
     def _record_dialog_add_tag(self, tag):
         self._ds_input.value = self._ds_input.value.rstrip() + " " + tag
@@ -995,7 +1001,7 @@ class RecordDialog(BaseDialog):
         window.store.records.put(self._record)
         super().submit(self._record)
 
-    def _get_suggested_tags(self, max_suggestions=8):
+    def _get_suggested_tags(self, max_suggestions=16):
         # Get history of records
         t2 = dt.now()
         t1 = t2 - 12 * 7 * 24 * 3600  # 12 weeks, about a quarter year
@@ -1019,9 +1025,8 @@ class RecordDialog(BaseDialog):
         # Turn into html
         html_parts = {}
         for tag in tag_names:
-            color = "initial"
             x = f"<a onclick='window._record_dialog_add_tag(\"{tag}\")' "
-            x += f"style='cursor:pointer; color: {color}'"
+            x += f"style='cursor:pointer;'"
             x += ">" + tag + "</a>"
             html_parts[tag] = x
         return html_parts

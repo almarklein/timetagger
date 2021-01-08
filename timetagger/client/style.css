@@ -165,7 +165,7 @@ main a.ctabutton:hover {
     padding: 0.5em;
 }
 body.darkmode .dialog.verticalmenu {
-    background: #C3C8CA;
+    background: #D3D8DA;
 }
 .dialog.verticalmenu .loggedinas {
     text-align: center;
@@ -305,7 +305,7 @@ body.darkmode .tooltipdiv {
 }
 .dialog h2 {
     font-size: 1.1em;
-    margin-top: 10px;
+    margin-top: 20px;
     user-select: none;
     -moz-user-select: none;
 }
@@ -380,7 +380,7 @@ body.darkmode .tooltipdiv {
 }
 
 body.darkmode .dialog {
-    background: #C3C8CA;
+    background: #D3D8DA;
     border-color: #31383F
 }
 body.darkmode .dialog h1, body.darkmode .dialog .info {

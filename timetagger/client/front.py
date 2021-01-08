@@ -784,7 +784,7 @@ class TopWidget(Widget):
 
         # Draw indicator icon - rotating when syncing
         M = dict(
-            pending="\uf055",  # uf067 uf055
+            pending="\uf067",  # uf067 uf055
             sync="\uf2f1",
             ok="\uf00c",
             warn="\uf12a",
