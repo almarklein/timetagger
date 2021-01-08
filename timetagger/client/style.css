@@ -58,19 +58,19 @@ p {
 }
 
 a:link, a:visited, a:active {
-    color: #765A0F;
+    color: #0B99DD;
     text-decoration: none;
 }
 p a:link, p a:visited, p a:active, li a:link, li a:visited, li a:active {
     text-decoration: none;
 }
 a:hover, p a:hover {
-    color: #B48B1C;
+    color: #0B99DD;
     text-decoration: underline;
 }
 
 h1, h2, h3, h4 {
-    color: #2399DA;
+    color: #E37108;
 }
 h1 {
     color: #000;
@@ -131,7 +131,7 @@ main a.ctabutton {
     display: inline-block;
     border: none;
     border-radius: 4px;
-    background: #2399DA;
+    background: #0B99DD;
     color: #fff;
     padding: 1em;
     box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.4);
@@ -155,14 +155,17 @@ main a.ctabutton:hover {
 .verticalmenu a, .dialog.verticalmenu .loggedinas {
     user-select: none;
     -moz-user-select: none;
+    color: #222;
     display: block;
     box-sizing: border-box;
-    color: #222;
     border: 1px solid #bbb;
     margin: 0;
     margin-top: -1px;
     margin-left: -1px;
     padding: 0.5em;
+}
+body.darkmode .dialog.verticalmenu {
+    background: #D3D8DA;
 }
 .dialog.verticalmenu .loggedinas {
     text-align: center;
@@ -211,6 +214,11 @@ main a.ctabutton:hover {
     box-shadow: 2px 4px 8px rgba(0, 0, 0, 0.25);
     transition: opacity 0.2s, left 0.2s, right 0.2s;
 }
+body.darkmode .tooltipdiv {
+    background: #363B42;
+    color: #ddd;
+    border-color: #000;
+}
 
 /**************** Dialogs ****************/
 
@@ -247,7 +255,7 @@ main a.ctabutton:hover {
     box-sizing: border-box;
     outline: none;
     background: #fff;
-    border: 6px solid #333333;
+    border: 6px solid #31383F;
     position: absolute;
     left: 5%;
     right: 5%;
@@ -289,7 +297,7 @@ main a.ctabutton:hover {
     padding-bottom: 0;
     line-height: 150%;
     font-size: 1.2em;
-    background: #333333;
+    background: #31383F;
     color: #fff;
 }
 .dialog h1 > i.fas {
@@ -297,12 +305,12 @@ main a.ctabutton:hover {
 }
 .dialog h2 {
     font-size: 1.1em;
-    margin-top: 10px;
+    margin-top: 20px;
     user-select: none;
     -moz-user-select: none;
 }
 .dialog .info {
-    background: #333333;
+    background: #31383F;
     margin: 0;
     padding-top: 2px;
     color: #ccc;
@@ -371,6 +379,15 @@ main a.ctabutton:hover {
     background: none;
 }
 
+body.darkmode .dialog {
+    background: #D3D8DA;
+    border-color: #31383F
+}
+body.darkmode .dialog h1, body.darkmode .dialog .info {
+    background: #31383F;
+    border-color: #31383F
+}
+
 
 /* --- dialog table --- */
 
@@ -395,7 +412,6 @@ main a.ctabutton:hover {
     border-bottom: 1px solid #aaa;
 }
 .dialog table.darkheaders th {
-   background: rgb(220,220,220);
    color: #000;
    font-weight: bold;
    border: none;
@@ -435,3 +451,16 @@ main a.ctabutton:hover {
 @media screen and (min-width: 800px) { .dialog table {
         font-size: 100%;
 }}
+
+body.darkmode .dialog table th {
+    background-color: rgb(140,145,149);
+}
+body.darkmode .dialog table tr {
+    background-color: rgb(170,175,179);
+}
+body.darkmode .dialog table tr:nth-child(even) {
+    background-color: rgb(160,165,169);
+}
+body.darkmode .dialog table tr.blank_row {
+    background-color: initial;
+}

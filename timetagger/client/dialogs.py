@@ -365,7 +365,7 @@ class MenuDialog(BaseDialog):
 
         # Put the menu right next to the menu button
         self.maindiv.style.top = "5px"
-        self.maindiv.style.left = "40px"
+        self.maindiv.style.left = "50px"
 
         self.maindiv.innerHTML = f"""
             <div class='loggedinas'></div>
@@ -894,6 +894,7 @@ class RecordDialog(BaseDialog):
             </h1>
             <h2><i class='fas'>\uf305</i> Description</h2>
             <input type="text" class="dode12" placeholder='{dstext}' />
+            <div style='color:#777;'></div>
             <h2><i class='fas'>\uf292</i> Tags</h2>
             <div></div>
             <h2><i class='fas'>\uf017</i> Time</h2>
@@ -906,8 +907,9 @@ class RecordDialog(BaseDialog):
             _,  # Dialog title
             _,  # Description header
             self._ds_input,
+            self._tag_suggestions_div,
             _,  # Tags header
-            self._tag_suggestions,
+            self._tags_div,
             _,  # Time header
             self._time_node,
             self._footer,
@@ -965,17 +967,21 @@ class RecordDialog(BaseDialog):
         """Get all current tags. If different, update suggestions. """
         tags, _ = utils.get_tags_and_parts_from_string(self._ds_input.value)
         if len(tags) == 0:
-            html = "No tags.<br><br>"
+            tags_html = "No tags."
         else:
-            html = "&nbsp; &nbsp;".join(tags) + "<br><br>"
+            tags_list = [f"<span style='color:#E37108'>{t}</span>" for t in tags]
+            tags_html = "&nbsp; &nbsp;".join(tags_list)
         if self._suggested_tags_html:
-            tags_html = self._suggested_tags_html.copy()
+            suggested_dict = self._suggested_tags_html.copy()
             for tag in tags:
-                tags_html.pop(tag, None)
-            html += "Suggestions:<br>" + "&nbsp; &nbsp;".join(tags_html.values())
+                suggested_dict.pop(tag, None)
+            suggested_list = suggested_dict.values()[:6]
+            suggested_html = "Suggested tags:&nbsp; &nbsp;"
+            suggested_html += "&nbsp; &nbsp;".join(suggested_list)
         else:
-            html += "Use e.g. '&#35;meeting' to add one or more tags."
-        self._tag_suggestions.innerHTML = html
+            suggested_html = "Use e.g. '&#35;meeting' to add one or more tags."
+        self._tag_suggestions_div.innerHTML = suggested_html
+        self._tags_div.innerHTML = tags_html
 
     def _record_dialog_add_tag(self, tag):
         self._ds_input.value = self._ds_input.value.rstrip() + " " + tag
@@ -995,7 +1001,7 @@ class RecordDialog(BaseDialog):
         window.store.records.put(self._record)
         super().submit(self._record)
 
-    def _get_suggested_tags(self, max_suggestions=8):
+    def _get_suggested_tags(self, max_suggestions=16):
         # Get history of records
         t2 = dt.now()
         t1 = t2 - 12 * 7 * 24 * 3600  # 12 weeks, about a quarter year
@@ -1019,10 +1025,8 @@ class RecordDialog(BaseDialog):
         # Turn into html
         html_parts = {}
         for tag in tag_names:
-            hue = window.utils.hue_from_name(tag)
-            color = self._canvas.color_from_hue(hue, 1.0, 0.5)
             x = f"<a onclick='window._record_dialog_add_tag(\"{tag}\")' "
-            x += f"style='cursor:pointer; color: {color}'"
+            x += f"style='cursor:pointer;'"
             x += ">" + tag + "</a>"
             html_parts[tag] = x
         return html_parts
@@ -2081,10 +2085,14 @@ class SettingsDialog(BaseDialog):
             <h1><i class='fas'>\uf013</i> Settings
                 <button type='button'><i class='fas'>\uf00d</i></button>
             </h1>
-            <h2>Tag colors</h2>
-            <label>
-                <input type='range' min='0' max='1' step='0.001' value='0.75'></input>
-                saturation</label>
+            <h2>Time zone</h2>
+            <p></p>
+            <h2>Dark mode</h2>
+            <select style='margin: 0.6em;'>
+                <option value=0>Auto detect</option>
+                <option value=1>Light mode</option>
+                <option value=2>Dark mode</option>
+            </select>
             <h2>Show stopwatch of running record</h2>
             <label>
                 <input type='checkbox' checked='true'></input>
@@ -2093,17 +2101,31 @@ class SettingsDialog(BaseDialog):
             """
 
         self.maindiv.innerHTML = html
-
         self._close_but = self.maindiv.children[0].children[-1]
         self._close_but.onclick = self.close
+        (
+            _,  # Dialog title
+            _,  # Timezone header
+            self._timezone_div,
+            _,  # Darmode header
+            self._darkmode_select,
+            _,  # Stopwatch header
+            self._stopwatch_label,
+        ) = self.maindiv.children
 
-        self._saturation_slider = self.maindiv.children[2].children[0]
-        self._saturation_slider.onchange = self._on_saturaration_slider
-        ob = window.store.settings.get_by_key("prsat")
-        if ob is not None:
-            self._saturation_slider.value = ob.get("value", 0.75)
+        # Set timezone info
+        offset, offset_winter, offset_summer = dt.get_timezone_info(dt.now())
+        s = f"UTC{offset:+0.2g}  /  GMT{offset_winter:+0.2g}"
+        s += " summertime" if offset == offset_summer else " wintertime"
+        self._timezone_div.innerText = s
 
-        self._stopwatch_check = self.maindiv.children[4].children[0]
+        # Darkmode
+        self._darkmode_select.onchange = self._on_darkmode_change
+        ob = window.store.settings.get_by_key("darkmode")
+        self._darkmode_select.value = 0 if ob is None else ob.value
+
+        # Stopwatch
+        self._stopwatch_check = self._stopwatch_label.children[0]
         self._stopwatch_check.onchange = self._on_stopwatch_check
         ob = window.store.settings.get_by_key("stopwatch")
         if ob is not None:
@@ -2111,12 +2133,13 @@ class SettingsDialog(BaseDialog):
 
         super().open(callback)
 
-    def _on_saturaration_slider(self):
-        saturation = self._saturation_slider.value
-        saturation = min(1, max(0, float(saturation)))
-        if window.isFinite(saturation):
-            ob = window.store.settings.create("prsat", saturation)
-            window.store.settings.put(ob)
+    def _on_darkmode_change(self):
+        window.select = self._darkmode_select
+        mode = int(self._darkmode_select.value)
+        ob = window.store.settings.create("darkmode", mode)
+        window.store.settings.put(ob)
+        if window.front:
+            window.front.set_colors()
 
     def _on_stopwatch_check(self):
         stopwatch = bool(self._stopwatch_check.checked)

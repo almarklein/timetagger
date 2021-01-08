@@ -35,35 +35,83 @@ FONT = {
 
 # Also see e.g. https://www.canva.com/colors/color-wheel/
 def set_colors():
-    # Use rgba so that the color can be re-used with different alpha
-    COLORS.background1 = "rgba(252, 252, 252, 1)"
-    COLORS.background2 = "rgba(255, 255, 255, 1)"
 
-    COLORS.button_text = "rgb(0, 0, 0)"
-    COLORS.button_subtext = "rgb(150, 150, 150)"
-    COLORS.button_bg = "rgb(240, 240, 240)"
-    COLORS.button_bg_hl = "rgb(255, 255, 255)"
+    # Unaffected by dark mode
+    COLORS.background3 = "rgb(22, 27, 34)"  # of the top
+    COLORS.header_text = "rgb(250, 250, 250)"
+    COLORS.tag = utils.color_from_hue(30, 1, 0.6, 0.99)
 
-    COLORS.header_text = "rgb(25, 25, 25)"
-    COLORS.subtle_day_text = "rgba(25, 25, 25, 0.2)"
-    COLORS.help_text = "rgb(25, 25, 25)"
+    COLORS.button_text = "#4085F0"  # utils.color_from_hue(240, 1, 0.6, 0.99)
+    COLORS.button_text_disabled = "#555"
+    COLORS.button_title = "rgb(150, 150, 150)"
+    COLORS.button_bg1 = "rgb(16, 16, 16)"
+    COLORS.button_bg2 = "rgb(45, 45, 45)"
 
-    COLORS.tick_text = "rgb(100, 100, 100)"
-    COLORS.tick_stripe1 = "rgba(25, 25, 25, 0.35)"  # day
-    COLORS.tick_stripe2 = "rgba(25, 25, 25, 0.25)"  # major
-    COLORS.tick_stripe3 = "rgba(25, 25, 25, 0.1)"  # minor
-    COLORS.record_divider = "rgba(25, 25, 25, 0.5)"
+    # Grays chosen to work in both light and dark mode
+    COLORS.tick_text = "rgba(130, 130, 130, 1)"
+    COLORS.tick_stripe1 = "rgba(130, 130, 130, 0.6)"  # day
+    COLORS.tick_stripe2 = "rgba(130, 130, 130, 0.3)"  # major
+    COLORS.tick_stripe3 = "rgba(130, 130, 130, 0.08)"  # minor
 
-    COLORS.record_bg = "rgb(247, 247, 247)"
-    COLORS.record_text = "rgb(25, 25, 25)"
+    COLORS.record_between = "rgba(130, 130, 130, 0.1)"
+    COLORS.record_subtle_stripes = "rgba(130, 130, 130, 0.025)"
 
-    bg3 = "rgb(255, 255, 255)"
-    bg4 = "rgb(245, 245, 245)"
-    window.document.body.style.background = f"linear-gradient(to bottom,{bg3},{bg4})"
+    # Dark vs light mode
+    mode = 0
+    if window.store and window.store.settings:
+        ob = window.store.settings.get_by_key("darkmode")
+        if ob is not None:
+            mode = ob.value
+    if mode == 1:
+        dark = False
+    elif mode == 2:
+        dark = True
+    else:
+        dark = False
+        if window.matchMedia:
+            if window.matchMedia("(prefers-color-scheme: dark)").matches:
+                dark = True
+
+    if dark:
+
+        # App background (use rgba so the color can be re-used with different alpha)
+        COLORS.background1 = "rgba(13, 17, 23, 1)"
+        COLORS.background2 = "rgba(3, 7, 13, 1)"
+
+        COLORS.record_bg = "rgb(50, 55, 62)"
+        COLORS.record_text = "rgb(190, 190, 190)"
+        COLORS.record_shadow = "rgba(0, 0, 0, 0.4)"
+        COLORS.record_timeline_bg = "rgba(80, 80, 80, 0.7)"
+        COLORS.record_timeline_edge = "rgb(75, 75, 75)"
+
+        window.document.body.classList.add("darkmode")
+        window.document.body.style.background = "rgb(0, 0, 0)"
+
+    else:
+
+        # App background (use rgba so the color can be re-used with different alpha)
+        COLORS.background1 = "rgba(252, 252, 252, 1)"
+        COLORS.background2 = "rgba(255, 255, 255, 1)"
+
+        COLORS.record_bg = "rgb(247, 247, 247)"
+        COLORS.record_text = "rgb(25, 25, 25)"
+        COLORS.record_shadow = "rgba(0, 0, 0, 0.4)"
+        COLORS.record_timeline_bg = "rgba(185, 185, 185, 0.7)"
+        COLORS.record_timeline_edge = "rgb(195, 195, 195)"
+
+        window.document.body.classList.remove("darkmode")
+        bg3, bg4 = "rgb(255, 255, 255)", "rgb(245, 245, 245)"
+        window.document.body.style.background = (
+            f"linear-gradient(to bottom,{bg3},{bg4})"
+        )
 
 
 # Init colors
 set_colors()
+if window.matchMedia:
+    window.matchMedia("(prefers-color-scheme: dark)").addEventListener(
+        "change", set_colors
+    )
 
 
 class TimeTaggerCanvas(BaseCanvas):
@@ -74,8 +122,9 @@ class TimeTaggerCanvas(BaseCanvas):
     def __init__(self, canvas):
         super().__init__(canvas)
 
+        set_colors()
+
         self._now = None
-        self._saturation = 0.9
         self._show_stopwatch = True
 
         self._last_picked_widget = None
@@ -122,9 +171,6 @@ class TimeTaggerCanvas(BaseCanvas):
             return self._now
         return dt.now()
 
-    def color_from_hue(self, hue, alpha=1, lightness=0.7):
-        return utils.color_from_hue(hue, alpha, lightness, self._saturation)
-
     def on_resize(self):
         """Perform layout; set sizes of widgets. We can go all responsive here."""
 
@@ -156,12 +202,13 @@ class TimeTaggerCanvas(BaseCanvas):
         x4 = self.grid_round(x4)
 
         y0 = 0
-        y1 = self.grid_round(96)
-        y2 = self.grid_round(self.h - 15)
+        y1 = self.grid_round(60)
+        y2 = self.grid_round(96)
+        y3 = self.grid_round(self.h - 15)
 
         self.widgets["TopWidget"].rect = x0, y0, x5, y1
-        self.widgets["RecordsWidget"].rect = x1, y1, x2, y2
-        self.widgets["AnalyticsWidget"].rect = x3, y1, x4, y2
+        self.widgets["RecordsWidget"].rect = x1, y2, x2, y3
+        self.widgets["AnalyticsWidget"].rect = x3, y2, x4, y3
 
         # Allocate space for fading in/out
         self.future_pixels = self.grid_round(60)
@@ -177,9 +224,6 @@ class TimeTaggerCanvas(BaseCanvas):
         self._now = dt.now()
 
         # Also determine current settings
-        prsat = window.store.settings.get_by_key("prsat")
-        if prsat is not None:
-            self._saturation = prsat.get("value", 0.75)
         ob = window.store.settings.get_by_key("stopwatch")
         if ob is not None:
             self._show_stopwatch = ob.get("value", True)
@@ -195,7 +239,7 @@ class TimeTaggerCanvas(BaseCanvas):
             # We need to be logged in, but we are not
             ctx.textAlign = "center"
             ctx.textBaseline = "middle"
-            ctx.fillStyle = "#000"
+            ctx.fillStyle = COLORS.tick_text
             text = "You need to login to use the TimeTagger app."
             utils.fit_font_size(ctx, self.w - 100, FONT.default, text, 30)
             ctx.fillText(text, self.w / 2, self.h / 2)
@@ -625,12 +669,15 @@ class TopWidget(Widget):
         self._button_pressed = None
         self._sync_feedback_xy = 0, 0
         window.setInterval(self._draw_sync_feedback_callback, 100)
-        self._top_offset = 16
+        self._top_offset = 20
 
     def on_draw(self, ctx, menu_only=False):
 
         self._picker.clear()
         x1, y1, x2, y2 = self.rect
+
+        ctx.fillStyle = COLORS.background3
+        ctx.fillRect(x1, y1, x2 - x1, y2 - y1)
 
         header_text_width = (x2 - x1) / 3
         self._margin = margin = self._canvas.grid_round(max(2, (x2 - x1) / 30))
@@ -657,15 +704,6 @@ class TopWidget(Widget):
 
             self._draw_header_text(ctx, x, y1, x2, y2)
 
-        # A subtle line below all buttons
-        ctx.lineStyle = COLORS.button_bg
-        ctx.lineWidth = 2
-        ctx.beginPath()
-        y = y1 + 2 * BUTTON_RADIUS + self._top_offset + 8
-        ctx.moveTo(x1 + 4, y)
-        ctx.lineTo(x - x1, y)
-        ctx.stroke()
-
     def _draw_menu_button(self, ctx, x1, y1, x2, y2):
 
         # Get user initials, demo, or user
@@ -691,8 +729,8 @@ class TopWidget(Widget):
         ctx.textAlign = "center"
         ctx.textBaseline = "top"
         ctx.font = "12px " + FONT.condensed
-        ctx.fillStyle = COLORS.button_subtext
-        ctx.fillText(text, (x1 + x) / 2, y1 + 1)
+        ctx.fillStyle = COLORS.button_title
+        ctx.fillText(text, (x1 + x) / 2, y1 + 5)
 
         return x - x1
 
@@ -727,26 +765,26 @@ class TopWidget(Widget):
         ctx.arc(x + w - rn, y + h - rn, rn, 0.0 * PI, 0.5 * PI)
         ctx.arc(x + rn, y + h - rn, rn, 0.5 * PI, 1.0 * PI)
         ctx.closePath()
-        ctx.fillStyle = COLORS.background1
+        ctx.fillStyle = COLORS.background3
         ctx.fill()
-        ctx.strokeStyle = COLORS.button_bg
+        ctx.strokeStyle = COLORS.button_bg1
         ctx.lineWidth = self._canvas.grid_round(1)
         ctx.stroke()
 
         # Draw progress
-        yo = (h - 2 * rn) * (1 - factor)
+        yo = (h - 2 * rn) * (factor)
         ctx.beginPath()
-        ctx.arc(x + rn, y + rn + yo, rn, 1.0 * PI, 1.5 * PI)
-        ctx.arc(x + w - rn, y + rn + yo, rn, 1.5 * PI, 2.0 * PI)
-        ctx.arc(x + w - rn, y + h - rn, rn, 0.0 * PI, 0.5 * PI)
-        ctx.arc(x + rn, y + h - rn, rn, 0.5 * PI, 1.0 * PI)
+        ctx.arc(x + rn, y + rn, rn, 1.0 * PI, 1.5 * PI)
+        ctx.arc(x + w - rn, y + rn, rn, 1.5 * PI, 2.0 * PI)
+        ctx.arc(x + w - rn, y + yo - rn, rn, 0.0 * PI, 0.5 * PI)
+        ctx.arc(x + rn, y + yo - rn, rn, 0.5 * PI, 1.0 * PI)
         ctx.closePath()
-        ctx.fillStyle = COLORS.button_bg
+        ctx.fillStyle = COLORS.button_bg2
         ctx.fill()
 
         # Draw indicator icon - rotating when syncing
         M = dict(
-            pending="\uf055",  # uf067 uf055
+            pending="\uf067",  # uf067 uf055
             sync="\uf2f1",
             ok="\uf00c",
             warn="\uf12a",
@@ -763,7 +801,7 @@ class TopWidget(Widget):
                 ctx.font = int(0.25 * h) + "px FontAwesome"
                 ctx.textBaseline = "middle"
                 ctx.textAlign = "center"
-                ctx.fillStyle = COLORS.header_text  # COLORS.button_text
+                ctx.fillStyle = COLORS.button_text
                 ctx.fillText(text, 0, 0)
             finally:
                 ctx.restore()
@@ -811,14 +849,14 @@ class TopWidget(Widget):
         # Draw summary text
         ctx.textBaseline = "top"
         ctx.font = "12px " + FONT.condensed
-        ctx.fillStyle = COLORS.button_subtext
+        ctx.fillStyle = COLORS.button_title
         #
         if startstop_summary and self._canvas._show_stopwatch:
             ctx.textAlign = "right"
-            ctx.fillText(startstop_summary, x, y1 + 1, x - x1)
+            ctx.fillText(startstop_summary, x, y1 + 5, x - x1)
         else:
             ctx.textAlign = "center"
-            ctx.fillText("Record", (x1 + x) / 2, y1 + 1, x - x1)
+            ctx.fillText("Record", (x1 + x) / 2, y1 + 5, x - x1)
 
         return x - x1
 
@@ -847,7 +885,7 @@ class TopWidget(Widget):
         if len(now_scale):
             t1_now = dt.floor(now, now_scale)
             if t1 == t1_now and t2 == dt.add(t1_now, now_scale):
-                now_clr = "#AAA"
+                now_clr = COLORS.button_text_disabled
 
         # Get where we should zoom in to
         # Use a margin for summer-winter transitions and leap days/secs.
@@ -924,9 +962,9 @@ class TopWidget(Widget):
         # Draw summary text
         ctx.textBaseline = "top"
         ctx.font = "12px " + FONT.condensed
-        ctx.fillStyle = COLORS.button_subtext
+        ctx.fillStyle = COLORS.button_title
         ctx.textAlign = "center"
-        ctx.fillText("Navigate", (x1 + x) / 2, y1 + 1, x - x1)
+        ctx.fillText("Navigate", (x1 + x) / 2, y1 + 5, x - x1)
 
         return x - x1  # return the width
 
@@ -938,31 +976,19 @@ class TopWidget(Widget):
         ctx.textAlign = "center"
         ctx.textBaseline = "top"
         ctx.font = "12px " + FONT.condensed
-        ctx.fillStyle = COLORS.button_subtext
-        ctx.fillText("Report", (x1 + x) / 2, y1 + 1)
+        ctx.fillStyle = COLORS.button_title
+        ctx.fillText("Report", (x1 + x) / 2, y1 + 5)
 
         return x - x1
 
     def _draw_header_text(self, ctx, x1, y1, x2, y2):
 
         header = self._canvas.range.get_context_header() + " "  # margin
-        now = self._canvas.now()
         t1, t2 = self._canvas.range.get_range()
 
         x3 = x1 + (x2 - x1) / 3
         x4 = x2
         tick_widget_in_use = self._canvas.widgets.RecordsWidget._pointer_pos  # noqa
-
-        if tick_widget_in_use:
-            # Draw time zone info
-            offset, offset_winter, offset_summer = dt.get_timezone_info(now)
-            ctx.font = "12px " + FONT.default
-            ctx.textAlign = "right"
-            ctx.textBaseline = "bottom"
-            ctx.fillStyle = "rgba(0, 0, 0, 0.25)"
-            s = f"UTC{offset:+0.2g}  /  GMT{offset_winter:+0.2g}"
-            s += " summertime" if offset == offset_summer else " wintertime"
-            ctx.fillText(s, x4, self._canvas.h - 4)
 
         if True:  # not tick_widget_in_use:
             # Draw header
@@ -974,7 +1000,7 @@ class TopWidget(Widget):
             if size < 30 and "  " in header:
                 # Use two lines
                 text1, text2 = header.split("  ", 1)
-                size = utils.fit_font_size(ctx, x4 - x3, FONT.default, text2, 30)
+                size = utils.fit_font_size(ctx, x4 - x3, FONT.default, text2, 25)
                 ctx.fillText(text1 + " ", x4, y1 + 5)
                 ctx.fillText(text2, x4, y1 + 5 + 30)
             else:
@@ -1030,8 +1056,8 @@ class TopWidget(Widget):
     ):
         PSCRIPT_OVERLOAD = False  # noqa
         tcolor = tcolor or COLORS.button_text
-        bgcolor1 = COLORS.button_bg
-        bgcolor2 = COLORS.button_bg_hl
+        bgcolor1 = COLORS.button_bg1
+        bgcolor2 = COLORS.button_bg2
         x, y = x1, y1 + self._top_offset
         w = h = BUTTON_RADIUS * 2
         # Prepare context
@@ -1112,7 +1138,6 @@ class TopWidget(Widget):
                     record = window.store.records.create(now, now)
                     self._canvas.record_dialog.open("Start", record, self.update)
             elif action == "addrecord_manual":
-                # self._canvas.widgets.RecordsWidget.start_dragging_new_record()
                 record = window.store.records.create(now - 1800, now)
                 self._canvas.record_dialog.open("New", record, self.update)
 
@@ -1172,7 +1197,6 @@ class RecordsWidget(Widget):
 
         # Stuff related to records
         self._selected_record = None
-        self._selection_drag_in_progress = None
         self._can_interact_with_records = False
         self._record_times = {}  # For snapping
 
@@ -1207,7 +1231,7 @@ class RecordsWidget(Widget):
             ctx.lineTo(x4, y3 + width)
             ctx.lineTo(x4, y4 - width)
             ctx.lineTo(x3, y4)
-            ctx.fillStyle = COLORS.button_bg
+            ctx.fillStyle = COLORS.button_bg1
             ctx.fill()
             ctx.textAlign = "center"
             ctx.textBaseline = "middle"
@@ -1249,7 +1273,7 @@ class RecordsWidget(Widget):
         ctx.lineWidth = lw
         ctx.strokeStyle = COLORS.background1
         drawstrokerect(1.0 * lw)
-        ctx.strokeStyle = COLORS.tick_stripe3
+        ctx.strokeStyle = COLORS.tick_stripe2
         drawstrokerect(0.0 * lw)
 
     def _draw_top_and_bottom_cover(self, ctx, x1, x2, x3, x4, y1, y2, stop):
@@ -1340,15 +1364,16 @@ class RecordsWidget(Widget):
         ctx.stroke()
 
         # Draw snap feedback
-        t1_snap, t2_snap = self._canvas.range.get_snap_range()
-        y1_snap = (t1_snap - t1) * npixels / nsecs  # can be negative!
-        y2_snap = (t2_snap - t1) * npixels / nsecs
-        # diff = abs(y1_snap) + abs(y2_snap - npixels)
-        # w = max(1, min(5, diff**0.5)) # feels "jerky"
-        w = 0 if (t1_snap == t1 and t2_snap == t2) else 3
-        if w > 0:
-            ctx.fillStyle = "rgba(127, 127, 127, 0.5)"
-            ctx.fillRect(x2 + 2, y1 + y1_snap, w, y2_snap - y1_snap)
+        if False:
+            t1_snap, t2_snap = self._canvas.range.get_snap_range()
+            y1_snap = (t1_snap - t1) * npixels / nsecs  # can be negative!
+            y2_snap = (t2_snap - t1) * npixels / nsecs
+            # diff = abs(y1_snap) + abs(y2_snap - npixels)
+            # w = max(1, min(5, diff**0.5)) # feels "jerky"
+            w = 0 if (t1_snap == t1 and t2_snap == t2) else 3
+            if w > 0:
+                ctx.fillStyle = COLORS.tick_stripe2
+                ctx.fillRect(x2 + 2, y1 + y1_snap, w, y2_snap - y1_snap)
 
     def _draw_record_area(self, ctx, x1, x2, x3, y1, y2):
 
@@ -1392,52 +1417,17 @@ class RecordsWidget(Widget):
                 # self._draw_stats(ctx, t3, t4, x1+10, y3, x3-10, y4, stat_period, fontsize)
                 self._draw_stats(ctx, t3, t4, x2, y3, x3, y4, stat_period, fontsize)
                 ctx.lineWidth = 2
-                ctx.strokeStyle = COLORS.record_divider
+                ctx.strokeStyle = COLORS.tick_stripe1
                 ctx.beginPath()
                 ctx.moveTo(x1, y3)
                 ctx.lineTo(x3, y3)
                 ctx.stroke()
                 t3 = t4
 
-        # Draw selection drag
-        if self._selection_drag_in_progress is not None:
-            if self._selection_drag_in_progress[2] == 0:
-                ctx.fillStyle = "rgba(128, 128, 128, 0.5)"
-                ctx.fillRect(x1, y1, x3 - x1, y2 - y1)
-                ctx.textBaseline = "middle"
-                ctx.textAlign = "center"
-                ctx.font = (
-                    utils.fit_font_size(ctx, x3 - x1 - 10, FONT.condensed, "DRAG", 50)
-                    + "px "
-                    + FONT.condensed
-                )
-                ctx.fillStyle = "#FFF"
-                ctx.fillText("DRAG", 0.5 * (x3 + x1), y1 + (y2 - y1) * 0.33)
-                ctx.fillText("HERE", 0.5 * (x3 + x1), y1 + (y2 - y1) * 0.66)
-                ctx.font = "bold " + min(40, (x3 - x1) / 2) + "px FontAwesome"
-                self._picker.register(x1, y1, x3, y2, {"recordstartcreate": True})
-            else:
-                seltimes = self._selection_drag_in_progress[:2]
-                # The rectangle
-                barmargin = int((x3 - x1) * 0.1)
-                ctx.fillStyle = "rgba(0, 0, 0, 0.5)"
-                xx1, xx3 = x1 + barmargin, x3 - barmargin
-                yy1 = y1 + (seltimes[0] - t1) * npixels / nsecs
-                yy2 = y1 + (seltimes[1] - t1) * npixels / nsecs
-                yy1, yy2 = min(yy1, yy2), max(yy1, yy2)
-                ctx.fillRect(xx1, yy1, xx3 - xx1, yy2 - yy1)
-                # Add plus symbol
-                if self._selection_drag_in_progress[2] == 2:
-                    ctx.fillStyle = "#FFF"
-                    ctx.textBaseline = "middle"
-                    ctx.textAlign = "center"
-                    ctx.font = "bold " + min(40, yy2 - yy1 - 2) + "px FontAwesome"
-                    ctx.fillText("\uf055", 0.5 * (x3 + x1), 0.5 * (yy1 + yy2))
-
         # Draw "now" - also if drawing stats
         t = self._canvas.now()
         y = y1 + (t - t1) * pps
-        ctx.strokeStyle = COLORS.record_divider
+        ctx.strokeStyle = COLORS.tick_stripe1
         ctx.lineWidth = 2  # Pretty thick so it sticks over other edges like week bounds
         ctx.setLineDash([4, 4])
         ctx.lineDashOffset = t % 8
@@ -1482,7 +1472,6 @@ class RecordsWidget(Widget):
             self._record_times[record.key] = record.t1, record.t2
 
         # Draw record rectangle fills, alpha < 1 is extra overlap detection
-        ctx.fillStyle = "rgba(255, 100, 100, 0.8)"
         ctx.lineWidth = self._canvas.grid_linewidth2
         yy = y1
         selected_record = None, 0
@@ -1576,18 +1565,18 @@ class RecordsWidget(Widget):
             ctx.lineTo(x3 - rn / 2, ty2)
             ctx.lineTo(x2 + rn / 2, ry2)
             ctx.closePath()
-            ctx.fillStyle = "rgba(0, 0, 0, 0.05)"
+            ctx.fillStyle = COLORS.record_between
             ctx.fill()
 
             # Draw shadow
-            ctx.shadowBlur = rn
             ctx.fillStyle = COLORS.record_bg
-            ctx.shadowColor = "rgba(0, 0, 0, 0.4)"
+            ctx.shadowColor = COLORS.record_shadow
             ctx.beginPath()
             ctx.moveTo(x3, ty1 + rn)
             ctx.lineTo(x3, ty2)
-            ctx.lineTo(x4, ty2)
+            ctx.lineTo(x4 - rn, ty2)
             ctx.closePath()
+            ctx.shadowBlur = rn
             ctx.fill()
             ctx.shadowBlur = 0
 
@@ -1606,7 +1595,7 @@ class RecordsWidget(Widget):
             for ry in range(ty1 + 6, ty2 - 5, 7):
                 ctx.moveTo(x3, ry)
                 ctx.lineTo(x4, ry)
-            ctx.strokeStyle = "rgba(128, 128, 128, 0.03)"
+            ctx.strokeStyle = COLORS.record_subtle_stripes
             ctx.stroke()
 
             # Draw duration text
@@ -1639,8 +1628,7 @@ class RecordsWidget(Widget):
                 if len(text) == 0:
                     continue
                 if text.startswith("#"):
-                    hue = window.utils.hue_from_name(text)
-                    ctx.fillStyle = self._canvas.color_from_hue(hue, 1.0, 0.5)
+                    ctx.fillStyle = COLORS.tag
                 else:
                     ctx.fillStyle = COLORS.record_text
                 new_x = x + ctx.measureText(text).width + space_width
@@ -1654,47 +1642,18 @@ class RecordsWidget(Widget):
         rn = min(rn, 0.5 * (ry2 - ry1))
         rn = grid_round(rn)
 
-        tags = window.store.records.tags_from_record(record)
-
-        # Draw body in colors of the tags
-        band_h = ry2 - ry1
-        band_w = (x2 - x1) / len(tags)
-        for i, tag in enumerate(tags):
-            hue = window.utils.hue_from_name(tag)
-            # clr = self._canvas.color_from_hue(hue, 0.5, 0.70)
-            clr = utils.color_from_hue(hue, 0.8, 0.93, self._canvas._saturation / 5)
-            ctx.fillStyle = clr
-            bx = x1 + band_w * i
-            by = ry1
-            ctx.beginPath()
-            if i == 0:
-                ctx.arc(bx + rn, by + rn, rn, 1.0 * PI, 1.5 * PI)
-            else:
-                ctx.moveTo(bx, by)
-            if i == len(tags) - 1:
-                ctx.arc(bx + band_w - rn, by + rn, rn, 1.5 * PI, 2.0 * PI)
-            else:
-                ctx.lineTo(bx + band_w, by)
-            if i == len(tags) - 1:
-                ctx.arc(bx + band_w - rn, by + band_h - rn, rn, 0.0 * PI, 0.5 * PI)
-            else:
-                ctx.lineTo(bx + band_w, by + band_h)
-            if i == 0:
-                ctx.arc(bx + rn, by + band_h - rn, rn, 0.5 * PI, 1.0 * PI)
-            else:
-                ctx.lineTo(bx, by + band_h)
-            ctx.closePath()
-            ctx.fill()
-
-        # And a subtle line around to better separate records when they align
+        # Draw body in colors of the tags, and a subtle line around to
+        # better separate records when they align
         ctx.beginPath()
         ctx.arc(x2 - rn, ry1 + rn, rn, 1.5 * PI, 2.0 * PI)
         ctx.arc(x2 - rn, ry2 - rn, rn, 0.0 * PI, 0.5 * PI)
         ctx.arc(x1 + rn, ry2 - rn, rn, 0.5 * PI, 1.0 * PI)
         ctx.arc(x1 + rn, ry1 + rn, rn, 1.0 * PI, 1.5 * PI)
         ctx.closePath()
+        ctx.fillStyle = COLORS.record_timeline_bg
+        ctx.fill()
+        ctx.strokeStyle = COLORS.record_timeline_edge
         ctx.lineWidth = 1.5
-        ctx.strokeStyle = "rgba(0, 0, 0, 0.15)"
         ctx.stroke()
 
         # The marker that indicates whether the record has been modified
@@ -1744,6 +1703,7 @@ class RecordsWidget(Widget):
         )
 
         # Register duration tooltip
+        tags = window.store.records.tags_from_record(record)
         duration = record.t2 - record.t1
         if duration > 0:
             duration_text = dt.duration_string(duration, True)
@@ -1768,10 +1728,9 @@ class RecordsWidget(Widget):
         x3 = x2 + 25
 
         # Prepare styles
-        body_style = "rgba(240, 240, 240, 0.7)"
-        border_style = "rgba(128, 128, 128, 1.0)"
-        text_style = COLORS.record_text
-        shadow_style = "rgba(0, 0, 0, 0.05)"
+        body_style = COLORS.record_timeline_edge
+        border_style = COLORS.record_timeline_bg
+        text_style = COLORS.tick_text
 
         # Get position in pixels
         ry1 = y0 + npixels * (record.t1 - t1) / nsecs
@@ -1826,7 +1785,7 @@ class RecordsWidget(Widget):
             for y in [ry1 + inset]:
                 ctx.moveTo(x1f + shadow_inset, y)
                 ctx.lineTo(x2f - shadow_inset, y)
-            ctx.strokeStyle = shadow_style
+            ctx.strokeStyle = COLORS.record_timeline_bg
             ctx.stroke()
             # Text
             timetext = dt.time2localstr(record.t1)[11:16]
@@ -1853,7 +1812,7 @@ class RecordsWidget(Widget):
             for y in [ry2 - inset]:
                 ctx.moveTo(x1f + shadow_inset, y)
                 ctx.lineTo(x2f - shadow_inset, y)
-            ctx.strokeStyle = shadow_style
+            ctx.strokeStyle = COLORS.record_timeline_bg
             ctx.stroke()
             # Text
             timetext = dt.time2localstr(record.t2)[11:16]
@@ -1911,22 +1870,22 @@ class RecordsWidget(Widget):
         # Show amount of time spend on toplevel categories. We fill the
         # whole area with a relatively transparent color and fill a portion
         # with a more solid color to indicate total amount of spend time.
+        ctx.fillStyle = COLORS.tick_stripe3
+        ctx.fillRect(x1, y1, fullwidth, (y2 - y1))
+        ctx.fillRect(x1, y1, fullwidth, fullheight)
+
+        # Stripes to indicate how time is divided over tags
+        ctx.beginPath()
         x = x1
-        y = y1  # + 0.5 * (y2 - y1 - fullheight)
-        for i in range(len(stats)):
-            name, count = stats[i]
-            hue = window.utils.hue_from_name(name)
-            clr1 = utils.color_from_hue(hue, 0.8, 0.95, self._canvas._saturation / 2)
-            clr2 = utils.color_from_hue(hue, 0.8, 0.9, self._canvas._saturation / 2)
+        for i in range(len(stats) - 1):
+            _, count = stats[i]
             width = fullwidth * count / sumcount
-            height = fullheight  # * count / sumcount
-            ctx.fillStyle = clr1
-            ctx.fillRect(x, y1, width, (y2 - y1))
-            ctx.fillStyle = clr2
-            ctx.fillRect(x, y, width, height)
-            # Next
-            x += width
-            # y += height
+            ctx.moveTo(x, y1)
+            ctx.lineTo(x, y1 + fullheight)
+            x += width  # next
+        ctx.strokeStyle = COLORS.tick_stripe3
+        ctx.lineWidth = 1.5
+        ctx.stroke()
 
         # Draw big text on top
         fontsize = min(fontsize, y2 - y1)
@@ -1934,13 +1893,13 @@ class RecordsWidget(Widget):
             ctx.font = f"bold {fontsize}px {FONT.condensed}"
             ctx.textBaseline = "middle"
             ctx.textAlign = "center"
-            ctx.fillStyle = "rgba(0, 0, 0, 0.1)"
+            ctx.fillStyle = COLORS.tick_stripe2
             ctx.fillText(text, 0.5 * (x1 + x2), 0.5 * (y1 + y2))
 
             ctx.font = FONT.size + "px " + FONT.condensed
             ctx.textBaseline = "top"
             ctx.textAlign = "left"
-            ctx.fillStyle = "rgba(0, 0, 0, 0.5)"
+            ctx.fillStyle = COLORS.tick_text
             show_secs = False
             if t1 < self._canvas.now() < t2:
                 show_secs = len(window.store.records.get_running_records()) > 0
@@ -2009,19 +1968,12 @@ class RecordsWidget(Widget):
         if self._selected_record is not None:
             self._selected_record = None
             self.update()
-        if self._selection_drag_in_progress is not None:
-            self._selection_drag_in_progress = None
-            self.update()
 
     def _selected_record_updated(self):
         if self._selected_record is not None:
             record = self._selected_record[0]
             record = window.store.records.get_by_key(record.key)
             self._selected_record = record, 0, self._canvas.now()
-        self.update()
-
-    def start_dragging_new_record(self):
-        self._selection_drag_in_progress = [0, 0, 0]
         self.update()
 
     def on_pointer(self, ev):
@@ -2062,19 +2014,9 @@ class RecordsWidget(Widget):
         # Things that trigger on a pointer down if we have not entered tick-behavior-mode yet.
         # These are starts of a drag operation not related to timeline navigation.
         if self._interaction_mode != 2 and "down" in ev.type:
-            self._selection_drag_in_progress = (
-                None  # Cancel drag on click - unless it starts it
-            )
             picked = self._picker.pick(x, y)
             if picked is not None:
-                if picked.recordstartcreate:
-                    # Start selection drag
-                    self._selected_record = None
-                    self._selection_drag_in_progress = [t, t, 1]
-                    self._interaction_mode = 0
-                    self.update()
-                    return
-                elif picked.recordrect and picked.region:
+                if picked.recordrect and picked.region:
                     # Initiate record drag
                     self._selected_record = [picked.record, picked.region, t]
                     self._interaction_mode = 0
@@ -2090,7 +2032,6 @@ class RecordsWidget(Widget):
                     self._canvas.range.animate_range(picked.t1, picked.t2)
                 elif picked.recordrect and not picked.region:
                     # Select a record
-                    self._selection_drag_in_progress = None
                     self._selected_record = [picked.record, 0, t]
                 elif picked.button is True:
                     # A button was pressed
@@ -2108,9 +2049,7 @@ class RecordsWidget(Widget):
         # Dispatch to record interaction?
         if self._interaction_mode == 0:
             if self._can_interact_with_records is False:
-                # Cancel drag, but maintain record selection
-                self._selection_drag_in_progress = None
-                # self._selected_record = None
+                pass  # self._selected_record = None
             else:
                 self._on_pointer_handle_record_interaction(ev)
 
@@ -2201,31 +2140,6 @@ class RecordsWidget(Widget):
                     # Disable when clicking elsewhere
                     self._selected_record = None
                     self.update()
-
-        # Dragging the selection drag
-        if self._selection_drag_in_progress is not None:
-            if "move" in ev.type:
-                if self._selection_drag_in_progress[2]:
-                    self._selection_drag_in_progress[1] = t
-                    t1 = int(min(self._selection_drag_in_progress[:2]) + 0.49)
-                    t2 = int(max(self._selection_drag_in_progress[:2]) + 0.49)
-                    ok = (t2 - t1) >= 10 and (t2 - t1) * npixels / nsecs > 10
-                    self._selection_drag_in_progress[2] = 2 if ok else 1
-                    self.update()
-            elif "up" in ev.type:
-                if self._selection_drag_in_progress[2] == 2:
-                    # Create new record
-                    t1 = int(min(self._selection_drag_in_progress[:2]) + 0.49)
-                    t2 = int(max(self._selection_drag_in_progress[:2]) + 0.49)
-                    record = window.store.records.create(t1, t2)
-                    record.t1 = Math.round(record.t1 / tround) * tround  # snap
-                    record.t2 = Math.round(record.t2 / tround) * tround
-                    self._canvas.record_dialog.open(
-                        "New", record, self.on_pointer_outside
-                    )
-                else:
-                    self._selection_drag_in_progress = None
-                self.update()
 
     def on_pointer_navigate(self, ev):
         """Handle mouse or touch event for navigation."""
@@ -2442,7 +2356,7 @@ class AnalyticsWidget(Widget):
             ctx.lineTo(x3, y3 + width)
             ctx.lineTo(x3, y4 - width)
             ctx.lineTo(x4, y4)
-            ctx.fillStyle = COLORS.button_bg
+            ctx.fillStyle = COLORS.button_bg1
             ctx.fill()
             ctx.textAlign = "center"
             ctx.textBaseline = "middle"
@@ -2486,7 +2400,7 @@ class AnalyticsWidget(Widget):
             t1, t2 = self._canvas.range.get_range()
             if t1 < self._canvas.now() < t2:
                 ctx.textBaseline = "top"
-                ctx.fillStyle = COLORS.help_text
+                ctx.fillStyle = COLORS.tick_text
                 text = "Hit the ▶ button to start tracking!"
                 ctx.fillText(text, x1 + 5, y1 + self._npixels_each + 15)
 
@@ -2504,7 +2418,7 @@ class AnalyticsWidget(Widget):
             w,
             w,
         )
-        ctx.fillStyle = "rgba(238, 238, 238, 0.96)"
+        ctx.fillStyle = COLORS.tick_stripe2
         ctx.fillRect(x1, y1, x2 - x1, y2 - y1)
 
     def _draw_stats(self, ctx, x1, y1, x2, y2):
@@ -2854,10 +2768,9 @@ class AnalyticsWidget(Widget):
         npixels = min(y3 - y2, target_npixels)
 
         # Define colors
-        make_gray = lambda x: "rgb(" + x * 255 + "," + x * 255 + "," + x * 255 + ")"
         body_style = COLORS.record_bg
-        top_style = make_gray(0.999)  # top
-        left_style = make_gray(0.833)  # left
+        top_style = COLORS.tick_stripe2
+        left_style = COLORS.tick_stripe1
         text_style = COLORS.record_text
 
         font_size = FONT.size * 0.9 ** (unit.level - 1)
@@ -2866,7 +2779,7 @@ class AnalyticsWidget(Widget):
         rn = min(ANALYSIS_ROUNDNESS, npixels / 2)
 
         # Stroke style for edges
-        ctx.strokeStyle = "rgba(0, 0, 0, 0.06)"
+        ctx.strokeStyle = COLORS.tick_stripe3
         ctx.lineWidth = 1.5
 
         # Draw a shadow at the base
@@ -2875,14 +2788,14 @@ class AnalyticsWidget(Widget):
             ctx.beginPath()
             if is_root:
                 ctx.shadowBlur = max(4, unit.target_inset / 4)
-                ctx.shadowColor = "rgba(0, 0, 0, 0.5)"
+                ctx.shadowColor = COLORS.record_shadow
                 ctx.arc(x3 - rn, y3 - rn, rn, 0.25 * PI, 0.5 * PI)  # bottom right
                 ctx.arc(x2 + rn, y3 - rn, rn, 0.5 * PI, 0.625 * PI)
                 ctx.arc(x1 + rn, y4 - rn, rn, 0.625 * PI, 1.0 * PI)  # bottom left
                 ctx.arc(x1 + rn, y1 + rn, rn, 1.0 * PI, 1.25 * PI)  # top left
             else:
                 ctx.shadowBlur = abs(unit.xoffset)
-                ctx.shadowColor = "rgba(0, 0, 0, 0.5)"
+                ctx.shadowColor = COLORS.record_shadow
                 ctx.moveTo(x1, y1 + rn)
                 ctx.lineTo(x1, y4 - rn)
                 ctx.lineTo(x1 + min(x3 - x2, y3 - y2), (y1 + y4) / 2)
@@ -2919,7 +2832,7 @@ class AnalyticsWidget(Widget):
         ctx.stroke()
 
         # Subtle stripes
-        ctx.strokeStyle = "rgba(128, 128, 128, 0.03)"
+        ctx.strokeStyle = COLORS.record_subtle_stripes
         ctx.lineWidth = 1
         ctx.beginPath()
         for y in range(3, y23, 7):
@@ -2970,16 +2883,14 @@ class AnalyticsWidget(Widget):
             texts.push([f" ({100*unit.percent_t:0.0f}%)", ""])
         # Draw text labels
         ctx.textAlign = "left"
-        ctx.strokeStyle = top_style
         ctx.lineWidth = 0.8
         for text, action in texts:
             dx = ctx.measureText(text).width
             if text.startswith("#"):
-                hue = window.utils.hue_from_name(text)
                 if text in self.selected_tags:
-                    ctx.fillStyle = self._canvas.color_from_hue(hue, 1.0, 0.2)
+                    ctx.fillStyle = text_style
                 else:
-                    ctx.fillStyle = self._canvas.color_from_hue(hue, 1.0, 0.5)
+                    ctx.fillStyle = COLORS.tag
             else:
                 ctx.fillStyle = text_style
             ctx.fillText(text, tx, ty)
@@ -2988,13 +2899,13 @@ class AnalyticsWidget(Widget):
                 ctx.moveTo(tx - 3, ty - dy)
                 ctx.lineTo(tx + dx + 3, ty - dy)
                 ctx.lineTo(tx + dx + 3, ty + dy)
-                ctx.strokeStyle = top_style
+                ctx.strokeStyle = COLORS.tick_stripe3
                 ctx.stroke()
                 ctx.beginPath()
                 ctx.moveTo(tx - 3, ty - dy)
                 ctx.lineTo(tx - 3, ty + dy)
                 ctx.lineTo(tx + dx + 3, ty + dy)
-                ctx.strokeStyle = left_style
+                ctx.strokeStyle = COLORS.tick_stripe2
                 ctx.stroke()
                 self._picker.register(tx - 4, ty - dy, tx + dx + 4, ty + dy, action)
                 dx += 2
