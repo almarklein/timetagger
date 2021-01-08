@@ -57,8 +57,22 @@ def set_colors():
     COLORS.record_subtle_stripes = "rgba(130, 130, 130, 0.025)"
 
     # Dark vs light mode
+    mode = 0
+    if window.store and window.store.settings:
+        ob = window.store.settings.get_by_key("darkmode")
+        if ob is not None:
+            mode = ob.value
+    if mode == 1:
+        dark = False
+    elif mode == 2:
+        dark = True
+    else:
+        dark = False
+        if window.matchMedia:
+            if window.matchMedia("(prefers-color-scheme: dark)").matches:
+                dark = True
 
-    if 0:  # window.dark_mode:
+    if dark:
 
         # App background (use rgba so the color can be re-used with different alpha)
         COLORS.background1 = "rgba(13, 17, 23, 1)"
@@ -70,8 +84,8 @@ def set_colors():
         COLORS.record_timeline_bg = "rgba(80, 80, 80, 0.7)"
         COLORS.record_timeline_edge = "rgb(75, 75, 75)"
 
-        bg3 = "rgb(10, 10, 10)"
-        bg4 = "rgb(10, 10, 10)"
+        bg3 = "rgb(0, 0, 0)"
+        bg4 = "rgb(0, 0, 0)"
 
     else:
 
@@ -93,6 +107,10 @@ def set_colors():
 
 # Init colors
 set_colors()
+if window.matchMedia:
+    window.matchMedia("(prefers-color-scheme: dark)").addEventListener(
+        "change", set_colors
+    )
 
 
 class TimeTaggerCanvas(BaseCanvas):
@@ -102,6 +120,8 @@ class TimeTaggerCanvas(BaseCanvas):
 
     def __init__(self, canvas):
         super().__init__(canvas)
+
+        set_colors()
 
         self._now = None
         self._saturation = 0.9

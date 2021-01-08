@@ -2082,6 +2082,12 @@ class SettingsDialog(BaseDialog):
             </h1>
             <h2>Time zone</h2>
             <p></p>
+            <h2>Dark mode</h2>
+            <select style='margin: 0.6em;'>
+                <option value=0>Auto detect</option>
+                <option value=1>Light mode</option>
+                <option value=2>Dark mode</option>
+            </select>
             <h2>Show stopwatch of running record</h2>
             <label>
                 <input type='checkbox' checked='true'></input>
@@ -2096,6 +2102,8 @@ class SettingsDialog(BaseDialog):
             _,  # Dialog title
             _,  # Timezone header
             self._timezone_div,
+            _,  # Darmode header
+            self._darkmode_select,
             _,  # Stopwatch header
             self._stopwatch_label,
         ) = self.maindiv.children
@@ -2106,6 +2114,11 @@ class SettingsDialog(BaseDialog):
         s += " summertime" if offset == offset_summer else " wintertime"
         self._timezone_div.innerText = s
 
+        # Darkmode
+        self._darkmode_select.onchange = self._on_darkmode_change
+        ob = window.store.settings.get_by_key("darkmode")
+        self._darkmode_select.value = 0 if ob is None else ob.value
+
         # Stopwatch
         self._stopwatch_check = self._stopwatch_label.children[0]
         self._stopwatch_check.onchange = self._on_stopwatch_check
@@ -2114,6 +2127,14 @@ class SettingsDialog(BaseDialog):
             self._stopwatch_check.checked = ob.get("value", True)
 
         super().open(callback)
+
+    def _on_darkmode_change(self):
+        window.select = self._darkmode_select
+        mode = int(self._darkmode_select.value)
+        ob = window.store.settings.create("darkmode", mode)
+        window.store.settings.put(ob)
+        if window.front:
+            window.front.set_colors()
 
     def _on_stopwatch_check(self):
         stopwatch = bool(self._stopwatch_check.checked)
