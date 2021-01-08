@@ -84,8 +84,8 @@ def set_colors():
         COLORS.record_timeline_bg = "rgba(80, 80, 80, 0.7)"
         COLORS.record_timeline_edge = "rgb(75, 75, 75)"
 
-        bg3 = "rgb(0, 0, 0)"
-        bg4 = "rgb(0, 0, 0)"
+        window.document.body.classList.add("darkmode")
+        window.document.body.style.background = "rgb(0, 0, 0)"
 
     else:
 
@@ -99,10 +99,11 @@ def set_colors():
         COLORS.record_timeline_bg = "rgba(185, 185, 185, 0.7)"
         COLORS.record_timeline_edge = "rgb(195, 195, 195)"
 
-        bg3 = "rgb(255, 255, 255)"
-        bg4 = "rgb(245, 245, 245)"
-
-    window.document.body.style.background = f"linear-gradient(to bottom,{bg3},{bg4})"
+        window.document.body.classList.remove("darkmode")
+        bg3, bg4 = "rgb(255, 255, 255)", "rgb(245, 245, 245)"
+        window.document.body.style.background = (
+            f"linear-gradient(to bottom,{bg3},{bg4})"
+        )
 
 
 # Init colors
