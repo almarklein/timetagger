@@ -52,38 +52,6 @@ def fit_font_size(ctx, available_width, font, text, maxsize=100):
     return size
 
 
-_lasthashedhue = "", 0  # memorization for hue_from_name()
-
-
-def hue_from_name(name):
-    name = name.lower()
-    PSCRIPT_OVERLOAD = False  # noqa
-
-    if _lasthashedhue[0] != name:
-        subnames = [name]
-        color = 0
-        for level in range(len(subnames)):
-            subname = subnames[level]
-            # Get color of this subname, using a hash on all characters
-            subcolor = len(subname) * 71  # prime number
-            for i in range(len(subname)):
-                subcolor += subname.charCodeAt(i) * 71
-            # Add contribution to global color. The contribution varies less as
-            # the sub-level increases (a quarter of the previous)
-            maxcolor = 360 / 4 ** level
-            subcolor = (subcolor % maxcolor) - maxcolor / 2
-            subcolor = RawJS(
-                "(subcolor < 0) ? (subcolor * 0.8 - 0.1*maxcolor) : (subcolor * 0.8 + 0.1*maxcolor)"
-            )
-            color += subcolor
-        # Sign-safe modulo, just in case a browser has trouble with negative angles
-        while color < 0:
-            color += 360
-        _lasthashedhue[0] = name
-        _lasthashedhue[1] = color
-    return _lasthashedhue[1]
-
-
 def color_from_hue(hue, alpha=1, lightness=0.7, saturation=0.75):
     """Generate a color based on the given hue."""
     PSCRIPT_OVERLOAD = False  # noqa

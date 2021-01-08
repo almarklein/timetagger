@@ -1019,8 +1019,7 @@ class RecordDialog(BaseDialog):
         # Turn into html
         html_parts = {}
         for tag in tag_names:
-            hue = window.utils.hue_from_name(tag)
-            color = self._canvas.color_from_hue(hue, 1.0, 0.5)
+            color = "initial"
             x = f"<a onclick='window._record_dialog_add_tag(\"{tag}\")' "
             x += f"style='cursor:pointer; color: {color}'"
             x += ">" + tag + "</a>"
@@ -2081,10 +2080,8 @@ class SettingsDialog(BaseDialog):
             <h1><i class='fas'>\uf013</i> Settings
                 <button type='button'><i class='fas'>\uf00d</i></button>
             </h1>
-            <h2>Tag colors</h2>
-            <label>
-                <input type='range' min='0' max='1' step='0.001' value='0.75'></input>
-                saturation</label>
+            <h2>Time zone</h2>
+            <p></p>
             <h2>Show stopwatch of running record</h2>
             <label>
                 <input type='checkbox' checked='true'></input>
@@ -2093,30 +2090,30 @@ class SettingsDialog(BaseDialog):
             """
 
         self.maindiv.innerHTML = html
-
         self._close_but = self.maindiv.children[0].children[-1]
         self._close_but.onclick = self.close
+        (
+            _,  # Dialog title
+            _,  # Timezone header
+            self._timezone_div,
+            _,  # Stopwatch header
+            self._stopwatch_label,
+        ) = self.maindiv.children
 
-        self._saturation_slider = self.maindiv.children[2].children[0]
-        self._saturation_slider.onchange = self._on_saturaration_slider
-        ob = window.store.settings.get_by_key("prsat")
-        if ob is not None:
-            self._saturation_slider.value = ob.get("value", 0.75)
+        # Set timezone info
+        offset, offset_winter, offset_summer = dt.get_timezone_info(dt.now())
+        s = f"UTC{offset:+0.2g}  /  GMT{offset_winter:+0.2g}"
+        s += " summertime" if offset == offset_summer else " wintertime"
+        self._timezone_div.innerText = s
 
-        self._stopwatch_check = self.maindiv.children[4].children[0]
+        # Stopwatch
+        self._stopwatch_check = self._stopwatch_label.children[0]
         self._stopwatch_check.onchange = self._on_stopwatch_check
         ob = window.store.settings.get_by_key("stopwatch")
         if ob is not None:
             self._stopwatch_check.checked = ob.get("value", True)
 
         super().open(callback)
-
-    def _on_saturaration_slider(self):
-        saturation = self._saturation_slider.value
-        saturation = min(1, max(0, float(saturation)))
-        if window.isFinite(saturation):
-            ob = window.store.settings.create("prsat", saturation)
-            window.store.settings.put(ob)
 
     def _on_stopwatch_check(self):
         stopwatch = bool(self._stopwatch_check.checked)
