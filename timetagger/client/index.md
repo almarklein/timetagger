@@ -6,7 +6,7 @@
     <img src='timetagger192.png' width='48px' />
     TimeTagger
 </h1>
-<h2>Tag your time,<br>and see where it has gone</h2>
+<h2 style='color:#222;'><span style='color:#E37108;'>Tag</span> your time,<br>get the <span style='color:#E37108;'>insight</span>.</h2>
 
 <div>
     <a href='/demo' class='ctabutton'>
@@ -22,5 +22,5 @@
 This is the stub index page for TimeTagger,
 an open source time-tracker that feels lightweight and has powerful reporting.
 
-The code for this project is on
-[https://github.com/almarklein/timetagger](https://github.com/almarklein/timetagger)
+The source code for this project is on
+[https://github.com/almarklein/timetagger](https://github.com/almarklein/timetagger).
