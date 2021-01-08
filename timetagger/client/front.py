@@ -1137,7 +1137,6 @@ class TopWidget(Widget):
                     record = window.store.records.create(now, now)
                     self._canvas.record_dialog.open("Start", record, self.update)
             elif action == "addrecord_manual":
-                # self._canvas.widgets.RecordsWidget.start_dragging_new_record()
                 record = window.store.records.create(now - 1800, now)
                 self._canvas.record_dialog.open("New", record, self.update)
 
@@ -1197,7 +1196,6 @@ class RecordsWidget(Widget):
 
         # Stuff related to records
         self._selected_record = None
-        self._selection_drag_in_progress = None
         self._can_interact_with_records = False
         self._record_times = {}  # For snapping
 
@@ -1424,41 +1422,6 @@ class RecordsWidget(Widget):
                 ctx.lineTo(x3, y3)
                 ctx.stroke()
                 t3 = t4
-
-        # Draw selection drag
-        if self._selection_drag_in_progress is not None:
-            if self._selection_drag_in_progress[2] == 0:
-                ctx.fillStyle = "rgba(128, 128, 128, 0.5)"
-                ctx.fillRect(x1, y1, x3 - x1, y2 - y1)
-                ctx.textBaseline = "middle"
-                ctx.textAlign = "center"
-                ctx.font = (
-                    utils.fit_font_size(ctx, x3 - x1 - 10, FONT.condensed, "DRAG", 50)
-                    + "px "
-                    + FONT.condensed
-                )
-                ctx.fillStyle = "#FFF"
-                ctx.fillText("DRAG", 0.5 * (x3 + x1), y1 + (y2 - y1) * 0.33)
-                ctx.fillText("HERE", 0.5 * (x3 + x1), y1 + (y2 - y1) * 0.66)
-                ctx.font = "bold " + min(40, (x3 - x1) / 2) + "px FontAwesome"
-                self._picker.register(x1, y1, x3, y2, {"recordstartcreate": True})
-            else:
-                seltimes = self._selection_drag_in_progress[:2]
-                # The rectangle
-                barmargin = int((x3 - x1) * 0.1)
-                ctx.fillStyle = "rgba(0, 0, 0, 0.5)"
-                xx1, xx3 = x1 + barmargin, x3 - barmargin
-                yy1 = y1 + (seltimes[0] - t1) * npixels / nsecs
-                yy2 = y1 + (seltimes[1] - t1) * npixels / nsecs
-                yy1, yy2 = min(yy1, yy2), max(yy1, yy2)
-                ctx.fillRect(xx1, yy1, xx3 - xx1, yy2 - yy1)
-                # Add plus symbol
-                if self._selection_drag_in_progress[2] == 2:
-                    ctx.fillStyle = "#FFF"
-                    ctx.textBaseline = "middle"
-                    ctx.textAlign = "center"
-                    ctx.font = "bold " + min(40, yy2 - yy1 - 2) + "px FontAwesome"
-                    ctx.fillText("\uf055", 0.5 * (x3 + x1), 0.5 * (yy1 + yy2))
 
         # Draw "now" - also if drawing stats
         t = self._canvas.now()
@@ -2004,19 +1967,12 @@ class RecordsWidget(Widget):
         if self._selected_record is not None:
             self._selected_record = None
             self.update()
-        if self._selection_drag_in_progress is not None:
-            self._selection_drag_in_progress = None
-            self.update()
 
     def _selected_record_updated(self):
         if self._selected_record is not None:
             record = self._selected_record[0]
             record = window.store.records.get_by_key(record.key)
             self._selected_record = record, 0, self._canvas.now()
-        self.update()
-
-    def start_dragging_new_record(self):
-        self._selection_drag_in_progress = [0, 0, 0]
         self.update()
 
     def on_pointer(self, ev):
@@ -2057,19 +2013,9 @@ class RecordsWidget(Widget):
         # Things that trigger on a pointer down if we have not entered tick-behavior-mode yet.
         # These are starts of a drag operation not related to timeline navigation.
         if self._interaction_mode != 2 and "down" in ev.type:
-            self._selection_drag_in_progress = (
-                None  # Cancel drag on click - unless it starts it
-            )
             picked = self._picker.pick(x, y)
             if picked is not None:
-                if picked.recordstartcreate:
-                    # Start selection drag
-                    self._selected_record = None
-                    self._selection_drag_in_progress = [t, t, 1]
-                    self._interaction_mode = 0
-                    self.update()
-                    return
-                elif picked.recordrect and picked.region:
+                if picked.recordrect and picked.region:
                     # Initiate record drag
                     self._selected_record = [picked.record, picked.region, t]
                     self._interaction_mode = 0
@@ -2085,7 +2031,6 @@ class RecordsWidget(Widget):
                     self._canvas.range.animate_range(picked.t1, picked.t2)
                 elif picked.recordrect and not picked.region:
                     # Select a record
-                    self._selection_drag_in_progress = None
                     self._selected_record = [picked.record, 0, t]
                 elif picked.button is True:
                     # A button was pressed
@@ -2103,9 +2048,7 @@ class RecordsWidget(Widget):
         # Dispatch to record interaction?
         if self._interaction_mode == 0:
             if self._can_interact_with_records is False:
-                # Cancel drag, but maintain record selection
-                self._selection_drag_in_progress = None
-                # self._selected_record = None
+                pass  # self._selected_record = None
             else:
                 self._on_pointer_handle_record_interaction(ev)
 
@@ -2196,31 +2139,6 @@ class RecordsWidget(Widget):
                     # Disable when clicking elsewhere
                     self._selected_record = None
                     self.update()
-
-        # Dragging the selection drag
-        if self._selection_drag_in_progress is not None:
-            if "move" in ev.type:
-                if self._selection_drag_in_progress[2]:
-                    self._selection_drag_in_progress[1] = t
-                    t1 = int(min(self._selection_drag_in_progress[:2]) + 0.49)
-                    t2 = int(max(self._selection_drag_in_progress[:2]) + 0.49)
-                    ok = (t2 - t1) >= 10 and (t2 - t1) * npixels / nsecs > 10
-                    self._selection_drag_in_progress[2] = 2 if ok else 1
-                    self.update()
-            elif "up" in ev.type:
-                if self._selection_drag_in_progress[2] == 2:
-                    # Create new record
-                    t1 = int(min(self._selection_drag_in_progress[:2]) + 0.49)
-                    t2 = int(max(self._selection_drag_in_progress[:2]) + 0.49)
-                    record = window.store.records.create(t1, t2)
-                    record.t1 = Math.round(record.t1 / tround) * tround  # snap
-                    record.t2 = Math.round(record.t2 / tround) * tround
-                    self._canvas.record_dialog.open(
-                        "New", record, self.on_pointer_outside
-                    )
-                else:
-                    self._selection_drag_in_progress = None
-                self.update()
 
     def on_pointer_navigate(self, ev):
         """Handle mouse or touch event for navigation."""
