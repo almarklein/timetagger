@@ -979,7 +979,7 @@ class RecordDialog(BaseDialog):
             suggested_html = "Suggested tags:&nbsp; &nbsp;"
             suggested_html += "&nbsp; &nbsp;".join(suggested_list)
         else:
-            suggested_html += "Use e.g. '&#35;meeting' to add one or more tags."
+            suggested_html = "Use e.g. '&#35;meeting' to add one or more tags."
         self._tag_suggestions_div.innerHTML = suggested_html
         self._tags_div.innerHTML = tags_html
 
