@@ -38,12 +38,12 @@ def set_colors():
 
     # Unaffected by dark mode
     COLORS.background3 = "rgb(22, 27, 34)"  # of the top
-    COLORS.header_text = "rgb(250, 250, 250)"
-    COLORS.tag = utils.color_from_hue(30, 1, 0.6, 0.99)
+    COLORS.header_text = "rgb(230, 230, 230)"
+    COLORS.tag = utils.color_from_hue(130, 1, 0.6, 0.99)
 
-    COLORS.button_text = "#4085F0"  # utils.color_from_hue(240, 1, 0.6, 0.99)
+    COLORS.button_text = "rgb(230, 230, 230)"
     COLORS.button_text_disabled = "#555"
-    COLORS.button_title = "rgb(150, 150, 150)"
+    COLORS.button_title = utils.color_from_hue(240, 1, 0.6, 0.99)
     COLORS.button_bg1 = "rgb(16, 16, 16)"
     COLORS.button_bg2 = "rgb(45, 45, 45)"
 

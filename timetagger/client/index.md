@@ -6,7 +6,7 @@
     <img src='timetagger192.png' width='48px' />
     TimeTagger
 </h1>
-<h2 style='color:#222;'><span style='color:#E37108;'>Tag</span> your time,<br>get the <span style='color:#E37108;'>insight</span>.</h2>
+<h2 style='color:#222;'><span style='color:#07A82C;'>Tag</span> your time,<br>get the <span style='color:#07A82C;'>insight</span>.</h2>
 
 <div>
     <a href='/demo' class='ctabutton'>
