@@ -15,14 +15,11 @@ from timetagger.server import api_handler, create_assets_from_dir
 logger = logging.getLogger("asgineer")
 
 
-# Create dict with assets
+# Create dict with assets. You could add/replace assets here.
 assets = {}
 assets.update(create_assets_from_dir(resource_filename("timetagger.client", ".")))
 assets.update(create_assets_from_dir(resource_filename("timetagger.static", ".")))
 assets.update(create_assets_from_dir(resource_filename("timetagger.images", ".")))
-
-# Uncomment the line below to include the TimeTagger website
-# assets.update(create_assets_from_dir(resource_filename("timetagger.website", "/")))
 
 # Turn asset dict into a handler. This feature of Asgineer provides
 # lightning fast handlers that support compression and HTTP caching.
