@@ -969,7 +969,7 @@ class RecordDialog(BaseDialog):
         if len(tags) == 0:
             tags_html = "No tags."
         else:
-            tags_list = [f"<span style='color:#E37108'>{t}</span>" for t in tags]
+            tags_list = [f"<span style='color:#07A82C'>{t}</span>" for t in tags]
             tags_html = "&nbsp; &nbsp;".join(tags_list)
         if self._suggested_tags_html:
             suggested_dict = self._suggested_tags_html.copy()

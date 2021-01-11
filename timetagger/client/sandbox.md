@@ -28,4 +28,4 @@ window.addEventListener("load", function() {
 <span class='fas' style='color: #eee;'></span>
 <img id='ttlogo' alt='TimeTagger logo' src='timetagger192.png' width='2px' />
 
-<canvas id='canvas'>This website needs a working (HTML5) canvas.</canvas>
+<canvas id='canvas'>This page needs a working (HTML5) canvas.</canvas>

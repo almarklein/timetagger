@@ -21,7 +21,7 @@ font_exts = ".ttf", ".otf", ".woff", ".woff2"
 re_fas = re.compile(r"\>(\\uf[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F])\<")
 
 default_template = (
-    open(pkg_resources.resource_filename("timetagger.website", "_template.html"), "rb")
+    open(pkg_resources.resource_filename("timetagger.client", "_template.html"), "rb")
     .read()
     .decode()
 )
