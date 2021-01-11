@@ -39,11 +39,11 @@ def set_colors():
     # Unaffected by dark mode
     COLORS.background3 = "rgb(22, 27, 34)"  # of the top
     COLORS.header_text = "rgb(230, 230, 230)"
-    COLORS.tag = utils.color_from_hue(130, 1, 0.6, 0.99)
+    COLORS.tag = utils.color_from_hue(130, 1, 0.6, 0.99)  # 07A82C
 
     COLORS.button_text = "rgb(230, 230, 230)"
     COLORS.button_text_disabled = "#555"
-    COLORS.button_title = utils.color_from_hue(240, 1, 0.6, 0.99)
+    COLORS.button_title = utils.color_from_hue(240, 1, 0.6, 0.99)  # 0B99DD
     COLORS.button_bg1 = "rgb(16, 16, 16)"
     COLORS.button_bg2 = "rgb(45, 45, 45)"
 
@@ -177,7 +177,7 @@ class TimeTaggerCanvas(BaseCanvas):
         margin = 5
         margin2 = 5  # self.w / 40  --> handle margin inside analytics widget
         space_to_divide = self.w - margin - margin2 - margin
-        if space_to_divide >= 800:
+        if space_to_divide >= 785:
             records_width = space_to_divide / 2
         elif self._prefer_show_analytics:
             records_width = 30

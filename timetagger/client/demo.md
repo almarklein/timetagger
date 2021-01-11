@@ -14,7 +14,7 @@
 <script>
 
 // Uncomment to run demo at a specific moment in time, nice for making screenshots
-// var demodeltatime = dt.now() - new Date("2001-01-07 16:15").getTime() / 1000;
+// var demodeltatime = dt.now() - new Date("2021-01-12 16:15").getTime() / 1000;
 // dt.now = function() { return new Date().getTime() / 1000 - demodeltatime};
 
 window.addEventListener("load", function() {
@@ -33,4 +33,4 @@ window.addEventListener("load", function() {
 <span class='fas' style='color: #eee;'></span>
 <img id='ttlogo' alt='TimeTagger logo' src='timetagger192.png' width='2px' />
 
-<canvas id='canvas'>This website needs a working (HTML5) canvas.</canvas>
+<canvas id='canvas'>This page needs a working (HTML5) canvas.</canvas>
