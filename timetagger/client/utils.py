@@ -165,6 +165,99 @@ def get_tags_and_parts_from_string(s=""):
     return tags, parts
 
 
+def get_better_tag_order_from_stats(stats, selected_tags, remove_selected):
+    """Given a stats dict (tagz -> times) put the tags of each item in a
+    sensible order. Returns a dict that maps the old tagz to the new. The items
+    in the dict
+
+    the keys are modified so that the tags are in an order that matches
+    the time for that tag.
+    """
+
+    # Select tags (discart unselected)
+    if len(selected_tags) > 0:
+        ori_stats = stats
+        stats = {}
+        for tagz in ori_stats.keys():
+            tags = tagz.split(" ")
+            if all([tag in tags for tag in selected_tags]):
+                stats[tagz] = ori_stats[tagz]
+
+    # Score the individual tags, so we can sort them later
+    tag_scores1 = {}
+    tag_connections = {}
+    depth = 0
+    for tagz, t in stats.items():
+        tags = tagz.split(" ")
+        depth = max(depth, len(tags))
+        for tag in tags:
+            tag_scores1[tag] = tag_scores1.get(tag, 0) + t
+            tag_connections[tag] = tag_connections.get(tag, 0) + 1
+
+    # Also calculate a score based on how often a tag occurs. This works
+    # by letting each tag deal out points to other tags that it occurs
+    # with together, which gives a nicer result than just counting occurances.
+    # This is actually the more important score.
+    tag_scores2 = {}
+    for tagz, t in stats.items():
+        tags = tagz.split(" ")
+        for tag in tags:
+            for tag2 in tags:
+                if tag2 != tag:
+                    tag_scores2[tag2] = (
+                        tag_scores2.get(tag2, 0) + 1 / tag_connections[tag]
+                    )
+
+    # Make sure that selected tags have the best scores
+    for i, tag in enumerate(selected_tags):
+        d = 1000 + len(selected_tags) - i
+        tag_scores1[tag] = tag_scores1.get(tag, 0) + d
+
+    # Sort the tagz (tag combis), based on the tag_scores.
+    # This will be the order for the renaming process.
+    sorted_tagz = []
+    for tagz in stats.keys():
+        score1 = 0
+        score2 = 0
+        for tag in tagz.split(" "):
+            score1 += tag_scores1[tag]
+            score2 += tag_scores2[tag]
+        sorted_tagz.append((tagz, score1, score2))
+    sorted_tagz.sort(key=lambda x: -x[1])
+    sorted_tagz.sort(key=lambda x: -x[2])
+
+    # Rename the tagz (change tag order) based on the tag score
+    name_map = {}
+    position_votes = {}
+    for tagz, _, _ in sorted_tagz:
+        tags = tagz.split(" ")
+        # Optionally clear the list from selected tags
+        if remove_selected:
+            for tag in selected_tags:
+                if tag in tags:
+                    tags.remove(tag)
+        # Sort the tags, in a way that tries to preserve the structure of the
+        # tags. This is done by remembering at what position each tag was present.
+        remaining_tags = tags.copy()
+        tags = []
+        i = -1
+        while len(remaining_tags) > 0:
+            i += 1
+            remaining_tags.sort(key=lambda tag: -tag_scores1[tag])
+            remaining_tags.sort(key=lambda tag: -tag_scores2[tag])
+            remaining_tags.sort(key=lambda tag: -position_votes.get(str(i) + tag, 0))
+            tags.append(remaining_tags.pop(0))
+        name_map[tagz] = " ".join(tags)
+        # Promote current position of each tag (and demote other positions)
+        for i, tag in enumerate(tags):
+            for ii in range(depth):
+                pos_key = str(ii) + tag
+                s = 1 if i == ii else -1 / depth
+                position_votes[pos_key] = position_votes.get(pos_key, 0) + s
+
+    return name_map
+
+
 def positions_mean_and_std(positions):
     """Calculate the mean and std for a list of positions."""
     PSCRIPT_OVERLOAD = False  # noqa

@@ -2426,53 +2426,39 @@ class AnalyticsWidget(Widget):
 
         root = self._tag_bars[""]
 
-        # Get stats for the current time range
-        t1, t2 = self._canvas.range.get_range()
-        stats = window.store.records.get_stats(t1, t2)
-
-        # Select tags (discart unselected)
-        if len(self.selected_tags):
-            for tagz in stats.keys():
-                tags = tagz.split(" ")
-                if not all([tag in tags for tag in self.selected_tags]):
-                    stats.pop(tagz)
-
-        # Score the tags, for tag-sorting
-        tag_scores = {}
-        tmax = 0
-        for tagz, t in stats.items():
-            tmax = max(tmax, t)
-            for tag in tagz.split(" "):
-                tag_scores[tag] = tag_scores.get(tag, 0) + t
-
-        # Make sure that selected tags score even better
-        for i, tag in enumerate(self.selected_tags):
-            d = tmax + len(self.selected_tags) - i
-            tag_scores[tag] = tag_scores.get(tag, 0) + d
-
-        # Rename the tagz (change tag order) based on the tag score
-        for tagz in stats.keys():
-            tags = tagz.split(" ")
-            tags.sort(key=lambda tag: -tag_scores[tag])
-            stats[tags.join(" ")] = stats.pop(tagz)
-
         # Reset times for all elements. The one that are still valid
         # will get their time set.
         for key in self._tag_bars.keys():
             self._tag_bars[key].cum_t = 0
             self._tag_bars[key].t = 0
 
+        # Get stats for the current time range
+        t1, t2 = self._canvas.range.get_range()
+        stats = window.store.records.get_stats(t1, t2)
+
+        # Get better names
+        name_map = utils.get_better_tag_order_from_stats(
+            stats, self.selected_tags, False
+        )
+
+        # Replace the stats with the sorted version
+        new_stats = {}
+        for tagz1, tagz2 in name_map.items():
+            new_stats[tagz2] = stats[tagz1]
+
         # Group tags
         group_counts = {}
-        for tagz in stats.keys():
-            tags = tagz.split(" ")
-            for level in range(len(tags)):
-                tagz = tags[: level + 1].join(" ")
-                if len(self.selected_tags) and self.selected_tags == tagz:
-                    group_counts[tagz] = group_counts.get(tagz, 0) + 1
+        if len(self.selected_tags) > 0:
+            selected_tagz = self.selected_tags.join(" ")
+            for tagz in new_stats.keys():
+                tags = tagz.split(" ")
+                for level in range(len(tags)):
+                    tagz = tags[: level + 1].join(" ")
+                    if selected_tagz == tagz:
+                        group_counts[tagz] = group_counts.get(tagz, 0) + 1
 
         # Insert any new tags into the hierarchy
-        for tagz, t in stats.items():
+        for tagz, t in new_stats.items():
             tags = tagz.split(" ")
             dprev = root
             key = ""
