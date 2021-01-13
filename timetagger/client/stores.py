@@ -963,7 +963,7 @@ class DemoDataStore(BaseDataStore):
             ["#unpaid #reading"],
             ["#unpaid #admin"],
             ["#client1 #meeting", "#client1 #consulting", "#client1 #admin"],
-            ["#client1 #meeting", "#client1 #admin"],
+            ["#client1 #meeting", "#client1 #admin", "#client1 #code"],
             [
                 "#client2 #code #writing",
                 "#client2 #code",
@@ -988,8 +988,6 @@ class DemoDataStore(BaseDataStore):
                 "#client3 #training",
                 "#client3 #coaching",
             ],
-            ["#client4 #consulting", "#client4 #admin"],
-            ["#client4 #consulting", "#client4 #training"],
         ]
 
     def _create_one_year_of_data(self, y):
@@ -1030,15 +1028,17 @@ class DemoDataStore(BaseDataStore):
                     # Put some predictable stuff on today, whatever day it is.
                     if y == nowyear and m == nowmonth and d == nowday:
                         for start, stop, tag in [
-                            ("08:51", "10:19", "#client1 #code"),
-                            ("10:19", "10:52", "#client1 #design"),
-                            ("10:59", "11:47", "#unpaid #reading"),
+                            ("08:51", "09:11", "#unpaid #admin"),
+                            ("09:11", "10:19", "#client1 #design"),
+                            ("10:19", "11:52", "#client1 #code"),
                             ("12:51", "13:36", "#client1 #design"),
-                            ("13:36", "14:28", "#client3 #meeting"),
-                            ("14:34", "16:11", "#client3 #code"),
+                            ("13:36", "14:28", "#client2 #meeting"),
+                            ("14:34", "16:11", "#client2 #code"),
                         ]:
                             t1 = dt.to_time_int(f"{sy}-{sm}-{sd}T{start}:00")
                             t2 = dt.to_time_int(f"{sy}-{sm}-{sd}T{stop}:00")
+                            if t2 > now:
+                                continue
                             works = ["work", "stuff", "things", "administration"]
                             ds = "Did some " + works[int(random() * len(works))]
                             ds += " " + tag

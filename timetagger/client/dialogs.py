@@ -417,6 +417,8 @@ class MenuDialog(BaseDialog):
                 text = "Signed in as " + auth.email
             else:
                 text = "Not signed in"
+        if window.timetaggerversion:
+            text += " - TimeTagger " + window.timetaggerversion
         loggedinas.innerText = text
 
         container = self.maindiv
@@ -1339,35 +1341,18 @@ class ReportDialog(BaseDialog):
         records = window.store.records.get_records(t1, t2).values()
         records.sort(key=lambda record: record.t1)
 
-        # Select tags (discart unselected)
-        if len(self._tags):
-            for tagz in stats.keys():
-                tags = tagz.split(" ")
-                if not all([tag in tags for tag in self._tags]):
-                    stats.pop(tagz)
+        # Get better names
+        name_map = utils.get_better_tag_order_from_stats(stats, self._tags, True)
 
-        # Score the tags, for tag-sorting
-        tag_scores = {}
-        tmax = 0
-        for tagz, t in stats.items():
-            tmax = max(tmax, t)
-            for tag in tagz.split(" "):
-                tag_scores[tag] = tag_scores.get(tag, 0) + t
-
-        # Rename the tagz (change tag order) based on the tag score
+        # Create list of pairs of stat-name, stat-key, and sort it.
         statnames = []
-        for tagz in stats.keys():
-            tags = tagz.split(" ")
-            for tag in self._tags:
-                if tag in tags:
-                    tags.remove(tag)
-            tags.sort(key=lambda tag: -tag_scores[tag])
-            statnames.append((tags.join(" "), tagz))
+        for tagz1, tagz2 in name_map.items():
+            statnames.append((tagz2, tagz1))
         statnames.sort(key=lambda x: x[0].lower())
 
         # Collect per tag combi, filter if necessary
         records_per_tagz = {}
-        for tagz in stats.keys():
+        for tagz in name_map.keys():
             records_per_tagz[tagz] = []
         for i in range(len(records)):
             record = records[i]
@@ -1382,8 +1367,8 @@ class ReportDialog(BaseDialog):
 
         # Include total
         total = 0
-        for t in stats.values():
-            total += t
+        for tagz in name_map.keys():
+            total += stats[tagz]
         rows.append(["head", duration2str(total), "Total", 0])
 
         for name, tagz in statnames:

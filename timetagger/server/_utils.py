@@ -5,6 +5,7 @@ Misc utils.
 import os
 import asyncio
 import concurrent
+import subprocess
 from base64 import urlsafe_b64encode as b64encode, urlsafe_b64decode as b64decode
 
 
@@ -89,3 +90,22 @@ async def asyncthis(func, *args):
     """
     loop = asyncio.get_event_loop()
     return await loop.run_in_executor(executor, func, *args)
+
+
+# %% Other
+
+
+def get_commit_hash():
+    """Get the short commit hash, if the source is part of a cloned repo."""
+    dir = os.path.abspath(os.path.join(__file__, "..", "..", ".."))
+    if os.path.isdir(os.path.join(dir, ".git")):
+        cmd = ["git", "rev-parse", "--short", "HEAD"]
+        try:
+            out = subprocess.check_output(cmd, cwd=dir)
+            str = out.decode().strip()
+            if not ("\n" in str or "<" in str or ">" in str):
+                return str
+        except Exception:
+            pass
+    # Else ...
+    return ""
