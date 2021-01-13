@@ -841,11 +841,6 @@ class TopWidget(Widget):
             ctx, x, y1, startstoptext, "addrecord_start", startstop_tt
         )
 
-        # Button to add a record = f055, f067
-        x += self._draw_button(
-            ctx, x, y1, "fas-\uf067", "addrecord_manual", "Add a record"
-        )
-
         # Draw summary text
         ctx.textBaseline = "top"
         ctx.font = "12px " + FONT.condensed
@@ -857,6 +852,11 @@ class TopWidget(Widget):
         else:
             ctx.textAlign = "center"
             ctx.fillText("Record", (x1 + x) / 2, y1 + 5, x - x1)
+
+        # Button to add a record = f055, f067
+        x += self._draw_button(
+            ctx, x, y1, "fas-\uf067", "addrecord_manual", "Add a record"
+        )
 
         return x - x1
 

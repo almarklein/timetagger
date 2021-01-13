@@ -301,8 +301,9 @@ class DemoInfoDialog(BaseDialog):
             </h1>
             <p>
             This demo shows 5 years of randomly generated time tracking data.
+            Have a look around!
             </p><p>
-            Press those buttons - don't worry about breaking anything!
+            <i>Click anywhere outside of this dialog to close it.</i>
             </p>
         """
         self.maindiv.innerHTML = html
@@ -327,6 +328,8 @@ class SandboxInfoDialog(BaseDialog):
             The TimeTagger sandbox starts without any records. You can play around
             or try importing records. The data is not synced to the server and
             will be lost as soon as you leave this page.
+            </p><p>
+            <i>Click anywhere outside of this dialog to close it.</i>
             </p>
         """
         self.maindiv.innerHTML = html
