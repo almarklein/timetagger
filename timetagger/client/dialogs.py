@@ -417,6 +417,8 @@ class MenuDialog(BaseDialog):
                 text = "Signed in as " + auth.email
             else:
                 text = "Not signed in"
+        if window.timetaggerversion:
+            text += " - TimeTagger " + window.timetaggerversion
         loggedinas.innerText = text
 
         container = self.maindiv

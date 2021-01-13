@@ -70,7 +70,7 @@ a:hover, p a:hover {
 }
 
 h1, h2, h3, h4 {
-    color: #E37108;
+    color: #07A82C;
 }
 h1 {
     color: #000;
@@ -83,11 +83,6 @@ h2 > a:link, h2 > a:visited, h2 > a:active, h3 > a:link, h3 > a:visited, h3 > a:
 }
 h2 > a:hover, h3 > a:hover {
     text-decoration: none;
-}
-h2 > a:hover::after, h3 > a:hover::after {
-    content: " \00B6";
-    color: rgba(0, 0, 0, 0.3);
-    font-size: 80%;
 }
 
 hr {
@@ -168,6 +163,7 @@ body.darkmode .dialog.verticalmenu {
     background: #D3D8DA;
 }
 .dialog.verticalmenu .loggedinas {
+    user-select: text;
     text-align: center;
     font-size: 90%;
     color: #999;

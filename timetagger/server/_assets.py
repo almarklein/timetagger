@@ -12,6 +12,12 @@ import jinja2
 import pscript
 import markdown
 
+from .. import __version__
+from ._utils import get_commit_hash
+
+
+versionstring = ("v" + __version__ + " " + get_commit_hash()).strip()
+
 
 logger = logging.getLogger("asgineer")
 
@@ -70,6 +76,7 @@ def md2html(text, template):
         main=main,
         embedded_script="",
         embedded_style=style_embed,
+        versionstring=versionstring,
     )
 
 
