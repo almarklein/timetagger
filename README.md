@@ -48,13 +48,9 @@ pip install https://github.com/almarklein/timetagger/archive/main.zip
 
 ## License
 
-This code is subject to the GPL-3.0 License.
-
-Note that this code is used as part of a closed-source application at
-https://timetagger.app. If you make contributions to this project, you
-also provide me the right to use these contributions as such. I'm not
-sure how well this holds legally, to be honest. Therefore, I'd be
-reluctant to accept larger contributions.
+This code is subject to the GPL-3.0 License. Contributors must agree to the
+[Contributor License Agreement](https://github.com/almarklein/timetagger/blob/main/CLA.md)
+to grant the right to use contributions at e.g. the TimeTagger.app service.
 
 
 ## Developers
