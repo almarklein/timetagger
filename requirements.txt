@@ -3,3 +3,4 @@ markdown
 asgineer
 itemdb
 pscript
+uvicorn
