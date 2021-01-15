@@ -900,7 +900,6 @@ class RecordDialog(BaseDialog):
             <h2><i class='fas'>\uf305</i> Description</h2>
             <input type="text" class="dode12" placeholder='{dstext}' />
             <div style='color:#777;'></div>
-            <h2><i class='fas'>\uf292</i> Tags</h2>
             <div></div>
             <h2><i class='fas'>\uf017</i> Time</h2>
             <div></div>
@@ -913,7 +912,6 @@ class RecordDialog(BaseDialog):
             _,  # Description header
             self._ds_input,
             self._tag_suggestions_div,
-            _,  # Tags header
             self._tags_div,
             _,  # Time header
             self._time_node,
@@ -970,12 +968,14 @@ class RecordDialog(BaseDialog):
 
     def _query_tags(self):
         """Get all current tags. If different, update suggestions. """
+        # Show info about current tags in description
         tags, parts = utils.get_tags_and_parts_from_string(self._ds_input.value)
+        tags_html = "Tags: "
         if len(tags) == 0:
-            tags_html = "No tags."
-        else:
-            tags_list = [f"<span style='color:#07A82C'>{t}</span>" for t in tags]
-            tags_html = "&nbsp; &nbsp;".join(tags_list)
+            tags = ["#untagged"]
+        tags_list = [f"<span style='color:#07A82C'>{t}</span>" for t in tags]
+        tags_html += "&nbsp; &nbsp;".join(tags_list)
+        # Get suggested tags
         if self._suggested_tags_html:
             suggested_dict = self._suggested_tags_html.copy()
             for tag in tags:
