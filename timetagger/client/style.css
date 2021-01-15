@@ -342,7 +342,7 @@ body.darkmode .tooltipdiv {
 .dialog .formlayout {
     display: grid;
     grid-template-columns: auto 1fr;
-    max-width: 400px;
+    max-width: 500px;
     grid-gap: 5px 1em;
     justify-items: stretch;
     align-items: center;
