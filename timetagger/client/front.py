@@ -125,8 +125,6 @@ class TimeTaggerCanvas(BaseCanvas):
     def __init__(self, canvas):
         super().__init__(canvas)
 
-        set_colors()
-
         self._now = None
         self._show_stopwatch = True
 
@@ -230,6 +228,10 @@ class TimeTaggerCanvas(BaseCanvas):
         ob = window.store.settings.get_by_key("stopwatch")
         if ob is not None:
             self._show_stopwatch = ob.get("value", True)
+        ob = window.store.settings.get_by_key("darkmode")
+        if ob is not None and ob.value != self._darkmode:
+            self._darkmode = ob.value
+            set_colors()
 
         # Update the range if it is animating
         self.range.animation_update()
