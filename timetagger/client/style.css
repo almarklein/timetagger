@@ -305,18 +305,8 @@ body.darkmode .tooltipdiv {
     user-select: none;
     -moz-user-select: none;
 }
-.dialog .info {
-    background: #31383F;
-    margin: 0;
-    padding-top: 2px;
-    color: #ccc;
-    font-size: 70%;
-    font-family: "Ubuntu Condensed", "Ubuntu", Verdana, sans-serif;
-}
+
 @media screen and (min-width: 800px) {
-    .dialog .info {
-        font-size: 90%;
-    }
     .dialog h1 {
         font-size: 1.5em;
     }
@@ -379,7 +369,7 @@ body.darkmode .dialog {
     background: #D3D8DA;
     border-color: #31383F
 }
-body.darkmode .dialog h1, body.darkmode .dialog .info {
+body.darkmode .dialog h1 {
     background: #31383F;
     border-color: #31383F
 }

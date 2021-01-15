@@ -303,7 +303,7 @@ class DemoInfoDialog(BaseDialog):
             This demo shows 5 years of randomly generated time tracking data.
             Have a look around!
             </p><p>
-            <i>Click anywhere outside of this dialog to close it.</i>
+            <i>Hit Escape or click anywhere outside of this dialog to close it.</i>
             </p>
         """
         self.maindiv.innerHTML = html
@@ -329,7 +329,7 @@ class SandboxInfoDialog(BaseDialog):
             or try importing records. The data is not synced to the server and
             will be lost as soon as you leave this page.
             </p><p>
-            <i>Click anywhere outside of this dialog to close it.</i>
+            <i>Hit Escape or click anywhere outside of this dialog to close it.</i>
             </p>
         """
         self.maindiv.innerHTML = html
@@ -903,8 +903,12 @@ class RecordDialog(BaseDialog):
             <div></div>
             <h2><i class='fas'>\uf017</i> Time</h2>
             <div></div>
-            <div class='info'>ID: {record.key} - modified: {dt.time2localstr(record.mt)}
-                </div>
+            <hr style='margin-top:2em;' />
+            <div class='formlayout' style='font-size:85%; grid-gap: 0px 1em;'>
+                <div>ID:</div><div>{record.key}</div>
+                <div>Modified:</div><div>{dt.time2localstr(record.mt)}</div>
+                <input type='button' value='Delete' /><input type='button' value='Confirm deleting this record' />
+            </div>
         """
         self.maindiv.innerHTML = html
         (
@@ -915,11 +919,17 @@ class RecordDialog(BaseDialog):
             self._tags_div,
             _,  # Time header
             self._time_node,
-            self._footer,
+            _,  # More/advanced header
+            self._form,
         ) = self.maindiv.children
 
         self._cancel_but = self.maindiv.children[0].children[-2]
         self._submit_but = self.maindiv.children[0].children[-1]
+        self._delete_but1 = self._form.children[-2]
+        self._delete_but2 = self._form.children[-1]
+        self._delete_but2.style.visibility = "hidden"
+        if actionl in ("new", "start", "create"):
+            self._delete_but1.style.visibility = "hidden"
 
         self._time_edit = StartStopEdit(
             self._time_node, self._on_times_change, record.t1, record.t2
@@ -937,6 +947,8 @@ class RecordDialog(BaseDialog):
         self._submit_but.onclick = self.submit
         self._ds_input.oninput = self._on_user_edit
         self._ds_input.onchange = self._on_user_edit_done
+        self._delete_but1.onclick = self._delete1
+        self._delete_but2.onclick = self._delete2
 
         # Init and start with submit but disabled if it makes sense
         self._no_user_edit_yet = False
@@ -1044,6 +1056,16 @@ class RecordDialog(BaseDialog):
             x += ">" + tag + "</a>"
             html_parts[tag] = x
         return html_parts
+
+    def _delete1(self):
+        self._delete_but2.style.visibility = "visible"
+
+    def _delete2(self):
+        record = self._record
+        window.stores.make_hidden(record)  # Sets the description
+        record.t2 = record.t1 + 1  # Set duration to 1s (t1 == t2 means running)
+        window.store.records.put(record)
+        self.close(record)
 
 
 class TagManageDialog(BaseDialog):
