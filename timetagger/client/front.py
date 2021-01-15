@@ -1617,31 +1617,26 @@ class RecordsWidget(Widget):
             ctx.textAlign = "left"
             max_x = x4 - ctx.measureText(duration_text).width - 8
             space_width = ctx.measureText(" ").width + 2
-            words = (record.ds or "").split()
-            parts = [""]
-            for word in words:
-                if word.startswith("#"):
-                    parts.append(word)
-                    parts.append("")
-                else:
-                    parts[-1] += " " + word
+            _, parts = utils.get_tags_and_parts_from_string(record.ds)
             x = x3 + 8
-            for text in parts:
-                if x > max_x:
-                    continue
-                text = text.strip()
-                if len(text) == 0:
-                    continue
-                if text.startswith("#"):
+            for part in parts:
+                if part.startswith("#"):
                     ctx.fillStyle = COLORS.tag
+                    texts = [part]
                 else:
                     ctx.fillStyle = COLORS.record_text
-                new_x = x + ctx.measureText(text).width + space_width
-                if new_x <= max_x:
-                    ctx.fillText(text, x, ty1 + 23, max_x - x)
-                else:
-                    ctx.fillText("…", x, ty1 + 23, max_x - x)
-                x = new_x
+                    texts = part.split(" ")
+                for text in texts:
+                    if len(text) == 0:
+                        continue
+                    if x > max_x:
+                        continue
+                    new_x = x + ctx.measureText(text).width + space_width
+                    if new_x <= max_x:
+                        ctx.fillText(text, x, ty1 + 23, max_x - x)
+                    else:
+                        ctx.fillText("…", x, ty1 + 23, max_x - x)
+                    x = new_x
 
         # For the repr in the time bar, we may neen to scale down the roundness
         rn = min(rn, 0.5 * (ry2 - ry1))
