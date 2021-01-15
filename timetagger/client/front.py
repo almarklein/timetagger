@@ -109,9 +109,12 @@ def set_colors():
 # Init colors
 set_colors()
 if window.matchMedia:
-    window.matchMedia("(prefers-color-scheme: dark)").addEventListener(
-        "change", set_colors
-    )
+    try:
+        window.matchMedia("(prefers-color-scheme: dark)").addEventListener(
+            "change", set_colors
+        )
+    except Exception:
+        pass  # e.g. Mobile Safari
 
 
 class TimeTaggerCanvas(BaseCanvas):
