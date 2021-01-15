@@ -1081,10 +1081,12 @@ class TagManageDialog(BaseDialog):
                 <button type='button'><i class='fas'>\uf00d</i></button>
                 </h1>
             <p>This dialog allows you to search records by tag names, and to
-            rename or remove tags by updating all records in which these tags
-            are present. If this feels scary, consider experimenting with
-            this in the live demo.
-            Tag names may include dashes, underscores and forward slashes.
+            rename, remove, merge, or split tags from these records.
+            </p>
+            <p>
+            If this feels scary, consider experimenting with this in
+            the live demo. Tag names may include dashes, underscores
+            and forward slashes.
             </p>
             <div class='formlayout'>
                 <div>Tags:</div>
@@ -1109,7 +1111,7 @@ class TagManageDialog(BaseDialog):
 
         self._records_node = self.maindiv.children[-1]
 
-        formdiv = self.maindiv.children[2]
+        formdiv = self.maindiv.children[3]
         self._tagname1 = formdiv.children[1]
         self._tagname2 = formdiv.children[3]
         self._button_find = formdiv.children[5]
