@@ -1268,7 +1268,7 @@ class ReportDialog(BaseDialog):
                 <button type='button'><i class='fas'>\uf328</i>&nbsp;&nbsp;{self._copybuttext}</button>
                     <div>to paste in a spreadsheet</div>
                 <button type='button'><i class='fas'>\uf0ce</i>&nbsp;&nbsp;Save CSV</button>
-                    <div>to save as spreadsheet</div>
+                    <div>to save as spreadsheet (with more details)</div>
                 <button type='button'><i class='fas'>\uf1c1</i>&nbsp;&nbsp;Save PDF</button>
                     <div>to archive or send to a client</div>
             </div>
@@ -1403,6 +1403,7 @@ class ReportDialog(BaseDialog):
                             st1,
                             st2,
                             record.get("ds", ""),
+                            window.store.records.tags_from_record(record).join(" "),
                         ]
                     )
 
@@ -1421,10 +1422,10 @@ class ReportDialog(BaseDialog):
                     + "<th></th><th></th><th></th><th></th></tr>"
                 )
             elif row[0] == "record":
-                _, key, duration, sd1, st1, st2, ds = row
+                _, key, duration, sd1, st1, st2, ds, tagz = row
                 lines.append(
-                    f"<tr><td></td><td></td><td>{duration}</td><td>"
-                    + f"{sd1}</td><td class='t1'>{st1}</td><td class='t2'>{st2}</td>"
+                    f"<tr><td></td><td></td><td>{duration}</td>"
+                    + f"<td>{sd1}</td><td class='t1'>{st1}</td><td class='t2'>{st2}</td>"
                     + f"<td><a onclick='window._open_record_dialog(\"{key}\")' style='cursor:pointer;'>"
                     + f"{ds or '&nbsp;-&nbsp;'}</a></td></tr>"
                 )
@@ -1451,7 +1452,9 @@ class ReportDialog(BaseDialog):
         rows = self._generate_table_rows(self._last_t1, self._last_t2)
 
         lines = []
-        lines.append("total, tags, duration, date, start, stop, description, user")
+        lines.append(
+            "subtotals, tag_groups, duration, date, start, stop, description, user, tags"
+        )
         lines.append("")
 
         user = ""  # noqa
@@ -1462,15 +1465,15 @@ class ReportDialog(BaseDialog):
 
         for row in rows:
             if row[0] == "blank":
-                lines.append(",,,,,,")
+                lines.append(",,,,,,,,")
             elif row[0] == "head":
-                lines.append(RawJS('row[1] + ", " + row[2] + ",,,,,,"'))
+                lines.append(RawJS('row[1] + ", " + row[2] + ",,,,,,,"'))
             elif row[0] == "record":
-                _, key, duration, sd1, st1, st2, ds = row
+                _, key, duration, sd1, st1, st2, ds, tagz = row
                 ds = '"' + ds + '"'
                 lines.append(
                     RawJS(
-                        """',,' + duration + ', ' + sd1 + ', ' + st1 + ', ' + st2 + ', ' + ds + ', ' + user"""
+                        """',,' + duration + ', ' + sd1 + ', ' + st1 + ', ' + st2 + ', ' + ds + ', ' + user + ', ' + tagz"""
                     )
                 )
 
@@ -1592,7 +1595,8 @@ class ReportDialog(BaseDialog):
                     doc.setFillColor("#f3f3f3" if rownr % 2 else "#eaeaea")
                     doc.rect(margin, y, width - 2 * margin, rowheight, "F")
                     doc.setTextColor("#000")
-                    rowvalues = row[2:]  # _, key, duration, sd1, st1, st2, ds = row
+                    # _, key, duration, sd1, st1, st2, ds, tagz = row
+                    rowvalues = row[2:]
                     # The duration is right-aligned
                     x = margin + coloffsets[0]
                     doc.text(row[2], x, y + rowheight2, right_middle)
