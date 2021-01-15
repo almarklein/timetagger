@@ -999,7 +999,7 @@ class RecordDialog(BaseDialog):
 
     def _record_dialog_add_tag(self, tag):
         self._ds_input.value = self._ds_input.value.rstrip() + " " + tag
-        self._query_tags()
+        self._on_user_edit()
 
     def close(self, e=None):
         self._time_edit.close()
