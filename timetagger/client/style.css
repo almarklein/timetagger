@@ -244,7 +244,7 @@ body.darkmode .tooltipdiv {
     /* display: none; */
     pointer-events: none;
     background: rgba(0, 0, 0, 0.0);
-    transition: background 0.2s;
+    transition: background 0.3s;
 }
 
 .dialog {
@@ -259,12 +259,14 @@ body.darkmode .tooltipdiv {
     max-height: 95vh;
     overflow-y: auto;
     overflow-x: hidden;  /* prevent horizontal swiping */
-    display: none;
     border-radius: 2px;
     box-shadow: 0 20px 40px rgba(0,0,0,0.4);
     user-select: auto;
     z-index: 1000;
     padding: 0;
+    display: none;
+    opacity: 0;
+    transition: opacity 0.1s linear;
 }
 .dialog h2, .dialog h3 {
     color: #000;  /* override red headers */

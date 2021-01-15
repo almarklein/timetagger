@@ -238,6 +238,18 @@ class BaseDialog:
         self.maindiv.className = "dialog"
         self.maindiv.setAttribute("tabindex", -1)
 
+    def _show_dialog(self):
+        self.maindiv.style.display = "block"
+
+        def f():
+            self.maindiv.style.opacity = 1
+
+        window.setTimeout(f, 1)
+
+    def _hide_dialog(self):
+        self.maindiv.style.display = "none"
+        self.maindiv.style.opacity = 0
+
     def is_shown(self):
         return self.maindiv.style.display == "block"
 
@@ -247,10 +259,10 @@ class BaseDialog:
         if self.MODAL:
             show_background_div(True, self.TRANSPARENT_BG)
         if stack:
-            stack[-1].maindiv.style.display = "none"
+            stack[-1]._hide_dialog()
 
         # Show this dialog and add it to the stack
-        self.maindiv.style.display = "block"
+        self._show_dialog()
         stack.append(self)
         self.maindiv.focus()
 
@@ -265,14 +277,14 @@ class BaseDialog:
     def close(self, e=None):
         """Close/cancel/hide the dialog."""
         # Hide, and remove ourselves from the stack (also if not at the end)
-        self.maindiv.style.display = "none"
+        self._hide_dialog()
         for i in reversed(range(len(stack))):
             if stack[i] is self:
                 stack.pop(i)
 
         # Give conrol back to parent dialog, or to the main app
         if stack:
-            stack[-1].maindiv.style.display = "block"
+            stack[-1]._show_dialog()
         for d in stack:
             if d.MODAL:
                 show_background_div(True, d.TRANSPARENT_BG)
