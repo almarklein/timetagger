@@ -222,7 +222,8 @@ class BaseDialog:
     """
 
     MODAL = True
-    EXIT_ON_CLICK_OUTSIDE = False
+    EXIT_ON_CLICK_OUTSIDE = True
+    TRANSPARENT_BG = False
 
     def __init__(self, canvas):
         self._canvas = canvas
@@ -244,7 +245,7 @@ class BaseDialog:
         self._callback = callback
         # Disable main app and any "parent" dialogs
         if self.MODAL:
-            show_background_div(True, self.EXIT_ON_CLICK_OUTSIDE)
+            show_background_div(True, self.TRANSPARENT_BG)
         if stack:
             stack[-1].maindiv.style.display = "none"
 
@@ -274,7 +275,7 @@ class BaseDialog:
             stack[-1].maindiv.style.display = "block"
         for d in stack:
             if d.MODAL:
-                show_background_div(True, d.EXIT_ON_CLICK_OUTSIDE)
+                show_background_div(True, d.TRANSPARENT_BG)
                 break
         else:
             show_background_div(False)
@@ -362,6 +363,7 @@ class MenuDialog(BaseDialog):
     """Dialog to show a popup menu."""
 
     EXIT_ON_CLICK_OUTSIDE = True
+    TRANSPARENT_BG = True
 
     def open(self):
         """Show/open the dialog ."""
@@ -475,6 +477,7 @@ class TimeSelectionDialog(BaseDialog):
     """Dialog to show a popup for selecting the time range."""
 
     EXIT_ON_CLICK_OUTSIDE = True
+    TRANSPARENT_BG = True
 
     def open(self):
         """Show/open the dialog ."""
