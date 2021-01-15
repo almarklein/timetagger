@@ -970,7 +970,7 @@ class RecordDialog(BaseDialog):
 
     def _query_tags(self):
         """Get all current tags. If different, update suggestions. """
-        tags, _ = utils.get_tags_and_parts_from_string(self._ds_input.value)
+        tags, parts = utils.get_tags_and_parts_from_string(self._ds_input.value)
         if len(tags) == 0:
             tags_html = "No tags."
         else:
@@ -985,6 +985,15 @@ class RecordDialog(BaseDialog):
             suggested_html += "&nbsp; &nbsp;".join(suggested_list)
         else:
             suggested_html = "Use e.g. '&#35;meeting' to add one or more tags."
+        # Detect duplicate tags
+        tag_counts = {}
+        for part in parts:
+            if part.startswith("#"):
+                tag_counts[part] = tag_counts.get(part, 0) + 1
+        duplicates = [tag for tag, count in tag_counts.items() if count > 1]
+        if len(duplicates):
+            suggested_html += "<br>Duplicate tags: " + duplicates.join(" ")
+        # Apply
         self._tag_suggestions_div.innerHTML = suggested_html
         self._tags_div.innerHTML = tags_html
 
@@ -1215,7 +1224,9 @@ class TagManageDialog(BaseDialog):
             new_parts = []
             replacement_made = False
             for part in parts:
-                if part in search_tags:
+                if part.startswith("#") and (
+                    part in search_tags or part in replacement_tags
+                ):
                     if not replacement_made:
                         replacement_made = True
                         new_parts.push(" ".join(replacement_tags))
