@@ -2853,6 +2853,9 @@ class AnalyticsWidget(Widget):
             if len(self.selected_tags):
                 tx = x_ref
                 texts.push([" << total ", "select:"])
+                texts.push(
+                    ["shift-click to select multiple tags", "", COLORS.tick_stripe1]
+                )
             elif unit.cum_t > 0:
                 ctx.textAlign = "right"
                 ctx.fillText(duration, x_ref + 50, ty)
@@ -2870,9 +2873,11 @@ class AnalyticsWidget(Widget):
         # Draw text labels
         ctx.textAlign = "left"
         ctx.lineWidth = 0.8
-        for text, action in texts:
+        for text, action, clr in texts:
             dx = ctx.measureText(text).width
-            if text.startswith("#"):
+            if clr:
+                ctx.fillStyle = clr
+            elif text.startswith("#"):
                 if text in self.selected_tags:
                     ctx.fillStyle = text_style
                 else:
