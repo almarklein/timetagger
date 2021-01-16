@@ -833,11 +833,11 @@ class TopWidget(Widget):
         # Define play / stop button
         startstoptext = "fas-\uf04b"  # start: f04b or f144
         startstop_summary = ""  # Press play to start timer"
-        startstop_tt = "Start recording"
+        startstop_tt = "Start recording [s]"
         records = window.store.records.get_running_records()
         if len(records) > 0:
             startstoptext = "fas-\uf04d"  # stop: f04d or f28d
-            startstop_tt = "Stop recording"
+            startstop_tt = "Stop recording [s]"
             startstop_summary = "Timers running"
             if len(records) == 1:
                 tagz = window.store.records.tags_from_record(records[0]).join(" ")
@@ -866,7 +866,7 @@ class TopWidget(Widget):
 
         # Button to add a record = f055, f067
         x += self._draw_button(
-            ctx, x, y1, "fas-\uf067", "addrecord_manual", "Add a record"
+            ctx, x, y1, "fas-\uf067", "addrecord_new", "Add a record [a]"
         )
 
         return x - x1
@@ -940,14 +940,24 @@ class TopWidget(Widget):
 
         # Define buttons and display priority
         buttons = [
-            (9, "fas-\uf073", "nav_menu", "Select time range"),
-            (7, "fas-\uf106", "nav_backward", "Step backward"),  # f102 f0d8 f106
-            (7, "fas-\uf107", "nav_forward", "Step forward"),  # f103 f0d7 f107
+            (9, "fas-\uf073", "nav_menu", "Select time range [t]"),
+            (
+                7,
+                "fas-\uf106",
+                "nav_backward",
+                "Step backward [ArrowUp/pageUp]",
+            ),  # f102 f0d8 f106
+            (
+                7,
+                "fas-\uf107",
+                "nav_forward",
+                "Step forward [ArrowDown/pageDown]",
+            ),  # f103 f0d7 f107
             (
                 8,
                 "fas-\uf015",
                 "nav_snap_now" + now_scale,
-                "Snap to now",
+                "Snap to now [Home]",
                 now_clr,
             ),
         ]
@@ -983,7 +993,7 @@ class TopWidget(Widget):
     def _draw_report_button(self, ctx, x1, y1, x2, y2):
 
         x = x1
-        x += self._draw_button(ctx, x1, y1, "fas-\uf15c", "report", "Show report")
+        x += self._draw_button(ctx, x1, y1, "fas-\uf15c", "report", "Show report [r]")
 
         ctx.textAlign = "center"
         ctx.textBaseline = "top"
@@ -1134,12 +1144,23 @@ class TopWidget(Widget):
             self._handle_button_press("nav_snap_now")
         elif e.key.lower() == "home":
             self._handle_button_press("nav_snap_now_" + self._now_scale)
+        elif e.key.lower() == "d":
+            self._handle_button_press("nav_snap_now_1D")
+        elif e.key.lower() == "w":
+            self._handle_button_press("nav_snap_now_1W")
+        elif e.key.lower() == "m":
+            self._handle_button_press("nav_snap_now_1M")
+        elif e.key.lower() == "t":
+            self._handle_button_press("nav_menu")
         elif e.key.lower() == "s":
             self._handle_button_press("addrecord_start")
-            e.preventDefault()
+        elif e.key.lower() == "a":
+            self._handle_button_press("addrecord_new")
         elif e.key.lower() == "r":
             self._handle_button_press("report")
-            e.preventDefault()
+        else:
+            return
+        e.preventDefault()
 
     def _handle_button_press(self, action):
         now = self._canvas.now()
@@ -1169,7 +1190,7 @@ class TopWidget(Widget):
                 else:
                     record = window.store.records.create(now, now)
                     self._canvas.record_dialog.open("Start", record, self.update)
-            elif action == "addrecord_manual":
+            elif action == "addrecord_new":
                 record = window.store.records.create(now - 1800, now)
                 self._canvas.record_dialog.open("New", record, self.update)
 
