@@ -672,9 +672,15 @@ class TopWidget(Widget):
     def on_init(self):
         self._picker = utils.Picker()
         self._button_pressed = None
+        self._now_scale = ""
         self._sync_feedback_xy = 0, 0
         window.setInterval(self._draw_sync_feedback_callback, 100)
         self._top_offset = 20
+
+        # For navigation with keys. Listen to canvas events, and window events (in
+        # case canvas does not have focus), but don't listen for events from dialogs.
+        window.addEventListener("keydown", self._on_key, 0)
+        self._canvas.node.addEventListener("keydown", self._on_key, 0)
 
     def on_draw(self, ctx, menu_only=False):
 
@@ -887,6 +893,7 @@ class TopWidget(Widget):
 
         # Are we currently on one of the reference scales?
         now_clr = None
+        self._now_scale = now_scale
         if len(now_scale):
             t1_now = dt.floor(now, now_scale)
             if t1 == t1_now and t2 == dt.add(t1_now, now_scale):
@@ -1114,6 +1121,26 @@ class TopWidget(Widget):
                 if picked.action == pressed.action:
                     self._handle_button_press(picked.action)
 
+    def _on_key(self, e):
+        if e.key.lower() == "arrowup" or e.key.lower() == "pageup":
+            self._handle_button_press("nav_backward")
+        elif e.key.lower() == "arrowdown" or e.key.lower() == "pagedown":
+            self._handle_button_press("nav_forward")
+        elif e.key.lower() == "arrowleft":
+            self._handle_button_press("nav_zoom_+1")
+        elif e.key.lower() == "arrowright":
+            self._handle_button_press("nav_zoom_-1")
+        elif e.key.lower() == "end":
+            self._handle_button_press("nav_snap_now")
+        elif e.key.lower() == "home":
+            self._handle_button_press("nav_snap_now_" + self._now_scale)
+        elif e.key.lower() == "s":
+            self._handle_button_press("addrecord_start")
+            e.preventDefault()
+        elif e.key.lower() == "r":
+            self._handle_button_press("report")
+            e.preventDefault()
+
     def _handle_button_press(self, action):
         now = self._canvas.now()
 
@@ -1215,11 +1242,6 @@ class RecordsWidget(Widget):
         self._pointer_startpos = {}
         self._pointer_startrange = 0, 0
         self._pointer_inertia = []  # track last n move events
-
-        # For navigation with keys. Listen to canvas events, and window events (in
-        # case canvas does not have focus), but don't listen for events from dialogs.
-        window.addEventListener("keydown", self._on_key, 0)
-        self._canvas.node.addEventListener("keydown", self._on_key, 0)
 
     def on_draw(self, ctx):
         x1, y1, x2, y2 = self.rect
@@ -1905,16 +1927,6 @@ class RecordsWidget(Widget):
                 show_secs = len(window.store.records.get_running_records()) > 0
             ctx.fillText(f"{dt.duration_string(sumcount, show_secs)}", x1 + 10, y1 + 5)
 
-    def _on_key(self, e):
-        if e.key.lower() == "arrowup":
-            self._handle_button_press("step_backward")
-        elif e.key.lower() == "arrowdown":
-            self._handle_button_press("step_forward")
-        elif e.key.lower() == "arrowleft":
-            self._handle_button_press("zoom_+1")
-        elif e.key.lower() == "arrowright":
-            self._handle_button_press("zoom_-1")
-
     def on_wheel(self, ev):
         """Handle wheel event.
         Trackpads usually have buildin inertia (by the OS), so it makese sense
@@ -2258,23 +2270,6 @@ class RecordsWidget(Widget):
             self._canvas._prefer_show_analytics = False
             self._canvas.on_resize()
             self.update()
-        elif action.startswith("snap_"):
-            res = action.split("_")[-1]
-            t1, t2 = self._canvas.range.get_target_range()
-            if res.startswith("now"):
-                res = res[3:]
-                if len(res) == 0:
-                    nsecs = t2 - t1
-                    t1 = now - nsecs / 2
-                    t2 = now + nsecs / 2
-                else:
-                    t1 = dt.floor(now, res)
-                    t2 = dt.add(t1, res)
-            else:
-                t_ref = now if (t1 <= now <= t2) else (t2 + t1) / 2
-                t1 = dt.floor(t_ref, res)
-                t2 = dt.add(t1, res)
-            self._canvas.range.animate_range(t1, t2)
         elif action.startswith("zoom_"):
             t1, t2 = self._canvas.range.get_target_range()
             res = action.split("_")[-1]
@@ -2921,7 +2916,11 @@ class AnalyticsWidget(Widget):
             elif picked.startswith("select:"):
                 _, _, tag = picked.partition(":")
                 if tag:
-                    if "Shift" in ev.modifiers or "Ctrl" in ev.modifiers:
+                    if (
+                        "Shift" in ev.modifiers
+                        or "Ctrl" in ev.modifiers
+                        or "Meta" in ev.modifiers
+                    ):
                         if tag in self.selected_tags:
                             self.selected_tags.remove(tag)
                         else:
