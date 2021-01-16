@@ -952,6 +952,7 @@ class RecordDialog(BaseDialog):
 
         window._record_dialog_add_tag = self._record_dialog_add_tag
         self._suggested_tags_html = self._get_suggested_tags()
+        self._suggested_tags_list = []  # for keyboard shortcuts
 
         # Set some initial values
         self._ds_input.value = record.get("ds", "")
@@ -962,6 +963,7 @@ class RecordDialog(BaseDialog):
         self._submit_but.onclick = self.submit
         self._ds_input.oninput = self._on_user_edit
         self._ds_input.onchange = self._on_user_edit_done
+        self._ds_input.onkeydown = self.on_keydown_in_ds_input
         self._delete_but1.onclick = self._delete1
         self._delete_but2.onclick = self._delete2
 
@@ -1003,13 +1005,16 @@ class RecordDialog(BaseDialog):
         tags_list = [f"<span style='color:#07A82C'>{t}</span>" for t in tags]
         tags_html += "&nbsp; &nbsp;".join(tags_list)
         # Get suggested tags
+        self._suggested_tags_list = []
         if self._suggested_tags_html:
             suggested_dict = self._suggested_tags_html.copy()
             for tag in tags:
                 suggested_dict.pop(tag, None)
-            suggested_list = suggested_dict.values()[:6]
-            suggested_html = "Suggested tags:&nbsp; &nbsp;"
-            suggested_html += "&nbsp; &nbsp;".join(suggested_list)
+            self._suggested_tags_list = suggested_dict.keys()[:6]
+            suggested_html = "Suggested tags:"
+            for i, tag in enumerate(self._suggested_tags_list):
+                html = suggested_dict[tag].replace(">#", f">{i + 1}: ")
+                suggested_html += "&nbsp; &nbsp;" + html
         else:
             suggested_html = "Use e.g. '&#35;meeting' to add one or more tags."
         # Detect duplicate tags
@@ -1025,17 +1030,33 @@ class RecordDialog(BaseDialog):
         self._tags_div.innerHTML = tags_html
 
     def _record_dialog_add_tag(self, tag):
-        self._ds_input.value = self._ds_input.value.rstrip() + " " + tag
+        self._ds_input.value = self._ds_input.value.rstrip() + " " + tag + " "
         self._on_user_edit()
+        if window.innerWidth >= 800:
+            self._ds_input.focus()
 
     def close(self, e=None):
         self._time_edit.close()
         super().close(e)
 
+    def on_keydown_in_ds_input(self, ev):
+        if ev.key.lower() == "enter":
+            self.submit()
+        elif ev.key in "123456789" and (ev.ctrlKey or ev.metaKey):
+            try:
+                index = int(ev.key) - 1
+            except Exception:
+                return
+            if 0 <= index < len(self._suggested_tags_list):
+                tag = self._suggested_tags_list[index]
+                self._record_dialog_add_tag(tag)
+                ev.preventDefault()  # don't insert the digit
+
     def submit(self):
         """Submit the record to the store."""
         # Set record.ds
-        self._record.ds = to_str(self._ds_input.value)
+        _, parts = utils.get_tags_and_parts_from_string(to_str(self._ds_input.value))
+        self._record.ds = parts.join("")
         if not self._record.ds:
             self._record.pop("ds", None)
         # Apply
