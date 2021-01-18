@@ -385,18 +385,18 @@ class MenuDialog(BaseDialog):
         self.maindiv.innerHTML = f"""
             <div class='loggedinas'></div>
             <div style="min-height: 1px; margin:0; "></div>
-            <div class='menu'>
-                <a class='fas' style='flex: 0 0 auto; color: rgba(127, 127, 127, 0.3);'>\uf35d</a>
-                <a href="/"><img style='width:24px; height:24px;vertical-align:middle;' src='timetagger192.png' /> Home
-                <a href="/login"><i class='fas'>\uf2f6</i> Login</a>
-                <a href="/logout"><i class='fas'>\uf2f5</i> Logout</a>
-                <a href="/account"><i class='fas'>\uf2bd</i> Account</a>
-            </div>
+            <a href="/"><img style='width:18px; height:18px;vertical-align:middle;' src='timetagger192.png' />&nbsp;&nbsp;Homepage</a>
+            <a href="/login"><i class='fas'>\uf2f6</i>&nbsp;&nbsp;Login</a>
+            <a href="/logout"><i class='fas'>\uf2f5</i>&nbsp;&nbsp;Logout</a>
+            <a href="/support"><i class='fas'>\uf059</i>&nbsp;&nbsp;Support & FAQs</a>
             <div style="min-height: 1px; margin:0; "></div>
+            <a href="/account"><i class='fas'>\uf2bd</i>&nbsp;&nbsp;Account</a>
         """
 
         # Unpack
-        loggedinas, _, extmenu, _ = self.maindiv.children
+        loggedinas = self.maindiv.children[0]
+        loginbut = self.maindiv.children[3]
+        logoutbut = self.maindiv.children[4]
 
         # Valid store?
         if window.store.get_auth:
@@ -412,14 +412,14 @@ class MenuDialog(BaseDialog):
         ):
             is_the_app = False
 
-        # Hide login or logout button
-        if window.top is not window.self and window.store.__name__.startswith("Demo"):
-            # Hide external nav when demo is embedded
-            extmenu.style.display = "none"
+        # Hide login or logout button, or both
+        if True:
+            loginbut.style.display = "none"
+            logoutbut.style.display = "none"
         elif logged_in:
-            extmenu.children[-3].style.display = "none"
+            loginbut.style.display = "none"
         else:
-            extmenu.children[-2].style.display = "none"
+            logoutbut.style.display = "none"
 
         # Display sensible text in "header"
         if window.store.__name__.startswith("Demo"):
@@ -439,17 +439,23 @@ class MenuDialog(BaseDialog):
         container = self.maindiv
         for icon, isvalid, title, func in [
             ("\uf013", store_valid, "Settings", self._show_settings),
-            ("\uf02c", store_valid, "Manage tags", self._manage_tags),
-            ("\uf56f", store_valid, "Import", self._import),
-            ("\uf56e", store_valid, "Export", self._export),
+            ("\uf02c", store_valid, "Search and manage tags", self._manage_tags),
             ("\uf3fa", is_the_app, "Install this app", self._show_install_instructions),
+            (None, True, None, None),
+            ("\uf56f", store_valid, "Import records", self._import),
+            ("\uf56e", store_valid, "Export all records", self._export),
         ]:
             if not isvalid:
                 continue
-            el = window.document.createElement("a")
-            el.innerHTML = f"<i class='fas'>{icon}</i>&nbsp;&nbsp;{title}"
-            el.onclick = func
-            container.appendChild(el)
+            elif title is None:
+                el = window.document.createElement("div")
+                el.setAttribute("style", "min-height: 1px; margin:0;")
+                container.appendChild(el)
+            else:
+                el = window.document.createElement("a")
+                el.innerHTML = f"<i class='fas'>{icon}</i>&nbsp;&nbsp;{title}"
+                el.onclick = func
+                container.appendChild(el)
 
         # more: Settings, User account, inport / export
 
