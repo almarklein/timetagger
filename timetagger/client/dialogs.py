@@ -961,7 +961,6 @@ class RecordDialog(BaseDialog):
         self._submit_but.onclick = self.submit
         self._ds_input.oninput = self._on_user_edit
         self._ds_input.onchange = self._on_user_edit_done
-        self._ds_input.onkeydown = self.on_keydown_in_ds_input
         self._delete_but1.onclick = self._delete1
         self._delete_but2.onclick = self._delete2
 
@@ -1037,18 +1036,21 @@ class RecordDialog(BaseDialog):
         self._time_edit.close()
         super().close(e)
 
-    def on_keydown_in_ds_input(self, ev):
-        if ev.key.lower() == "enter":
+    def _on_key(self, e):
+        key = e.key.lower()
+        if key == "enter" or key == "return":
             self.submit()
-        elif ev.key in "123456789" and (ev.ctrlKey or ev.metaKey):
+        elif key in "123456789" and (e.ctrlKey or e.metaKey):
             try:
-                index = int(ev.key) - 1
+                index = int(key) - 1
             except Exception:
                 return
             if 0 <= index < len(self._suggested_tags_list):
                 tag = self._suggested_tags_list[index]
                 self._record_dialog_add_tag(tag)
-                ev.preventDefault()  # don't insert the digit
+                e.preventDefault()  # don't insert the digit
+        else:
+            super()._on_key(e)
 
     def submit(self):
         """Submit the record to the store."""
