@@ -918,8 +918,6 @@ class RecordDialog(BaseDialog):
             <div></div>
             <hr style='margin-top:2em;' />
             <div class='formlayout' style='font-size:85%; grid-gap: 0px 1em;'>
-                <div>ID:</div><div>{record.key}</div>
-                <div>Modified:</div><div>{dt.time2localstr(record.mt)}</div>
                 <input type='button' value='Delete' /><input type='button' value='Confirm deleting this record' />
             </div>
         """
@@ -938,11 +936,17 @@ class RecordDialog(BaseDialog):
 
         self._cancel_but = self.maindiv.children[0].children[-2]
         self._submit_but = self.maindiv.children[0].children[-1]
-        self._delete_but1 = self._form.children[-2]
-        self._delete_but2 = self._form.children[-1]
+        self._delete_but1 = self._form.children[0]
+        self._delete_but2 = self._form.children[1]
         self._delete_but2.style.visibility = "hidden"
         if actionl in ("new", "start", "create"):
             self._delete_but1.style.visibility = "hidden"
+
+        if False:  # Enable for some more info (e.g. during dev)
+            for x in ["ID:", record.key, "Modified", dt.time2localstr(record.mt)]:
+                el = window.document.createElement("div")
+                el.innerText = x
+                self._form.appendChild(el)
 
         self._time_edit = StartStopEdit(
             self._time_node, self._on_times_change, record.t1, record.t2
