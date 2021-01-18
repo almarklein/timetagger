@@ -18,12 +18,12 @@ def to_str(x):
     return window.stores.to_str(x)
 
 
-def create_background_div():
+def show_background_div(show, keep_transparent=False):
+    # Create element?
     if not window.dialogbackdiv:
-        # Create element
         window.dialogbackdiv = window.document.createElement("div")
-        window.document.body.appendChild(window.dialogbackdiv)
         window.dialogbackdiv.className = "dialog-cover"
+        document.getElementById("canvas").parentNode.appendChild(window.dialogbackdiv)
         # Make it block events
         evts = "click", "mousedown", "mousemove", "touchstart", "touchmove"
         for evname in evts:
@@ -36,8 +36,6 @@ def create_background_div():
             "keydown", handle_background_div_event, 0
         )
 
-
-def show_background_div(show, keep_transparent=False):
     if show:
         alpha = 0.0 if keep_transparent else 0.1
         window.dialogbackdiv.style.background = f"rgba(0, 0, 0, {alpha})"
@@ -63,7 +61,8 @@ def handle_background_div_event(e):
 
 def handle_window_blur_event(e):
     if len(stack) > 0:
-        if stack[-1].EXIT_ON_CLICK_OUTSIDE:
+        looks_like_menu = stack[-1].TRANSPARENT_BG and stack[-1].EXIT_ON_CLICK_OUTSIDE
+        if looks_like_menu:
             stack[-1].close()
 
 
@@ -227,7 +226,6 @@ class BaseDialog:
 
     def __init__(self, canvas):
         self._canvas = canvas
-        create_background_div()
         self._create_main_div()
         self._callback = None
 
@@ -2144,6 +2142,36 @@ class SettingsDialog(BaseDialog):
         super().__init__(canvas)
 
     def open(self, callback=None):
+
+        # Get shortcuts html
+        shortcuts = {
+            "<b>In dialogs</b>": "",
+            "Enter": "Submit dialog",
+            "Escape": "Close dialog",
+            "<b>Navigation</b>": "",
+            "d": "Select today",
+            "w": "Select this week",
+            "m": "Select this month",
+            "↑/PageUp": "Step back in time",
+            "↓/PageDown": "Step forward in time",
+            "→": "Zoom in",
+            "←": "Zoom out",
+            "Home/End": "Snap to now (on current time-scale)",
+            "<b>Other</b>": "",
+            "s": "Start/stop the timer",
+            "a": "Add new record",
+            "t": "Select time range",
+            "r": "Open report dialog",
+        }
+        shortcuts_html = ""
+        for key, explanation in shortcuts.items():
+            if key.startswith("<b>"):
+                shortcuts_html += f"<div>{key}</div><div>{explanation}</div>"
+            else:
+                shortcuts_html += (
+                    f"<div class='monospace'>{key}</div><div>{explanation}</div>"
+                )
+
         html = f"""
             <h1><i class='fas'>\uf013</i> Settings
                 <button type='button'><i class='fas'>\uf00d</i></button>
@@ -2151,7 +2179,7 @@ class SettingsDialog(BaseDialog):
             <h2>Time zone</h2>
             <p></p>
             <h2>Dark mode</h2>
-            <select style='margin: 0.6em;'>
+            <select>
                 <option value=0>Auto detect</option>
                 <option value=1>Light mode</option>
                 <option value=2>Dark mode</option>
@@ -2160,6 +2188,8 @@ class SettingsDialog(BaseDialog):
             <label>
                 <input type='checkbox' checked='true'></input>
                 show stopwatch</label>
+            <h2>Keyboard shortcuts</h2>
+            <div class='formlayout'>{shortcuts_html}</div>
             <br /><br />
             """
 
@@ -2174,6 +2204,8 @@ class SettingsDialog(BaseDialog):
             self._darkmode_select,
             _,  # Stopwatch header
             self._stopwatch_label,
+            _,  # Shortcuts header
+            self._shortcuts_div,
         ) = self.maindiv.children
 
         # Set timezone info

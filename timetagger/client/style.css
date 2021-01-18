@@ -278,10 +278,14 @@ body.darkmode .tooltipdiv {
     left: calc(50% - 400px);
     right: calc(50% - 400px);
 }}
-.dialog > p, .dialog > h1, .dialog > h2, .dialog > input, .dialog > label, .dialog > button, .dialog > table, .dialog > div {
+.dialog > p, .dialog > h1, .dialog > h2, .dialog > input, .dialog > label, .dialog > button, .dialog > select, .dialog > table, .dialog > div {
     margin: 8px;
     margin-top: 0;
 }
+@media screen and (min-width: 500px) {
+    dialog > p, .dialog > input, .dialog > label, .dialog > button, .dialog > select, .dialog > table, .dialog > div {
+        margin-left: 2em;
+}}
 
 .dialog h1 {
     position: -webkit-sticky; /* Safari */
@@ -339,9 +343,12 @@ body.darkmode .tooltipdiv {
     justify-items: stretch;
     align-items: center;
 }
-.dialog .formlayout > div:nth-child(odd) {
-    justify-self: end;
+.dialog .formlayout > * {
     height: 1.5em;
+    vertical-align: center;
+}
+.dialog .formlayout > *:nth-child(odd) {
+    justify-self: end;
 }
 
 .dialog h1 button {

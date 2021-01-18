@@ -293,7 +293,6 @@ SCALES = [
     ("6h", "1h"),  # Kind of the default view
     ("12h", "2h"),
     ("1D", "6h"),
-    ("3D", "1D"),
     ("1W", "1D"),  # step with 1D, 1W steps is awkward
     ("1M", "1M"),  # 1M steps bit awkward, but what else?
     ("3M", "1M"),
@@ -945,13 +944,13 @@ class TopWidget(Widget):
                 7,
                 "fas-\uf106",
                 "nav_backward",
-                "Step backward [ArrowUp/pageUp]",
+                "Step backward [↑/pageUp]",
             ),  # f102 f0d8 f106
             (
                 7,
                 "fas-\uf107",
                 "nav_forward",
-                "Step forward [ArrowDown/pageDown]",
+                "Step forward [↓/pageDown]",
             ),  # f103 f0d7 f107
             (
                 8,
@@ -1140,9 +1139,7 @@ class TopWidget(Widget):
             self._handle_button_press("nav_zoom_+1")
         elif e.key.lower() == "arrowright":
             self._handle_button_press("nav_zoom_-1")
-        elif e.key.lower() == "end":
-            self._handle_button_press("nav_snap_now")
-        elif e.key.lower() == "home":
+        elif e.key.lower() == "home" or e.key.lower() == "end":
             self._handle_button_press("nav_snap_now_" + self._now_scale)
         elif e.key.lower() == "d":
             self._handle_button_press("nav_snap_now_1D")
