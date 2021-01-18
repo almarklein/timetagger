@@ -6,6 +6,10 @@ from pscript import this_is_js
 from pscript.stubs import window, perf_counter, RawJS, Math
 
 
+def looks_like_desktop():
+    return window.innerWidth >= 800
+
+
 # From https://github.com/hsluv/hsluv/tree/master/javascript
 # hue is a number between 0 and 360, saturation and lightness are numbers between 0 and 100.
 # returns an array of 3 numbers between 0 and 1, for the r, g, and b channel.

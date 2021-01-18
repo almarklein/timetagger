@@ -973,7 +973,7 @@ class RecordDialog(BaseDialog):
         # Almost done
         super().open(callback)
         # Focus on ds if this looks like desktop; it's anoying on mobile
-        if window.innerWidth >= 800:
+        if utils.looks_like_desktop():
             self._ds_input.focus()
 
     def _on_user_edit(self):
@@ -1029,7 +1029,7 @@ class RecordDialog(BaseDialog):
     def _record_dialog_add_tag(self, tag):
         self._ds_input.value = self._ds_input.value.rstrip() + " " + tag + " "
         self._on_user_edit()
-        if window.innerWidth >= 800:
+        if utils.looks_like_desktop():
             self._ds_input.focus()
 
     def close(self, e=None):
@@ -1156,6 +1156,8 @@ class TagManageDialog(BaseDialog):
         self._tagname2.oninput = self._check_names
         self._tagname1.onchange = self._fix_name1
         self._tagname2.onchange = self._fix_name2
+        self._tagname1.onkeydown = self._on_key1
+        self._tagname2.onkeydown = self._on_key2
 
         self._button_find.onclick = self._find_records
         self._button_replace.onclick = self._replace_all
@@ -1171,6 +1173,8 @@ class TagManageDialog(BaseDialog):
         self._records = []
 
         super().open(None)
+        if utils.looks_like_desktop():
+            self._tagname1.focus()
 
     def close(self):
         self._records = []
@@ -1218,6 +1222,16 @@ class TagManageDialog(BaseDialog):
     def _fix_name2(self):
         tags2, _ = utils.get_tags_and_parts_from_string(self._tagname2.value)
         self._tagname2.value = " ".join(tags2)
+
+    def _on_key1(self, e):
+        key = e.key.lower()
+        if key == "enter" or key == "return":
+            self._find_records()
+
+    def _on_key2(self, e):
+        key = e.key.lower()
+        if key == "enter" or key == "return":
+            self._replace_all()
 
     def _find_records(self):
         search_tags, _ = utils.get_tags_and_parts_from_string(self._tagname1.value)
