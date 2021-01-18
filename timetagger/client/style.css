@@ -283,7 +283,7 @@ body.darkmode .tooltipdiv {
     margin-top: 0;
 }
 @media screen and (min-width: 500px) {
-    dialog > p, .dialog > input, .dialog > label, .dialog > button, .dialog > select, .dialog > table, .dialog > div {
+    dialog > p, .dialog > input, .dialog > label, .dialog > button, .dialog > select, .dialog > div {
         margin-left: 2em;
 }}
 

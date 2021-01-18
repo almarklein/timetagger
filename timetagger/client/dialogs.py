@@ -2190,7 +2190,7 @@ class SettingsDialog(BaseDialog):
                 <button type='button'><i class='fas'>\uf00d</i></button>
             </h1>
             <h2>Time zone</h2>
-            <p></p>
+            <div></div>
             <h2>Dark mode</h2>
             <select>
                 <option value=0>Auto detect</option>
@@ -2200,7 +2200,7 @@ class SettingsDialog(BaseDialog):
             <h2>Show stopwatch of running record</h2>
             <label>
                 <input type='checkbox' checked='true'></input>
-                show stopwatch</label>
+                Show stopwatch</label>
             <h2>Keyboard shortcuts</h2>
             <div class='formlayout'>{shortcuts_html}</div>
             <br /><br />
