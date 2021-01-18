@@ -172,18 +172,6 @@ body.darkmode .dialog.verticalmenu {
     text-decoration: none;
     background: rgba(127, 127, 127, 0.1);
 }
-.dialog.verticalmenu .menu {
-    display: flex;
-    justify-content: space-between;
-    align-items: stretch;
-    margin: 0;
-}
-.verticalmenu .menu a, .verticalmenu .menu input {
-    display: inline-block;
-    flex: 1 1 auto;
-    text-align: center;
-}
-
 .verticalmenu .grid5 {
     display: grid;
     grid-template-columns: auto auto auto auto auto;
