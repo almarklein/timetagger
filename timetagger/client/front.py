@@ -721,14 +721,8 @@ class TopWidget(Widget):
             text = "Demo"
         elif window.store.__name__.startswith("Sandbox"):
             text = "Sandbox"
-        elif window.store.get_auth:
-            auth = window.store.get_auth()
-            if auth:
-                text = auth.initials
-            else:
-                text = "Menu"
         else:
-            text = "Menu"
+            text = ""
 
         # Draw buttons
         x = x1
