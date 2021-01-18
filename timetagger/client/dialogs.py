@@ -439,7 +439,7 @@ class MenuDialog(BaseDialog):
         container = self.maindiv
         for icon, isvalid, title, func in [
             ("\uf013", store_valid, "Settings", self._show_settings),
-            ("\uf02c", store_valid, "Search and manage tags", self._manage_tags),
+            ("\uf02c", store_valid, "Search & manage tags", self._manage_tags),
             ("\uf3fa", is_the_app, "Install this app", self._show_install_instructions),
             (None, True, None, None),
             ("\uf56f", store_valid, "Import records", self._import),
@@ -1120,16 +1120,12 @@ class TagManageDialog(BaseDialog):
     def open(self):
 
         self.maindiv.innerHTML = """
-            <h1><i class='fas'>\uf02b</i> Manage tags
+            <h1><i class='fas'>\uf02b</i> Search & manage tags
                 <button type='button'><i class='fas'>\uf00d</i></button>
                 </h1>
             <p>This dialog allows you to search records by tag names, and to
-            rename, remove, merge, or split tags from these records.
-            </p>
-            <p>
-            If this feels scary, consider experimenting with this in
-            the live demo. Tag names may include dashes, underscores
-            and forward slashes.
+            rename/remove/merge/split the tags in these records. See the
+            <a href="/support#app">support page</a> for details.<br><br>
             </p>
             <div class='formlayout'>
                 <div>Tags:</div>
@@ -1154,7 +1150,7 @@ class TagManageDialog(BaseDialog):
 
         self._records_node = self.maindiv.children[-1]
 
-        formdiv = self.maindiv.children[3]
+        formdiv = self.maindiv.children[2]
         self._tagname1 = formdiv.children[1]
         self._tagname2 = formdiv.children[3]
         self._button_find = formdiv.children[5]
@@ -1738,14 +1734,9 @@ class ExportDialog(BaseDialog):
             <p>
             The table below contains all your records. This can be
             useful for backups, processing, or to move your data
-            elsewhere.
-            </p><p>
-            After copying, the data can be pasted into a text file (as
-            tab-separated values) or a spreadsheet (e.g. Excel or Libre
-            Office). The default date-time format is expressed in the
-            local time zone and is recognized automatically by
-            spreadsheets.
-            </p>
+            elsewhere. See the <a href='/support#importexport'>support page</a>
+            for details.
+            </p><p>&nbsp;</p>
             <div>
                 <span>Date-time format:</span>
                 &nbsp;<input type="radio" name="dtformat" value="local" checked> Local</input>
@@ -1850,10 +1841,9 @@ class ImportDialog(BaseDialog):
             Copy your table data (from e.g. a CSV file, a text file, or
             directly from Excel) and paste it in the text field below.
             CSV files can be dragged directly into the text field.
-            </p><p>
-            See the <a target='new' href='/support#faq-search=import'>support page</a>
+            See the <a href='/support#importexport'>support page</a>
             for details.
-            </p>
+            </p><p>&nbsp;</p>
             <button type='button'>Analyse</button>
             <button type='button'>Import</button>
             <hr />
