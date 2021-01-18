@@ -2145,10 +2145,10 @@ class SettingsDialog(BaseDialog):
 
         # Get shortcuts html
         shortcuts = {
-            "<b>In dialogs</b>": "",
+            "_dialogs": "<b>In dialogs</b>",
             "Enter": "Submit dialog",
             "Escape": "Close dialog",
-            "<b>Navigation</b>": "",
+            "_nav": "<b>Navigation</b>",
             "d": "Select today",
             "w": "Select this week",
             "m": "Select this month",
@@ -2157,20 +2157,17 @@ class SettingsDialog(BaseDialog):
             "→": "Zoom in",
             "←": "Zoom out",
             "Home/End": "Snap to now (on current time-scale)",
-            "<b>Other</b>": "",
+            "_other": "<b>Other</b>",
             "s": "Start/stop the timer",
             "a": "Add new record",
             "t": "Select time range",
             "r": "Open report dialog",
         }
         shortcuts_html = ""
-        for key, explanation in shortcuts.items():
-            if key.startswith("<b>"):
-                shortcuts_html += f"<div>{key}</div><div>{explanation}</div>"
-            else:
-                shortcuts_html += (
-                    f"<div class='monospace'>{key}</div><div>{explanation}</div>"
-                )
+        for key, expl in shortcuts.items():
+            if key.startswith("_"):
+                key = ""
+            shortcuts_html += f"<div class='monospace'>{key}</div><div>{expl}</div>"
 
         html = f"""
             <h1><i class='fas'>\uf013</i> Settings
