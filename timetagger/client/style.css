@@ -343,11 +343,11 @@ body.darkmode .tooltipdiv {
     justify-items: stretch;
     align-items: center;
 }
-.dialog .formlayout > * {
+.dialog .formlayout > div {
     height: 1.5em;
     vertical-align: center;
 }
-.dialog .formlayout > *:nth-child(odd) {
+.dialog .formlayout > div:nth-child(odd) {
     justify-self: end;
 }
 
