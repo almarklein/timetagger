@@ -204,7 +204,7 @@ class TimeTaggerCanvas(BaseCanvas):
 
         y0 = 0
         y1 = self.grid_round(60)
-        y2 = self.grid_round(96)
+        y2 = self.grid_round(104)
         y3 = self.grid_round(self.h - 15)
 
         self.widgets["TopWidget"].rect = x0, y0, x5, y1
@@ -1297,6 +1297,14 @@ class RecordsWidget(Widget):
         self._draw_top_and_bottom_cover(ctx, x1, x3, x4, x2, 0, y1, 0.7)
         self._draw_top_and_bottom_cover(ctx, x1, x3, x4, x2, y2, self._canvas.h, -0.02)
 
+        # # Draw title text
+        # text1 = "Timeline"
+        # ctx.textAlign = "left"
+        # ctx.textBaseline = "bottom"
+        # ctx.fillStyle = COLORS.tick_stripe1
+        # ctx.font = (FONT.size * 1.4) + "px " + FONT.default
+        # ctx.fillText(text1, x4 + 25, y1 - 8)
+
     def _draw_shadow(self, ctx, x1, y1, x2, y2):
         def drawstrokerect(lw):
             rn = RECORD_AREA_ROUNDNESS + lw
@@ -2369,15 +2377,30 @@ class AnalyticsWidget(Widget):
             ctx.textBaseline = "middle"
             ctx.fillStyle = COLORS.button_text
             ctx.font = FONT.size + "px " + FONT.default
-            for i, c in enumerate("Analytics"):
+            for i, c in enumerate("Overview"):
                 ctx.fillText(c, (x3 + x4) / 2, (y3 + y4) / 2 + (i - 4) * 18)
             self._picker.register(
                 x3, y3, x4, y4, {"button": True, "action": "showanalytics"}
             )
             return
 
-        # x offset
+        # X offset
         x1 += max(5, (x2 - x1) / 20)
+
+        # Draw title text
+        text1 = "Overview"
+        text2 = "click a tag to select it"
+        ctx.textAlign = "left"
+        ctx.textBaseline = "bottom"
+        #
+        ctx.font = (FONT.size * 1.4) + "px " + FONT.default
+        ctx.fillStyle = COLORS.tick_stripe1  # COLORS.record_text
+        ctx.fillText(text1, x1, y1 - 8)
+        text1_width = ctx.measureText(text1).width
+        #
+        ctx.font = (FONT.size * 0.9) + "px " + FONT.default
+        ctx.fillStyle = COLORS.tick_stripe1
+        ctx.fillText(text2, x1 + text1_width + 10, y1 - 8)
 
         # Process _time_at_last_draw, and set _time_since_last_draw
         time_now = time()
@@ -2859,22 +2882,25 @@ class AnalyticsWidget(Widget):
         if is_root:
             if len(self.selected_tags):
                 tx = x_ref
-                texts.push([" << total ", "select:"])
-                texts.push(
-                    ["shift-click to select multiple tags", "", COLORS.tick_stripe1]
-                )
-            elif unit.cum_t > 0:
+                texts.push([" ←  back to all ", "select:"])
+            else:
                 ctx.textAlign = "right"
                 ctx.fillText(duration, x_ref + 50, ty)
-                texts.push(["total", ""])
-            else:
-                texts.push(["(no records)", ""])
+                if unit.cum_t > 0:
+                    texts.push(["total", ""])
+                else:
+                    texts.push(["(no records)", ""])
         else:
             ctx.textAlign = "right"
             ctx.fillText(duration, x_ref + 50, ty)
             tags = [tag for tag in unit.subname.split(" ")]
             for tag in tags:
-                texts.push([tag, "select:" + tag])
+                if tag in self.selected_tags:
+                    texts.push([tag, ""])
+                else:
+                    texts.push([tag, "select:" + tag])
+            if len(self.selected_tags) and unit.level == 1:
+                texts.push(["(subtotal)", ""])
         if unit.is_selected >= 2 and unit.cum_t > 0:
             texts.push([f" ({100*unit.percent_t:0.0f}%)", ""])
         # Draw text labels
@@ -2885,10 +2911,7 @@ class AnalyticsWidget(Widget):
             if clr:
                 ctx.fillStyle = clr
             elif text.startswith("#"):
-                if text in self.selected_tags:
-                    ctx.fillStyle = text_style
-                else:
-                    ctx.fillStyle = COLORS.tag
+                ctx.fillStyle = COLORS.tag
             else:
                 ctx.fillStyle = text_style
             ctx.fillText(text, tx, ty)
@@ -2928,17 +2951,8 @@ class AnalyticsWidget(Widget):
             elif picked.startswith("select:"):
                 _, _, tag = picked.partition(":")
                 if tag:
-                    if (
-                        "Shift" in ev.modifiers
-                        or "Ctrl" in ev.modifiers
-                        or "Meta" in ev.modifiers
-                    ):
-                        if tag in self.selected_tags:
-                            self.selected_tags.remove(tag)
-                        else:
-                            self.selected_tags.push(tag)
-                    else:
-                        self.selected_tags = [tag]
+                    if tag not in self.selected_tags:
+                        self.selected_tags.push(tag)
                 else:
                     self.selected_tags = []
             self.update()
