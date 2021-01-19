@@ -45,7 +45,7 @@ def set_colors():
     COLORS.button_text_disabled = "#555"
     COLORS.button_title = utils.color_from_hue(240, 1, 0.6, 0.99)  # 0B99DD
     COLORS.button_bg1 = "rgb(16, 16, 16)"
-    COLORS.button_bg2 = "rgb(45, 45, 45)"
+    COLORS.button_bg2 = "rgb(55, 55, 55)"
 
     # Grays chosen to work in both light and dark mode
     COLORS.tick_text = "rgba(130, 130, 130, 1)"
@@ -948,7 +948,7 @@ class TopWidget(Widget):
                 "nav_snap_now" + now_scale,
                 "Snap to now [Home]",
                 now_clr,
-                BUTTON_RADIUS * 2.2,
+                BUTTON_RADIUS * 2.4,
             ),
             (7, "fas-\uf30c", "nav_backward", "Step backward [↑/pageUp]"),
             (7, "fas-\uf309", "nav_forward", "Step forward [↓/pageDown]"),
@@ -958,7 +958,7 @@ class TopWidget(Widget):
                 "nav_menu",
                 "Select time range [t]",
                 window.undefined,
-                BUTTON_RADIUS * 1.2,
+                BUTTON_RADIUS * 1.5,
             ),
         ]
 
