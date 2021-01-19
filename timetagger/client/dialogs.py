@@ -509,9 +509,9 @@ class TimeSelectionDialog(BaseDialog):
         # Generate preamble
         html = f"""
             <div class='grid5'>
-                <a>today</a>
-                <a>this week</a>
-                <a>this month</a>
+                <a>today [d]</a>
+                <a>this week [w]</a>
+                <a>this month [m]</a>
                 <a>this quarter</a>
                 <a>this year</a>
                 <a>yesterday</a>
@@ -553,9 +553,9 @@ class TimeSelectionDialog(BaseDialog):
     def _apply_preset(self, text):
         text = text.lower()
         last = text.count("last")
-        if text == "today":
+        if text.count("today"):
             rounder = "1D"
-        elif text == "yesterday":
+        elif text.count("yesterday"):
             rounder = "1D"
             last = True
         elif text.count("week"):

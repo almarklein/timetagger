@@ -871,9 +871,7 @@ class TopWidget(Widget):
         now = self._canvas.now()
 
         # Get the "sensible" scale that is closest to the current scale
-        if nsecs < 0.8 * 86400:
-            now_scale = ""
-        elif nsecs < 3 * 86400:
+        if nsecs < 3 * 86400:
             now_scale = "1D"
         elif nsecs < 14 * 86400:
             now_scale = "1W"
@@ -932,26 +930,25 @@ class TopWidget(Widget):
         zoom_out_scale
 
         # Define buttons and display priority
+        # Alt home/day icons: uf783 uf015 uf185
         buttons = [
-            (9, "fas-\uf073", "nav_menu", "Select time range [t]"),
-            (
-                7,
-                "fas-\uf106",
-                "nav_backward",
-                "Step backward [↑/pageUp]",
-            ),  # f102 f0d8 f106
-            (
-                7,
-                "fas-\uf107",
-                "nav_forward",
-                "Step forward [↓/pageDown]",
-            ),  # f103 f0d7 f107
             (
                 8,
-                "fas-\uf015",
+                "Today",
                 "nav_snap_now" + now_scale,
                 "Snap to now [Home]",
                 now_clr,
+                BUTTON_RADIUS * 2.2,
+            ),
+            (7, "fas-\uf30c", "nav_backward", "Step backward [↑/pageUp]"),
+            (7, "fas-\uf309", "nav_forward", "Step forward [↓/pageDown]"),
+            (
+                9,
+                "fas-\uf0d7",
+                "nav_menu",
+                "Select time range [t]",
+                window.undefined,
+                BUTTON_RADIUS * 1.2,
             ),
         ]
 
@@ -969,10 +966,10 @@ class TopWidget(Widget):
         # Draw buttons
         x = x1
         for i in range(len(buttons)):
-            priority, text, action, help, tcolor = buttons[i]
+            priority, text, action, help, tcolor, w = buttons[i]
             tcolor = tcolor or None
             if priority >= ref_priority:
-                x += self._draw_button(ctx, x, y1, text, action, help, tcolor)
+                x += self._draw_button(ctx, x, y1, text, action, help, tcolor, w)
 
         # Draw summary text
         ctx.textBaseline = "top"
@@ -1047,17 +1044,18 @@ class TopWidget(Widget):
         action,
         help,
         tcolor=None,
+        w=BUTTON_RADIUS * 2,
+        h=BUTTON_RADIUS * 2,
     ):
         PSCRIPT_OVERLOAD = False  # noqa
         # Register picking for this button
         ob = {"button": True, "action": action, "help": help}
         cm = 2  # click margin
         x, y = x1, y1 + self._top_offset
-        w = h = BUTTON_RADIUS * 2
         self._picker.register(x - cm, y - cm, x + w + cm, y + h + cm, ob)
         self._canvas.register_tooltip(x, y, x + w, y + h, help)
         # Draw it
-        return self._draw_button_noreg(ctx, x1, y1, text, action, help, tcolor)
+        return self._draw_button_noreg(ctx, x1, y1, text, action, help, tcolor, w, h)
 
     def _draw_button_noreg(
         self,
@@ -1068,13 +1066,14 @@ class TopWidget(Widget):
         action,
         help,
         tcolor=None,
+        w=BUTTON_RADIUS * 2,
+        h=BUTTON_RADIUS * 2,
     ):
         PSCRIPT_OVERLOAD = False  # noqa
         tcolor = tcolor or COLORS.button_text
         bgcolor1 = COLORS.button_bg1
         bgcolor2 = COLORS.button_bg2
         x, y = x1, y1 + self._top_offset
-        w = h = BUTTON_RADIUS * 2
         # Prepare context
         ctx.textBaseline = "middle"
         ctx.textAlign = "center"
@@ -1134,7 +1133,7 @@ class TopWidget(Widget):
         elif e.key.lower() == "arrowright":
             self._handle_button_press("nav_zoom_-1")
         elif e.key.lower() == "home" or e.key.lower() == "end":
-            self._handle_button_press("nav_snap_now_" + self._now_scale)
+            self._handle_button_press("nav_snap_now" + self._now_scale)
         elif e.key.lower() == "d":
             self._handle_button_press("nav_snap_now_1D")
         elif e.key.lower() == "w":
@@ -1932,10 +1931,14 @@ class RecordsWidget(Widget):
         # Draw big text on top
         fontsize = min(fontsize, y2 - y1)
         if fontsize > 6:
+            if t1 < self._canvas.now() < t2:
+                show_secs = len(window.store.records.get_running_records()) > 0
+                ctx.fillStyle = COLORS.button_title
+            else:
+                ctx.fillStyle = COLORS.tick_stripe2
             ctx.font = f"bold {fontsize}px {FONT.condensed}"
             ctx.textBaseline = "middle"
             ctx.textAlign = "center"
-            ctx.fillStyle = COLORS.tick_stripe2
             ctx.fillText(text, 0.5 * (x1 + x2), 0.5 * (y1 + y2))
 
             ctx.font = FONT.size + "px " + FONT.condensed
@@ -1943,8 +1946,6 @@ class RecordsWidget(Widget):
             ctx.textAlign = "left"
             ctx.fillStyle = COLORS.tick_text
             show_secs = False
-            if t1 < self._canvas.now() < t2:
-                show_secs = len(window.store.records.get_running_records()) > 0
             ctx.fillText(f"{dt.duration_string(sumcount, show_secs)}", x1 + 10, y1 + 5)
 
     def on_wheel(self, ev):
