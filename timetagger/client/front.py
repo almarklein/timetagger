@@ -1270,11 +1270,11 @@ class RecordsWidget(Widget):
             ctx.lineTo(x4, y3 + width)
             ctx.lineTo(x4, y4 - width)
             ctx.lineTo(x3, y4)
-            ctx.fillStyle = COLORS.button_bg1
+            ctx.fillStyle = COLORS.tick_stripe2
             ctx.fill()
             ctx.textAlign = "center"
             ctx.textBaseline = "middle"
-            ctx.fillStyle = COLORS.button_text
+            ctx.fillStyle = COLORS.tick_text
             ctx.font = FONT.size + "px " + FONT.default
             for i, c in enumerate("Records"):
                 ctx.fillText(c, (x3 + x4) / 2, (y3 + y4) / 2 + (i - 3) * 18)
@@ -2371,11 +2371,11 @@ class AnalyticsWidget(Widget):
             ctx.lineTo(x3, y3 + width)
             ctx.lineTo(x3, y4 - width)
             ctx.lineTo(x4, y4)
-            ctx.fillStyle = COLORS.button_bg1
+            ctx.fillStyle = COLORS.tick_stripe2
             ctx.fill()
             ctx.textAlign = "center"
             ctx.textBaseline = "middle"
-            ctx.fillStyle = COLORS.button_text
+            ctx.fillStyle = COLORS.tick_text
             ctx.font = FONT.size + "px " + FONT.default
             for i, c in enumerate("Overview"):
                 ctx.fillText(c, (x3 + x4) / 2, (y3 + y4) / 2 + (i - 4) * 18)
