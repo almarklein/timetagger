@@ -2165,6 +2165,7 @@ class SettingsDialog(BaseDialog):
             "Enter": "Submit dialog",
             "Escape": "Close dialog",
             "_nav": "<b>Navigation</b>",
+            "Home/End": "Snap to now (on current time-scale)",
             "d": "Select today",
             "w": "Select this week",
             "m": "Select this month",
@@ -2172,7 +2173,6 @@ class SettingsDialog(BaseDialog):
             "↓/PageDown": "Step forward in time",
             "→": "Zoom in",
             "←": "Zoom out",
-            "Home/End": "Snap to now (on current time-scale)",
             "_other": "<b>Other</b>",
             "s": "Start/stop the timer",
             "a": "Add new record",
@@ -2189,19 +2189,19 @@ class SettingsDialog(BaseDialog):
             <h1><i class='fas'>\uf013</i> Settings
                 <button type='button'><i class='fas'>\uf00d</i></button>
             </h1>
-            <h2>Time zone</h2>
+            <h2><i class='fas'>\uf4fd</i>&nbsp;&nbsp;Time zone</h2>
             <div></div>
-            <h2>Dark mode</h2>
+            <h2><i class='fas'>\uf042</i>&nbsp;&nbsp;Dark mode</h2>
             <select>
                 <option value=0>Auto detect</option>
                 <option value=1>Light mode</option>
                 <option value=2>Dark mode</option>
             </select>
-            <h2>Show stopwatch of running record</h2>
+            <h2><i class='fas'>\uf2f2</i>&nbsp;&nbsp;Show stopwatch of running record</h2>
             <label>
                 <input type='checkbox' checked='true'></input>
                 Show stopwatch</label>
-            <h2>Keyboard shortcuts</h2>
+            <h2><i class='fas'>\uf11c</i>&nbsp;&nbsp;Keyboard shortcuts</h2>
             <div class='formlayout'>{shortcuts_html}</div>
             <br /><br />
             """
