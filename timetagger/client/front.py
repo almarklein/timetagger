@@ -1145,11 +1145,11 @@ class TopWidget(Widget):
         elif e.key.lower() == "home" or e.key.lower() == "end":
             self._handle_button_press("nav_snap_now" + self._now_scale)
         elif e.key.lower() == "d":
-            self._handle_button_press("nav_snap_now_1D")
+            self._handle_button_press("nav_snap_now1D")
         elif e.key.lower() == "w":
-            self._handle_button_press("nav_snap_now_1W")
+            self._handle_button_press("nav_snap_now1W")
         elif e.key.lower() == "m":
-            self._handle_button_press("nav_snap_now_1M")
+            self._handle_button_press("nav_snap_now1M")
         elif e.key.lower() == "t":
             self._handle_button_press("nav_menu")
         elif e.key.lower() == "s":
