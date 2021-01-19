@@ -183,6 +183,17 @@ body.darkmode .dialog.verticalmenu {
 .verticalmenu .grid5 > * {
     text-align: center;
 }
+.dialog.verticalmenu .menu {
+    display: flex;
+    justify-content: space-between;
+    align-items: stretch;
+    margin: 0;
+}
+.verticalmenu .menu a, .verticalmenu .menu input {
+    display: inline-block;
+    flex: 1 1 auto;
+    text-align: center;
+}
 
 /**************** Tooltip ****************/
 
