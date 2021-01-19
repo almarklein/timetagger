@@ -361,6 +361,7 @@ class TimeRange:
                 t2_new,
                 animation_time,
                 animation_end,
+                snap,
             ) = self._animate
             return t1_new, t2_new
         else:
@@ -373,7 +374,7 @@ class TimeRange:
         self._animate = None
         self._canvas.update()
 
-    def animate_range(self, t1, t2, animation_time=None):
+    def animate_range(self, t1, t2, animation_time=None, snap=True):
         """Animate the time range to the target t1 and t2, over the given animation time."""
         # Going from high scale to low (or reverse) takes longer
         if animation_time is None:
@@ -382,7 +383,7 @@ class TimeRange:
             animation_time = 0.3 + 0.1 * Math.log(factor)
 
         animation_end = self._canvas.now() + animation_time  # not rounded to seconds!
-        self._animate = self._t1, self._t2, t1, t2, animation_time, animation_end
+        self._animate = self._t1, self._t2, t1, t2, animation_time, animation_end, snap
         self._canvas.update()
 
     def animation_update(self):
@@ -390,14 +391,23 @@ class TimeRange:
         if self._animate is None:
             return
 
-        t1_old, t2_old, t1_new, t2_new, animation_time, animation_end = self._animate
+        (
+            t1_old,
+            t2_old,
+            t1_new,
+            t2_new,
+            animation_time,
+            animation_end,
+            snap,
+        ) = self._animate
         now = self._canvas.now()
 
         if now >= animation_end:
             # Done animating
             self._t1, self._t2 = t1_new, t2_new
             self._animate = None
-            self.snap()  # Will animate to aligned range if not already aligned
+            if snap:
+                self.snap()  # Will animate to aligned range if not already aligned
         else:
             # Interpolate the transition
             f = (animation_end - now) / animation_time
