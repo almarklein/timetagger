@@ -790,12 +790,12 @@ class TopWidget(Widget):
         M = dict(
             pending="\uf067",  # uf067 uf055
             sync="\uf2f1",
-            ok="\uf00c",
+            ok="\uf560",  # uf560 uf00c
             warn="\uf12a",
             error="\uf00d",
         )
         state = window.store.state
-        text = M.get(state, "")
+        text = M.get(state, "\uf00c")
         if text:
             ctx.save()
             try:
