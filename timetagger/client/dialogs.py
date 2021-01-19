@@ -592,7 +592,7 @@ class TimeSelectionDialog(BaseDialog):
         t2 = str_date_to_time_int(t2_date)
         t2 = dt.add(t2, "1D")  # look until the end of the day
 
-        window.canvas.range.set_range(t1, t2)  # animate_range() will snap
+        window.canvas.range.animate_range(t1, t2, None, False)  # without snap
 
 
 class StartStopEdit:
