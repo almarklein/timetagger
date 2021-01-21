@@ -598,16 +598,25 @@ class TimeSelectionDialog(BaseDialog):
 class StartStopEdit:
     """Helper class to allow the user to set the start and stop time of a record."""
 
-    def __init__(self, node, callback, t1, t2, isnew):
+    def __init__(self, node, callback, t1, t2, mode):
         self.node = node
         self.callback = callback
-        self.isnew = isnew
+        self.initialmode = mode.lower()
 
-        self.node.innerHTML = """
+        if self.initialmode in ("start", "new"):
+            text_startnow = "Start now"
+            text_startrlr = "Started earlier"
+            text_finished = "Already done"
+        else:
+            text_startnow = "Start now"  # not visible
+            text_startrlr = "Still running"
+            text_finished = "Stopped"
+
+        self.node.innerHTML = f"""
         <div>
-            <label style='user-select:none;'><input type='radio' name='runningornot' />&nbsp;Start now&nbsp;&nbsp;</label>
-            <label style='user-select:none;'><input type='radio' name='runningornot' />&nbsp;Started earlier&nbsp;&nbsp;</label>
-            <label style='user-select:none;'><input type='radio' name='runningornot' />&nbsp;Already finished&nbsp;&nbsp;</label>
+            <label style='user-select:none;'><input type='radio' name='runningornot' />&nbsp;{text_startnow}&nbsp;&nbsp;</label>
+            <label style='user-select:none;'><input type='radio' name='runningornot' />&nbsp;{text_startrlr}&nbsp;&nbsp;</label>
+            <label style='user-select:none;'><input type='radio' name='runningornot' />&nbsp;{text_finished}&nbsp;&nbsp;</label>
             <div style='min-height:1em;'></div>
         </div>
         <div>
@@ -669,6 +678,21 @@ class StartStopEdit:
         self.gridnode.style.justifyItems = "stretch"
         self.gridnode.style.alignItems = "stretch"
 
+        # Set visibility of mode-radio-buttons
+        if self.initialmode == "start":
+            self.radio_startnow.setAttribute("checked", True)
+        elif self.initialmode == "new":
+            self.radio_finished.setAttribute("checked", True)
+        elif self.initialmode == "stop":
+            self.radio_finished.setAttribute("checked", True)
+            self.radio_startnow.parentNode.style.display = "none"
+        elif t1 == t2:
+            self.radio_startrlr.setAttribute("checked", True)
+            self.radio_startnow.parentNode.style.display = "none"
+        else:
+            self.radio_finished.setAttribute("checked", True)
+            self.radionode.style.display = "none"
+
         # Connect events
         self.radio_startnow.onclick = self._on_mode_change
         self.radio_startrlr.onclick = self._on_mode_change
@@ -683,20 +707,6 @@ class StartStopEdit:
         self.time2more.onclick = lambda: self.onchanged("time2more")
         self.time2less.onclick = lambda: self.onchanged("time2less")
 
-        # Set visibility of mode-radio-buttons
-        if self.isnew:
-            if t1 == t2:
-                self.radio_startnow.setAttribute("checked", True)
-            else:
-                self.radio_finished.setAttribute("checked", True)
-        else:
-            if t1 == t2:
-                self.radio_startrlr.setAttribute("checked", True)
-                self.radio_startnow.parentNode.style.display = "none"
-            else:
-                self.radio_finished.setAttribute("checked", True)
-                self.radionode.style.display = "none"
-
         self._set_radio_button_visibility()
         self.reset(t1, t2)
         self._timer_handle = window.setInterval(self._update_duration, 200)
@@ -705,7 +715,7 @@ class StartStopEdit:
         window.clearInterval(self._timer_handle)
 
     def _on_mode_change(self):
-        if self.isnew:
+        if self.initialmode in ("start", "new"):
             # Get sensible earlier time
             t2 = dt.now()
             t1 = t2 - 5 * 3600
@@ -724,6 +734,7 @@ class StartStopEdit:
             else:
                 self.t1, self.t2 = t1, t2
         else:
+            # Switch between "already running" and "finished"
             if self.radio_startrlr.checked:
                 self.t2 = self.t1
             else:
@@ -980,22 +991,23 @@ class RecordDialog(BaseDialog):
         be called without arguments.
         """
         self._record = record.copy()
+        assert mode.lower() in ("start", "new", "edit", "stop")
 
         html = f"""
-            <h1><i class='fas'>\uf682</i><span>Record</span>
+            <h1><i class='fas'>\uf682</i>&nbsp;&nbsp;<span>Record</span>
                 <button type='button'><i class='fas'>\uf00d</i></button>
             </h1>
-            <h2><i class='fas'>\uf305</i> Description</h2>
+            <h2><i class='fas'>\uf305</i>&nbsp;&nbsp;Description</h2>
             <input type="text" style='width: calc(100% - 4em);' />
             <div style='color:#777;'></div>
             <div></div>
-            <h2><i class='fas'>\uf017</i> Time</h2>
+            <h2><i class='fas'>\uf017</i>&nbsp;&nbsp;Time</h2>
             <div></div>
             <div style='margin-top:2em;'></div>
             <div style='display: flex;justify-content: flex-end;'>
-                <button type='button' class='actionbutton'>Cancel</button>
-                <button type='button' class='actionbutton'>Delete</button>
-                <button type='button' class='actionbutton'>Resume</button>
+                <button type='button' class='actionbutton'><i class='fas'>\uf00d</i>&nbsp;&nbsp;Cancel</button>
+                <button type='button' class='actionbutton'><i class='fas'>\uf1f8</i>&nbsp;&nbsp;Delete</button>
+                <button type='button' class='actionbutton'><i class='fas'>\uf24d</i>&nbsp;&nbsp;Resume</button>
                 <button type='button' class='actionbutton submit'>Submit</button>
             </div>
             <button type='button' style='float:right;' class='actionbutton'>Confirm deleting this record</button>
@@ -1026,9 +1038,8 @@ class RecordDialog(BaseDialog):
         ) = self._buttons.children
 
         # Create the startstop-edit
-        isnew = mode.lower() in ("start", "new", "create")
         self._time_edit = StartStopEdit(
-            self._time_node, self._on_times_change, record.t1, record.t2, isnew
+            self._time_node, self._on_times_change, record.t1, record.t2, mode
         )
 
         # Prepare some things to show suggested tags
@@ -1068,37 +1079,39 @@ class RecordDialog(BaseDialog):
             self._ds_input.focus()
 
     def _set_mode(self, mode):
-        aliases = {"create": "new"}
-        lmode = mode.lower()
-        self._lmode = lmode = aliases.get(lmode, lmode)
-        self._title_div.innerText = f" {mode} record"
+        self._lmode = lmode = mode.lower()
+        self._title_div.innerText = f"{mode} record"
         is_running = self._record.t1 == self._record.t2
         has_running = len(window.store.records.get_running_records()) > 0
         # Set description placeholder
         if lmode == "start":
             self._ds_input.setAttribute("placeholder", "What are you going to do?")
+        elif lmode == "new":
+            self._ds_input.setAttribute("placeholder", "What have you done?")
         elif lmode == "stop":
-            self._ds_input.setAttribute("placeholder", "What did you do?")
+            self._ds_input.setAttribute("placeholder", "What did you just do?")
+        elif is_running:
+            self._ds_input.setAttribute("placeholder", "What are you doing?")
         else:
             self._ds_input.setAttribute("placeholder", "What has been done?")
         # Tweak the buttons at the bottom
         if lmode == "start":
-            self._submit_but.innerHTML = "Start"
+            self._submit_but.innerHTML = "<i class='fas'>\uf04b</i>&nbsp;&nbsp;Start"
             self._resume_but.style.display = "none"
             self._delete_but1.style.display = "none"
         elif lmode == "new":
-            self._submit_but.innerHTML = "Create"
+            self._submit_but.innerHTML = "<i class='fas'>\uf067</i>&nbsp;&nbsp;Create"
             self._resume_but.style.display = "none"
             self._delete_but1.style.display = "none"
         elif lmode == "edit":
-            self._submit_but.innerHTML = "Edit"
+            self._submit_but.innerHTML = "<i class='fas'>\uf304</i>&nbsp;&nbsp;Edit"
             title_mode = "Edit running" if is_running else "Edit"
-            self._title_div.innerText = f" {title_mode} record"
+            self._title_div.innerText = f"{title_mode} record"
             self._submit_but.disabled = self._no_user_edit_yet
             self._resume_but.style.display = "none" if has_running else "block"
             self._delete_but1.style.display = "block"
         elif lmode == "stop":
-            self._submit_but.innerHTML = "Stop"
+            self._submit_but.innerHTML = "<i class='fas'>\uf04d</i>&nbsp;&nbsp;Stop"
             self._resume_but.style.display = "none"
             self._delete_but1.style.display = "block"
         else:
@@ -1265,7 +1278,7 @@ class TagManageDialog(BaseDialog):
     def open(self):
 
         self.maindiv.innerHTML = """
-            <h1><i class='fas'>\uf02b</i> Search & manage tags
+            <h1><i class='fas'>\uf02b</i>&nbsp;&nbsp;Search & manage tags
                 <button type='button'><i class='fas'>\uf00d</i></button>
                 </h1>
             <p>This dialog allows you to search records by tag names, and to
@@ -1493,7 +1506,7 @@ class ReportDialog(BaseDialog):
             filtertext = "all (no tags selected)"
         self._copybuttext = "Copy table"
         html = f"""
-            <h1><i class='fas'>\uf15c</i> Report
+            <h1><i class='fas'>\uf15c</i>&nbsp;&nbsp;Report
                 <button type='button'><i class='fas'>\uf00d</i></button>
                 </h1>
             <div class='formlayout'>
@@ -1873,7 +1886,7 @@ class ExportDialog(BaseDialog):
 
     def open(self, callback=None):
         self.maindiv.innerHTML = f"""
-            <h1><i class='fas'>\uf56e</i> Export
+            <h1><i class='fas'>\uf56e</i>&nbsp;&nbsp;Export
                 <button type='button'><i class='fas'>\uf00d</i></button>
             </h1>
             <p>
@@ -1979,7 +1992,7 @@ class ImportDialog(BaseDialog):
 
     def open(self, callback=None):
         self.maindiv.innerHTML = f"""
-            <h1><i class='fas'>\uf56f</i> Import
+            <h1><i class='fas'>\uf56f</i>&nbsp;&nbsp;Import
                 <button type='button'><i class='fas'>\uf00d</i></button>
             </h1>
             <p>
@@ -2331,7 +2344,7 @@ class SettingsDialog(BaseDialog):
             shortcuts_html += f"<div class='monospace'>{key}</div><div>{expl}</div>"
 
         html = f"""
-            <h1><i class='fas'>\uf013</i> Settings
+            <h1><i class='fas'>\uf013</i>&nbsp;&nbsp;Settings
                 <button type='button'><i class='fas'>\uf00d</i></button>
             </h1>
             <h2><i class='fas'>\uf4fd</i>&nbsp;&nbsp;Time zone</h2>
@@ -2408,7 +2421,7 @@ class InstallInstructionsDialog(BaseDialog):
 
     def open(self, callback=None):
         html = f"""
-            <h1><i class='fas'>\uf3fa</i> How to install
+            <h1><i class='fas'>\uf3fa</i>&nbsp;&nbsp;How to install
                 <button type='button'><i class='fas'>\uf00d</i></button>
             </h1>
             <p>
