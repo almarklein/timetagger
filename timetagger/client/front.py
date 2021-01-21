@@ -1593,6 +1593,8 @@ class RecordsWidget(Widget):
     def _draw_one_record(self, ctx, record, t0, t1, x1, x2, x3, y0, npixels, nsecs, yy):
         PSCRIPT_OVERLOAD = False  # noqa
         grid_round = self._canvas.grid_round
+        now = self._canvas.now()
+        t2_or_now = now if (record.t1 == record.t2) else record.t2
 
         # Add another x
         x4 = x3
@@ -1601,8 +1603,8 @@ class RecordsWidget(Widget):
         # Set record description y positions
         ty1 = yy
         ty2 = yy + 40
-        if record.t2 < t0:
-            ty2 -= min(40, 0.5 * npixels * (t0 - record.t2) / nsecs)
+        if t2_or_now < t0:
+            ty2 -= min(40, 0.5 * npixels * (t0 - t2_or_now) / nsecs)
         yy = ty2 + 8  # margin between records
 
         ctx.font = FONT.size + "px " + FONT.condensed  # or FONT.default?
@@ -1610,9 +1612,7 @@ class RecordsWidget(Widget):
 
         # Get position in pixels
         ry1 = y0 + npixels * (record.t1 - t1) / nsecs
-        ry2 = y0 + npixels * (record.t2 - t1) / nsecs
-        if record.t1 == record.t2:
-            ry2 = y0 + npixels * (self._canvas.now() - t1) / nsecs
+        ry2 = y0 + npixels * (t2_or_now - t1) / nsecs
         if ry1 > ry2:
             ry1, ry2 = ry2, ry1  # started timer, then changed time offset
         # Round to pixels? Not during interaction to avoid jumps!
@@ -1625,7 +1625,7 @@ class RecordsWidget(Widget):
         rn = grid_round(rn)
 
         # Draw record description bars
-        if record.t2 > t0:
+        if t2_or_now > t0:
             # Draw area between two representations of the record
             ctx.beginPath()
             ctx.moveTo(x2 + rn / 2, ry1)
@@ -1670,7 +1670,7 @@ class RecordsWidget(Widget):
             duration = record.t2 - record.t1
             duration_text = dt.duration_string(duration, False)
             if duration <= 0:
-                duration = self._canvas.now() - record.t1
+                duration = now - record.t1
                 duration_text = dt.duration_string(duration, True)
             ctx.fillStyle = COLORS.record_text
             ctx.textAlign = "right"
@@ -1738,7 +1738,7 @@ class RecordsWidget(Widget):
             ctx.lineTo(x1f, ry2 - inset)
             ctx.fill()
             ctx.stroke()
-            if int(self._canvas.now()) % 2 == 1:
+            if int(now) % 2 == 1:
                 ctx.fillStyle = ctx.strokeStyle
                 ctx.beginPath()
                 ctx.arc(0.5 * (x1 + x2), ry2 + outset / 2, 5, 0, 2 * PI)
@@ -1771,7 +1771,7 @@ class RecordsWidget(Widget):
         if duration > 0:
             duration_text = dt.duration_string(duration, True)
         else:
-            duration = self._canvas.now() - record.t1
+            duration = now - record.t1
             duration_text = dt.duration_string(duration, True)
         self._canvas.register_tooltip(
             x1, ry1, x2, ry2 + outset, tags.join(" ") + "\n" + duration_text
