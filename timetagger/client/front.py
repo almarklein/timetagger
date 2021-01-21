@@ -833,44 +833,48 @@ class TopWidget(Widget):
 
         now = self._canvas.now()
 
-        # Define play / stop button
-        startstoptext = "fas-\uf04b"  # start: f04b or f144
-        startstop_summary = ""  # Press play to start timer"
-        startstop_tt = "Start recording [s]"
+        start_tt = "Start recording [s]"
+        stop_tt = "Stop recording [x]"
+
+        # Define stop summary
+        running_summary = "Record"
         records = window.store.records.get_running_records()
+        has_running = False
         if len(records) > 0:
-            startstoptext = "fas-\uf04d"  # stop: f04d or f28d
-            startstop_tt = "Stop recording [s]"
-            startstop_summary = "Timers running"
+            has_running = True
+            running_summary = "Timers running"
             if len(records) == 1:
                 tagz = window.store.records.tags_from_record(records[0]).join(" ")
-                duration = dt.duration_string(now - records[0].t1, True)
-                startstop_summary = duration
-                startstop_tt += " " + tagz
+                stop_tt += " " + tagz
+                if self._canvas._show_stopwatch:
+                    running_summary = dt.duration_string(now - records[0].t1, True)
+                else:
+                    running_summary = "Timer running"
 
         x = x1
 
-        # Play/Stop button
-        x += self._draw_button(
-            ctx, x, y1, startstoptext, "addrecord_start", startstop_tt
-        )
+        # Start button
+        x += self._draw_button(ctx, x, y1, "fas-\uf04b", "record_start", start_tt)
+        x2 = x
+
+        # Stop button
+        if has_running:
+            x += self._draw_button(ctx, x, y1, "fas-\uf04d", "record_stopall", stop_tt)
+            x2 = x
+        else:
+            x += x - x1
 
         # Draw summary text
         ctx.textBaseline = "top"
         ctx.font = "12px " + FONT.condensed
         ctx.fillStyle = COLORS.button_title
         #
-        if startstop_summary and self._canvas._show_stopwatch:
-            ctx.textAlign = "right"
-            ctx.fillText(startstop_summary, x, y1 + 5, x - x1)
+        if True:
+            ctx.textAlign = "center"
+            ctx.fillText(running_summary, (x1 + x2) / 2, y1 + 5)
         else:
             ctx.textAlign = "center"
-            ctx.fillText("Record", (x1 + x) / 2, y1 + 5, x - x1)
-
-        # Button to add a record = f055, f067
-        x += self._draw_button(
-            ctx, x, y1, "fas-\uf067", "addrecord_new", "Add a record [a]"
-        )
+            ctx.fillText("Record", (x1 + x) / 2, y1 + 5)
 
         return x - x1
 
@@ -1144,6 +1148,7 @@ class TopWidget(Widget):
             self._handle_button_press("nav_zoom_-1")
         elif e.key.lower() == "home" or e.key.lower() == "end":
             self._handle_button_press("nav_snap_now" + self._now_scale)
+        #
         elif e.key.lower() == "d":
             self._handle_button_press("nav_snap_now1D")
         elif e.key.lower() == "w":
@@ -1152,10 +1157,11 @@ class TopWidget(Widget):
             self._handle_button_press("nav_snap_now1M")
         elif e.key.lower() == "t":
             self._handle_button_press("nav_menu")
+        #
         elif e.key.lower() == "s":
-            self._handle_button_press("addrecord_start")
-        elif e.key.lower() == "a":
-            self._handle_button_press("addrecord_new")
+            self._handle_button_press("record_start")
+        elif e.key.lower() == "x":
+            self._handle_button_press("record_stopall")
         elif e.key.lower() == "r":
             self._handle_button_press("report")
         else:
@@ -1179,20 +1185,25 @@ class TopWidget(Widget):
             tags = self._canvas.widgets.AnalyticsWidget.selected_tags
             self._canvas.report_dialog.open(t1, t2, tags)
 
-        elif action.startswith("addrecord_"):
+        elif action.startswith("record_"):
             # A time tracking action
-            if action == "addrecord_start":
-                records = window.store.records.get_running_records()
-                if len(records) > 0:
-                    for record in records:
-                        record.t2 = max(record.t1 + 10, now)
-                        self._canvas.record_dialog.open("Stop", record, self.update)
-                else:
-                    record = window.store.records.create(now, now)
-                    self._canvas.record_dialog.open("Start", record, self.update)
-            elif action == "addrecord_new":
+            if action == "record_start":
+                record = window.store.records.create(now, now)
+                self._canvas.record_dialog.open("Start", record, self.update)
+            elif action == "record_new":
                 record = window.store.records.create(now - 1800, now)
                 self._canvas.record_dialog.open("New", record, self.update)
+            elif action == "record_stop":
+                records = window.store.records.get_running_records()
+                if len(records) > 0:
+                    record = records[0]
+                    record.t2 = max(record.t1 + 10, now)
+                    self._canvas.record_dialog.open("Stop", record, self.update)
+            elif action == "record_stopall":
+                records = window.store.records.get_running_records()
+                for record in records:
+                    record.t2 = max(record.t1 + 10, now)
+                    window.store.records.put(record)
 
         elif action.startswith("nav_"):
             # A navigation action
@@ -1518,8 +1529,9 @@ class RecordsWidget(Widget):
         # Select all records in this range. Sort so that smaller records are drawn on top.
         records = window.store.records.get_records(t1, t2).values()
 
-        # Sort records by start time
-        records.sort(key=lambda record: record.t1)
+        # Sort records by end time
+        now = self._canvas.now()
+        records.sort(key=lambda r: now if (r.t1 == r.t2) else r.t2)
 
         # Set record-times for snapping and more
         self._record_times = {}
@@ -1581,6 +1593,8 @@ class RecordsWidget(Widget):
     def _draw_one_record(self, ctx, record, t0, t1, x1, x2, x3, y0, npixels, nsecs, yy):
         PSCRIPT_OVERLOAD = False  # noqa
         grid_round = self._canvas.grid_round
+        now = self._canvas.now()
+        t2_or_now = now if (record.t1 == record.t2) else record.t2
 
         # Add another x
         x4 = x3
@@ -1589,8 +1603,8 @@ class RecordsWidget(Widget):
         # Set record description y positions
         ty1 = yy
         ty2 = yy + 40
-        if record.t2 < t0:
-            ty2 -= min(40, 0.5 * npixels * (t0 - record.t2) / nsecs)
+        if t2_or_now < t0:
+            ty2 -= min(40, 0.5 * npixels * (t0 - t2_or_now) / nsecs)
         yy = ty2 + 8  # margin between records
 
         ctx.font = FONT.size + "px " + FONT.condensed  # or FONT.default?
@@ -1598,9 +1612,7 @@ class RecordsWidget(Widget):
 
         # Get position in pixels
         ry1 = y0 + npixels * (record.t1 - t1) / nsecs
-        ry2 = y0 + npixels * (record.t2 - t1) / nsecs
-        if record.t1 == record.t2:
-            ry2 = y0 + npixels * (self._canvas.now() - t1) / nsecs
+        ry2 = y0 + npixels * (t2_or_now - t1) / nsecs
         if ry1 > ry2:
             ry1, ry2 = ry2, ry1  # started timer, then changed time offset
         # Round to pixels? Not during interaction to avoid jumps!
@@ -1613,7 +1625,7 @@ class RecordsWidget(Widget):
         rn = grid_round(rn)
 
         # Draw record description bars
-        if record.t2 > t0:
+        if t2_or_now > t0:
             # Draw area between two representations of the record
             ctx.beginPath()
             ctx.moveTo(x2 + rn / 2, ry1)
@@ -1658,7 +1670,7 @@ class RecordsWidget(Widget):
             duration = record.t2 - record.t1
             duration_text = dt.duration_string(duration, False)
             if duration <= 0:
-                duration = self._canvas.now() - record.t1
+                duration = now - record.t1
                 duration_text = dt.duration_string(duration, True)
             ctx.fillStyle = COLORS.record_text
             ctx.textAlign = "right"
@@ -1726,7 +1738,7 @@ class RecordsWidget(Widget):
             ctx.lineTo(x1f, ry2 - inset)
             ctx.fill()
             ctx.stroke()
-            if int(self._canvas.now()) % 2 == 1:
+            if int(now) % 2 == 1:
                 ctx.fillStyle = ctx.strokeStyle
                 ctx.beginPath()
                 ctx.arc(0.5 * (x1 + x2), ry2 + outset / 2, 5, 0, 2 * PI)
@@ -1759,7 +1771,7 @@ class RecordsWidget(Widget):
         if duration > 0:
             duration_text = dt.duration_string(duration, True)
         else:
-            duration = self._canvas.now() - record.t1
+            duration = now - record.t1
             duration_text = dt.duration_string(duration, True)
         self._canvas.register_tooltip(
             x1, ry1, x2, ry2 + outset, tags.join(" ") + "\n" + duration_text
@@ -2884,7 +2896,7 @@ class AnalyticsWidget(Widget):
         duration = dt.duration_string(unit.cum_t, show_secs)
 
         # Draw text labels
-        tx, ty = x_ref + 70, y2 + 0.6 * npixels
+        tx, ty = x_ref + 75, y2 + 0.6 * npixels
         dy = min(14, 0.8 * (y3 - y2))
         ctx.font = font_size + "px " + FONT.default
         ctx.fillStyle = text_style
@@ -2896,14 +2908,14 @@ class AnalyticsWidget(Widget):
                 texts.push([" ←  back to all ", "select:"])
             else:
                 ctx.textAlign = "right"
-                ctx.fillText(duration, x_ref + 50, ty)
+                ctx.fillText(duration, x_ref + 60, ty)
                 if unit.cum_t > 0:
                     texts.push(["total", ""])
                 else:
                     texts.push(["(no records)", ""])
         else:
             ctx.textAlign = "right"
-            ctx.fillText(duration, x_ref + 50, ty)
+            ctx.fillText(duration, x_ref + 60, ty)
             tags = [tag for tag in unit.subname.split(" ")]
             for tag in tags:
                 if tag in self.selected_tags:

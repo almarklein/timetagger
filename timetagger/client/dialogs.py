@@ -598,11 +598,29 @@ class TimeSelectionDialog(BaseDialog):
 class StartStopEdit:
     """Helper class to allow the user to set the start and stop time of a record."""
 
-    def __init__(self, node, callback, t1, t2):
+    def __init__(self, node, callback, t1, t2, mode):
         self.node = node
         self.callback = callback
+        self.initialmode = mode.lower()
+        self.initial_t1, self.initial_t2 = t1, t2  # even more original than ori_t1 :)
 
-        self.node.innerHTML = """
+        if self.initialmode in ("start", "new"):
+            text_startnow = "Start now"
+            text_startrlr = "Started earlier"
+            text_finished = "Already done"
+        else:
+            text_startnow = "Start now"  # not visible
+            text_startrlr = "Still running"
+            text_finished = "Stopped"
+
+        self.node.innerHTML = f"""
+        <div>
+            <label style='user-select:none;'><input type='radio' name='runningornot' />&nbsp;{text_startnow}&nbsp;&nbsp;</label>
+            <label style='user-select:none;'><input type='radio' name='runningornot' />&nbsp;{text_startrlr}&nbsp;&nbsp;</label>
+            <label style='user-select:none;'><input type='radio' name='runningornot' />&nbsp;{text_finished}&nbsp;&nbsp;</label>
+            <div style='min-height:1em;'></div>
+        </div>
+        <div>
         <span><i class='fas' style='color:#999; vertical-align:middle;'>\uf144</i></span>
             <input type='date' step='1'  style='font-size: 80%' />
             <span style='display: flex;'>
@@ -623,9 +641,15 @@ class StartStopEdit:
             <span></span>
             <input type='text' style='flex: 1; min-width: 50px' />
             <span></span>
+        </div>
         """
 
         # Unpack children
+        self.radionode = self.node.children[0]
+        self.gridnode = self.node.children[1]
+        self.radio_startnow = self.radionode.children[0].children[0]
+        self.radio_startrlr = self.radionode.children[1].children[0]
+        self.radio_finished = self.radionode.children[2].children[0]
         (
             _,  # date and time 1
             self.date1input,
@@ -639,7 +663,7 @@ class StartStopEdit:
             _,
             self.durationinput,
             _,
-        ) = self.node.children
+        ) = self.gridnode.children
 
         self.time1input, self.time1more, self.time1less = self.time1stuff.children
         self.time2input, self.time2more, self.time2less = self.time2stuff.children
@@ -649,13 +673,31 @@ class StartStopEdit:
             but.setAttribute("tabIndex", -1)
 
         # Styling
-        self.node.style.display = "grid"
-        self.node.style.gridTemplateColumns = "auto 130px 140px 2fr"
-        self.node.style.gridGap = "4px 0.5em"
-        self.node.style.justifyItems = "stretch"
-        self.node.style.alignItems = "stretch"
+        self.gridnode.style.display = "grid"
+        self.gridnode.style.gridTemplateColumns = "auto 130px 140px 2fr"
+        self.gridnode.style.gridGap = "4px 0.5em"
+        self.gridnode.style.justifyItems = "stretch"
+        self.gridnode.style.alignItems = "stretch"
+
+        # Set visibility of mode-radio-buttons
+        if self.initialmode == "start":
+            self.radio_startnow.setAttribute("checked", True)
+        elif self.initialmode == "new":
+            self.radio_finished.setAttribute("checked", True)
+        elif self.initialmode == "stop":
+            self.radio_finished.setAttribute("checked", True)
+            self.radio_startnow.parentNode.style.display = "none"
+        elif t1 == t2:
+            self.radio_startrlr.setAttribute("checked", True)
+            self.radio_startnow.parentNode.style.display = "none"
+        else:
+            self.radio_finished.setAttribute("checked", True)
+            self.radionode.style.display = "none"
 
         # Connect events
+        self.radio_startnow.onclick = self._on_mode_change
+        self.radio_startrlr.onclick = self._on_mode_change
+        self.radio_finished.onclick = self._on_mode_change
         self.date1input.onchange = lambda: self.onchanged("date1")
         self.time1input.onchange = lambda: self.onchanged("time1")
         self.date2input.onchange = lambda: self.onchanged("date2")
@@ -671,6 +713,34 @@ class StartStopEdit:
 
     def close(self):
         window.clearInterval(self._timer_handle)
+
+    def _on_mode_change(self):
+        if self.initialmode in ("start", "new"):
+            # Get sensible earlier time
+            t2 = dt.now()
+            t1 = t2 - 5 * 3600
+            records = window.store.records.get_records(t1, t2).values()
+            records.sort(key=lambda r: r.t2)
+            if len(records) > 0:
+                t1 = records[-1].t2  # start time == last records stop time
+                t1 = min(t1, t2 - 1)
+            else:
+                t1 = t2 - 3600  # start time is an hour ago
+            # Apply
+            if self.radio_startnow.checked:
+                self.reset(t2, t2)
+            elif self.radio_startrlr.checked:
+                self.reset(t1, t1)
+            else:
+                self.reset(t1, t2)
+        else:
+            # Switch between "already running" and "finished".
+            # Since this is an existing record, we should maintain initial values.
+            if self.radio_startrlr.checked:
+                self.reset(self.initial_t1, self.initial_t1)
+            else:
+                t2 = max(self.initial_t1 + 1, dt.now())
+                self.reset(self.initial_t1, t2)
 
     def reset(self, t1, t2):
         """Reset with a given t1 and t2."""
@@ -690,10 +760,29 @@ class StartStopEdit:
         t = t2 - t1
         self.ori_duration = f"{t//3600:.0f}h {(t//60)%60:02.0f}m {t%60:02.0f}s"
 
+        self._set_time_input_visibility()
         self.render()
+        window.setTimeout(self.callback, 1)
+
+    def _set_time_input_visibility(self):
+        def show_subnode(i, show):
+            subnode = self.gridnode.children[i]
+            if not show:
+                subnode.style.display = "none"
+            elif i % 4 == 2:
+                subnode.style.display = "flex"
+            else:
+                subnode.style.display = "inline-block"
+
+        for i in range(0, 4):
+            show_subnode(i, not self.radio_startnow.checked)
+        for i in range(4, 8):
+            show_subnode(i, self.radio_finished.checked)
+        for i in range(8, 12):
+            show_subnode(i, not self.radio_startnow.checked)
 
     def _update_duration(self):
-        if self.ori_t1 == self.ori_t2:
+        if self.t1 == self.t2:
             t = dt.now() - self.t1
             self.durationinput.value = (
                 f"{t//3600:.0f}h {(t//60)%60:02.0f}m {t%60:02.0f}s"
@@ -893,71 +982,67 @@ class RecordDialog(BaseDialog):
     def __init__(self, canvas):
         super().__init__(canvas)
         self._record = None
-        self._show_suggestions = False
         self._no_user_edit_yet = True
 
-    def open(self, action, record, callback=None):
+    def open(self, mode, record, callback=None):
         """Show/open the dialog for the given record. On submit, the
         record will be pushed to the store and callback (if given) will
         be called with the record. On close/cancel, the callback will
         be called without arguments.
         """
-        actionl = action.lower()
         self._record = record.copy()
-        dstext = "What has been done?"
-        if actionl == "start":
-            dstext = "What are you going to do?"
-        elif actionl == "stop":
-            dstext = "What did you do?"
-        self._show_suggestions = actionl in ("new", "start", "create")
+        assert mode.lower() in ("start", "new", "edit", "stop")
 
         html = f"""
-            <h1><i class='fas'>\uf682</i> {action} Record
+            <h1><i class='fas'>\uf682</i>&nbsp;&nbsp;<span>Record</span>
                 <button type='button'><i class='fas'>\uf00d</i></button>
-                <button type='button'>{actionl} <i class='fas'>\uf00c</i></button>
             </h1>
-            <h2><i class='fas'>\uf305</i> Description</h2>
-            <input type="text" class="dode12" placeholder='{dstext}' />
+            <h2><i class='fas'>\uf305</i>&nbsp;&nbsp;Description</h2>
+            <input type="text" style='width: calc(100% - 4em);' />
             <div style='color:#777;'></div>
             <div></div>
-            <h2><i class='fas'>\uf017</i> Time</h2>
+            <h2><i class='fas'>\uf017</i>&nbsp;&nbsp;Time</h2>
             <div></div>
-            <hr style='margin-top:2em;' />
-            <div class='formlayout' style='font-size:85%; grid-gap: 0px 1em;'>
-                <input type='button' value='Delete' /><input type='button' value='Confirm deleting this record' />
+            <div style='margin-top:2em;'></div>
+            <div style='display: flex;justify-content: flex-end;'>
+                <button type='button' class='actionbutton'><i class='fas'>\uf00d</i>&nbsp;&nbsp;Cancel</button>
+                <button type='button' class='actionbutton'><i class='fas'>\uf1f8</i>&nbsp;&nbsp;Delete</button>
+                <button type='button' class='actionbutton'><i class='fas'>\uf24d</i>&nbsp;&nbsp;Resume</button>
+                <button type='button' class='actionbutton submit'>Submit</button>
             </div>
+            <button type='button' style='float:right;' class='actionbutton'>Confirm deleting this record</button>
         """
         self.maindiv.innerHTML = html
+
+        # Unpack so we have all the components
         (
-            _,  # Dialog title
+            h1,  # Dialog title
             _,  # Description header
             self._ds_input,
             self._tag_suggestions_div,
             self._tags_div,
             _,  # Time header
             self._time_node,
-            _,  # More/advanced header
-            self._form,
+            _,  # Splitter
+            self._buttons,
+            self._delete_but2,
         ) = self.maindiv.children
+        #
+        self._title_div = h1.children[1]
+        self._cancel_but1 = self.maindiv.children[0].children[-1]
+        (
+            self._cancel_but2,
+            self._delete_but1,
+            self._resume_but,
+            self._submit_but,
+        ) = self._buttons.children
 
-        self._cancel_but = self.maindiv.children[0].children[-2]
-        self._submit_but = self.maindiv.children[0].children[-1]
-        self._delete_but1 = self._form.children[0]
-        self._delete_but2 = self._form.children[1]
-        self._delete_but2.style.visibility = "hidden"
-        if actionl in ("new", "start", "create"):
-            self._delete_but1.style.visibility = "hidden"
-
-        if False:  # Enable for some more info (e.g. during dev)
-            for x in ["ID:", record.key, "Modified", dt.time2localstr(record.mt)]:
-                el = window.document.createElement("div")
-                el.innerText = x
-                self._form.appendChild(el)
-
+        # Create the startstop-edit
         self._time_edit = StartStopEdit(
-            self._time_node, self._on_times_change, record.t1, record.t2
+            self._time_node, self._on_times_change, record.t1, record.t2, mode
         )
 
+        # Prepare some things to show suggested tags
         window._record_dialog_add_tag = self._record_dialog_add_tag
         self._suggested_tags_html = self._get_suggested_tags()
         self._suggested_tags_list = []  # for keyboard shortcuts
@@ -965,26 +1050,72 @@ class RecordDialog(BaseDialog):
         # Set some initial values
         self._ds_input.value = record.get("ds", "")
         self._query_tags()
+        self._delete_but2.style.display = "none"
+        self._no_user_edit_yet = True
+
+        # Show the right buttons
+        self._set_mode(mode)
 
         # Connect things up
-        self._cancel_but.onclick = self.close
+        self._cancel_but1.onclick = self.close
+        self._cancel_but2.onclick = self.close
         self._submit_but.onclick = self.submit
+        self._resume_but.onclick = self.resume_record
         self._ds_input.oninput = self._on_user_edit
         self._ds_input.onchange = self._on_user_edit_done
         self._delete_but1.onclick = self._delete1
         self._delete_but2.onclick = self._delete2
 
-        # Init and start with submit but disabled if it makes sense
-        self._no_user_edit_yet = False
-        if actionl == "edit":
-            self._no_user_edit_yet = True
-            self._submit_but.disabled = True
+        # Enable for some more info (e.g. during dev)
+        if False:
+            for x in [f"ID: {record.key}", f"Modified: {dt.time2localstr(record.mt)}"]:
+                el = window.document.createElement("div")
+                el.innerText = x
+                self.maindiv.appendChild(el)
 
-        # Almost done
+        # Almost done. Focus on ds if this looks like desktop; it's anoying on mobile
         super().open(callback)
-        # Focus on ds if this looks like desktop; it's anoying on mobile
         if utils.looks_like_desktop():
             self._ds_input.focus()
+
+    def _set_mode(self, mode):
+        self._lmode = lmode = mode.lower()
+        self._title_div.innerText = f"{mode} record"
+        is_running = self._record.t1 == self._record.t2
+        has_running = len(window.store.records.get_running_records()) > 0
+        # Set description placeholder
+        if lmode == "start":
+            self._ds_input.setAttribute("placeholder", "What are you going to do?")
+        elif lmode == "new":
+            self._ds_input.setAttribute("placeholder", "What have you done?")
+        elif lmode == "stop":
+            self._ds_input.setAttribute("placeholder", "What did you just do?")
+        elif is_running:
+            self._ds_input.setAttribute("placeholder", "What are you doing?")
+        else:
+            self._ds_input.setAttribute("placeholder", "What has been done?")
+        # Tweak the buttons at the bottom
+        if lmode == "start":
+            self._submit_but.innerHTML = "<i class='fas'>\uf04b</i>&nbsp;&nbsp;Start"
+            self._resume_but.style.display = "none"
+            self._delete_but1.style.display = "none"
+        elif lmode == "new":
+            self._submit_but.innerHTML = "<i class='fas'>\uf067</i>&nbsp;&nbsp;Create"
+            self._resume_but.style.display = "none"
+            self._delete_but1.style.display = "none"
+        elif lmode == "edit":
+            self._submit_but.innerHTML = "<i class='fas'>\uf304</i>&nbsp;&nbsp;Edit"
+            title_mode = "Edit running" if is_running else "Edit"
+            self._title_div.innerText = f"{title_mode} record"
+            self._submit_but.disabled = self._no_user_edit_yet
+            self._resume_but.style.display = "none" if has_running else "block"
+            self._delete_but1.style.display = "block"
+        elif lmode == "stop":
+            self._submit_but.innerHTML = "<i class='fas'>\uf04d</i>&nbsp;&nbsp;Stop"
+            self._resume_but.style.display = "none"
+            self._delete_but1.style.display = "block"
+        else:
+            console.warn("Unexpected record dialog mode " + mode)
 
     def _on_user_edit(self):
         self._query_tags()
@@ -998,9 +1129,22 @@ class RecordDialog(BaseDialog):
         self._ds_input.value = parts.join("")
 
     def _on_times_change(self):
+        was_running = self._record.t1 == self._record.t2
         self._record.t1 = self._time_edit.t1
         self._record.t2 = self._time_edit.t2
+        is_running = self._record.t1 == self._record.t2
         self._on_user_edit()
+        # Swap mode?
+        if was_running and not is_running:
+            if self._lmode == "start":
+                self._set_mode("New")
+            else:
+                self._set_mode("Stop")
+        elif is_running and not was_running:
+            if self._lmode == "new":
+                self._set_mode("Start")
+            else:
+                self._set_mode("Edit")
 
     def _query_tags(self):
         """Get all current tags. If different, update suggestions. """
@@ -1062,17 +1206,6 @@ class RecordDialog(BaseDialog):
         else:
             super()._on_key(e)
 
-    def submit(self):
-        """Submit the record to the store."""
-        # Set record.ds
-        _, parts = utils.get_tags_and_parts_from_string(to_str(self._ds_input.value))
-        self._record.ds = parts.join("")
-        if not self._record.ds:
-            self._record.pop("ds", None)
-        # Apply
-        window.store.records.put(self._record)
-        super().submit(self._record)
-
     def _get_suggested_tags(self, max_suggestions=16):
         # Get history of records
         t2 = dt.now()
@@ -1104,7 +1237,7 @@ class RecordDialog(BaseDialog):
         return html_parts
 
     def _delete1(self):
-        self._delete_but2.style.visibility = "visible"
+        self._delete_but2.style.display = "block"
 
     def _delete2(self):
         record = self._record
@@ -1113,6 +1246,47 @@ class RecordDialog(BaseDialog):
         window.store.records.put(record)
         self.close(record)
 
+    def _stop_all_running_records(self):
+        records = window.store.records.get_running_records()
+        now = dt.now()
+        for record in records:
+            record.t2 = max(record.t1 + 10, now)
+            window.store.records.put(record)
+
+    def submit(self):
+        """Submit the record to the store."""
+        # Submit means close if there was nothing to submit
+        if self._submit_but.disabled:
+            return self.close()
+        # Set record.ds
+        _, parts = utils.get_tags_and_parts_from_string(to_str(self._ds_input.value))
+        self._record.ds = parts.join("")
+        if not self._record.ds:
+            self._record.pop("ds", None)
+        # Prevent multiple timers at once
+        if self._record.t1 == self._record.t2:
+            self._stop_all_running_records()
+        # Apply
+        window.store.records.put(self._record)
+        super().submit(self._record)
+
+    def resume_record(self):
+        """Start a new record with the same description."""
+        # The resume button should only be visible for non-running records, but
+        # if (for whatever reason) this gets called, resume will mean leave running.
+        if self._record.t1 == self._record.t2:
+            return self.submit()
+        # In case other timers are runnning, stop these!
+        self._stop_all_running_records()
+        # Create new record with current description
+        now = dt.now()
+        record = window.store.records.create(now, now)
+        _, parts = utils.get_tags_and_parts_from_string(to_str(self._ds_input.value))
+        record.ds = parts.join("")
+        window.store.records.put(record)
+        # Apply local changes, and close the dialog
+        self.submit()
+
 
 class TagManageDialog(BaseDialog):
     """Dialog to manage tags."""
@@ -1120,7 +1294,7 @@ class TagManageDialog(BaseDialog):
     def open(self):
 
         self.maindiv.innerHTML = """
-            <h1><i class='fas'>\uf02b</i> Search & manage tags
+            <h1><i class='fas'>\uf02b</i>&nbsp;&nbsp;Search & manage tags
                 <button type='button'><i class='fas'>\uf00d</i></button>
                 </h1>
             <p>This dialog allows you to search records by tag names, and to
@@ -1133,11 +1307,11 @@ class TagManageDialog(BaseDialog):
                 <div>Replacement:</div>
                 <input type='text' placeholder='Replacement tags'/>
                 <div></div>
-                <input type='button' value='Find records' />
+                <button type='button'>Find records</button>
                 <div></div>
-                <input type='button' value='Replace all ...' />
+                <button type='button'>Replace all ...</button>
                 <div></div>
-                <input type='button' value='Confirm' />
+                <button type='button'>Confirm</button>
                 <div></div>
                 <div></div>
             </div>
@@ -1289,7 +1463,7 @@ class TagManageDialog(BaseDialog):
             text = f"Confirm replacing tags in {n} records"
         else:
             text = f"Confirm removing tags in {n} records"
-        self._button_replace_comfirm.value = text
+        self._button_replace_comfirm.innerText = text
         self._button_replace_comfirm.disabled = False
         self._button_replace_comfirm.style.visibility = "visible"
 
@@ -1348,7 +1522,7 @@ class ReportDialog(BaseDialog):
             filtertext = "all (no tags selected)"
         self._copybuttext = "Copy table"
         html = f"""
-            <h1><i class='fas'>\uf15c</i> Report
+            <h1><i class='fas'>\uf15c</i>&nbsp;&nbsp;Report
                 <button type='button'><i class='fas'>\uf00d</i></button>
                 </h1>
             <div class='formlayout'>
@@ -1728,7 +1902,7 @@ class ExportDialog(BaseDialog):
 
     def open(self, callback=None):
         self.maindiv.innerHTML = f"""
-            <h1><i class='fas'>\uf56e</i> Export
+            <h1><i class='fas'>\uf56e</i>&nbsp;&nbsp;Export
                 <button type='button'><i class='fas'>\uf00d</i></button>
             </h1>
             <p>
@@ -1834,7 +2008,7 @@ class ImportDialog(BaseDialog):
 
     def open(self, callback=None):
         self.maindiv.innerHTML = f"""
-            <h1><i class='fas'>\uf56f</i> Import
+            <h1><i class='fas'>\uf56f</i>&nbsp;&nbsp;Import
                 <button type='button'><i class='fas'>\uf00d</i></button>
             </h1>
             <p>
@@ -2174,8 +2348,8 @@ class SettingsDialog(BaseDialog):
             "→": "Zoom in",
             "←": "Zoom out",
             "_other": "<b>Other</b>",
-            "s": "Start/stop the timer",
-            "a": "Add new record",
+            "s": "Start the timer or add an earlier record",
+            "x": "Stop the timer",
             "t": "Select time range",
             "r": "Open report dialog",
         }
@@ -2186,7 +2360,7 @@ class SettingsDialog(BaseDialog):
             shortcuts_html += f"<div class='monospace'>{key}</div><div>{expl}</div>"
 
         html = f"""
-            <h1><i class='fas'>\uf013</i> Settings
+            <h1><i class='fas'>\uf013</i>&nbsp;&nbsp;Settings
                 <button type='button'><i class='fas'>\uf00d</i></button>
             </h1>
             <h2><i class='fas'>\uf4fd</i>&nbsp;&nbsp;Time zone</h2>
@@ -2263,7 +2437,7 @@ class InstallInstructionsDialog(BaseDialog):
 
     def open(self, callback=None):
         html = f"""
-            <h1><i class='fas'>\uf3fa</i> How to install
+            <h1><i class='fas'>\uf3fa</i>&nbsp;&nbsp;How to install
                 <button type='button'><i class='fas'>\uf00d</i></button>
             </h1>
             <p>

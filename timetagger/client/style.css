@@ -382,6 +382,13 @@ body.darkmode .dialog h1 {
     border-color: #31383F
 }
 
+.dialog button.actionbutton {
+    margin-left: 1em;
+    font-size: 100%;
+    padding: 0.5em 0.6em;
+}
+.dialog button.actionbutton.submit { background: #0B99DD; color: #fff; min-width: 8em; }
+.dialog button.actionbutton.submit:disabled { background: #0B99DD; color: #aaa; }
 
 /* --- dialog table --- */
 
