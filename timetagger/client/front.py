@@ -2896,7 +2896,7 @@ class AnalyticsWidget(Widget):
         duration = dt.duration_string(unit.cum_t, show_secs)
 
         # Draw text labels
-        tx, ty = x_ref + 70, y2 + 0.6 * npixels
+        tx, ty = x_ref + 75, y2 + 0.6 * npixels
         dy = min(14, 0.8 * (y3 - y2))
         ctx.font = font_size + "px " + FONT.default
         ctx.fillStyle = text_style
@@ -2908,14 +2908,14 @@ class AnalyticsWidget(Widget):
                 texts.push([" ←  back to all ", "select:"])
             else:
                 ctx.textAlign = "right"
-                ctx.fillText(duration, x_ref + 50, ty)
+                ctx.fillText(duration, x_ref + 60, ty)
                 if unit.cum_t > 0:
                     texts.push(["total", ""])
                 else:
                     texts.push(["(no records)", ""])
         else:
             ctx.textAlign = "right"
-            ctx.fillText(duration, x_ref + 50, ty)
+            ctx.fillText(duration, x_ref + 60, ty)
             tags = [tag for tag in unit.subname.split(" ")]
             for tag in tags:
                 if tag in self.selected_tags:
