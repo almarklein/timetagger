@@ -602,6 +602,7 @@ class StartStopEdit:
         self.node = node
         self.callback = callback
         self.initialmode = mode.lower()
+        self.initial_t1, self.initial_t2 = t1, t2  # even more original than ori_t1 :)
 
         if self.initialmode in ("start", "new"):
             text_startnow = "Start now"
@@ -707,7 +708,6 @@ class StartStopEdit:
         self.time2more.onclick = lambda: self.onchanged("time2more")
         self.time2less.onclick = lambda: self.onchanged("time2less")
 
-        self._set_radio_button_visibility()
         self.reset(t1, t2)
         self._timer_handle = window.setInterval(self._update_duration, 200)
 
@@ -728,21 +728,19 @@ class StartStopEdit:
                 t1 = t2 - 3600  # start time is an hour ago
             # Apply
             if self.radio_startnow.checked:
-                self.t1, self.t2 = t2, t2
+                self.reset(t2, t2)
             elif self.radio_startrlr.checked:
-                self.t1, self.t2 = t1, t1
+                self.reset(t1, t1)
             else:
-                self.t1, self.t2 = t1, t2
+                self.reset(t1, t2)
         else:
-            # Switch between "already running" and "finished"
+            # Switch between "already running" and "finished".
+            # Since this is an existing record, we should maintain initial values.
             if self.radio_startrlr.checked:
-                self.t2 = self.t1
+                self.reset(self.initial_t1, self.initial_t1)
             else:
-                self.t2 = dt.now()
-        # Update
-        self.render()
-        window.setTimeout(self.callback, 1)
-        self._set_radio_button_visibility()
+                t2 = max(self.initial_t1 + 1, dt.now())
+                self.reset(self.initial_t1, t2)
 
     def reset(self, t1, t2):
         """Reset with a given t1 and t2."""
@@ -762,9 +760,11 @@ class StartStopEdit:
         t = t2 - t1
         self.ori_duration = f"{t//3600:.0f}h {(t//60)%60:02.0f}m {t%60:02.0f}s"
 
+        self._set_time_input_visibility()
         self.render()
+        window.setTimeout(self.callback, 1)
 
-    def _set_radio_button_visibility(self):
+    def _set_time_input_visibility(self):
         def show_subnode(i, show):
             subnode = self.gridnode.children[i]
             if not show:
