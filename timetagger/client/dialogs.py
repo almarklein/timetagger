@@ -1206,20 +1206,6 @@ class RecordDialog(BaseDialog):
         else:
             super()._on_key(e)
 
-    def submit(self):
-        """Submit the record to the store."""
-        # Submit means close if there was nothing to submit
-        if self._submit_but.disabled:
-            return self.close()
-        # Set record.ds
-        _, parts = utils.get_tags_and_parts_from_string(to_str(self._ds_input.value))
-        self._record.ds = parts.join("")
-        if not self._record.ds:
-            self._record.pop("ds", None)
-        # Apply
-        window.store.records.put(self._record)
-        super().submit(self._record)
-
     def _get_suggested_tags(self, max_suggestions=16):
         # Get history of records
         t2 = dt.now()
@@ -1260,8 +1246,38 @@ class RecordDialog(BaseDialog):
         window.store.records.put(record)
         self.close(record)
 
+    def _stop_all_running_records(self):
+        records = window.store.records.get_running_records()
+        now = dt.now()
+        for record in records:
+            record.t2 = max(record.t1 + 10, now)
+            window.store.records.put(record)
+
+    def submit(self):
+        """Submit the record to the store."""
+        # Submit means close if there was nothing to submit
+        if self._submit_but.disabled:
+            return self.close()
+        # Set record.ds
+        _, parts = utils.get_tags_and_parts_from_string(to_str(self._ds_input.value))
+        self._record.ds = parts.join("")
+        if not self._record.ds:
+            self._record.pop("ds", None)
+        # Prevent multiple timers at once
+        if self._record.t1 == self._record.t2:
+            self._stop_all_running_records()
+        # Apply
+        window.store.records.put(self._record)
+        super().submit(self._record)
+
     def resume_record(self):
         """Start a new record with the same description."""
+        # The resume button should only be visible for non-running records, but
+        # if (for whatever reason) this gets called, resume will mean leave running.
+        if self._record.t1 == self._record.t2:
+            return self.submit()
+        # In case other timers are runnning, stop these!
+        self._stop_all_running_records()
         # Create new record with current description
         now = dt.now()
         record = window.store.records.create(now, now)
@@ -2332,8 +2348,8 @@ class SettingsDialog(BaseDialog):
             "→": "Zoom in",
             "←": "Zoom out",
             "_other": "<b>Other</b>",
-            "s": "Start/stop the timer",
-            "a": "Add new record",
+            "s": "Start the timer or add an earlier record",
+            "x": "Stop the timer",
             "t": "Select time range",
             "r": "Open report dialog",
         }

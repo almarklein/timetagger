@@ -833,44 +833,48 @@ class TopWidget(Widget):
 
         now = self._canvas.now()
 
-        # Define play / stop button
-        startstoptext = "fas-\uf04b"  # start: f04b or f144
-        startstop_summary = ""  # Press play to start timer"
-        startstop_tt = "Start recording [s]"
+        start_tt = "Start recording [s]"
+        stop_tt = "Stop recording [x]"
+
+        # Define stop summary
+        running_summary = "Record"
         records = window.store.records.get_running_records()
+        has_running = False
         if len(records) > 0:
-            startstoptext = "fas-\uf04d"  # stop: f04d or f28d
-            startstop_tt = "Stop recording [s]"
-            startstop_summary = "Timers running"
+            has_running = True
+            running_summary = "Timers running"
             if len(records) == 1:
                 tagz = window.store.records.tags_from_record(records[0]).join(" ")
-                duration = dt.duration_string(now - records[0].t1, True)
-                startstop_summary = duration
-                startstop_tt += " " + tagz
+                stop_tt += " " + tagz
+                if self._canvas._show_stopwatch:
+                    running_summary = dt.duration_string(now - records[0].t1, True)
+                else:
+                    running_summary = "Timer running"
 
         x = x1
 
-        # Play/Stop button
-        x += self._draw_button(
-            ctx, x, y1, startstoptext, "addrecord_start", startstop_tt
-        )
+        # Start button
+        x += self._draw_button(ctx, x, y1, "fas-\uf04b", "record_start", start_tt)
+        x2 = x
+
+        # Stop button
+        if has_running:
+            x += self._draw_button(ctx, x, y1, "fas-\uf04d", "record_stopall", stop_tt)
+            x2 = x
+        else:
+            x += x - x1
 
         # Draw summary text
         ctx.textBaseline = "top"
         ctx.font = "12px " + FONT.condensed
         ctx.fillStyle = COLORS.button_title
         #
-        if startstop_summary and self._canvas._show_stopwatch:
-            ctx.textAlign = "right"
-            ctx.fillText(startstop_summary, x, y1 + 5, x - x1)
+        if True:
+            ctx.textAlign = "center"
+            ctx.fillText(running_summary, (x1 + x2) / 2, y1 + 5)
         else:
             ctx.textAlign = "center"
-            ctx.fillText("Record", (x1 + x) / 2, y1 + 5, x - x1)
-
-        # Button to add a record = f055, f067
-        x += self._draw_button(
-            ctx, x, y1, "fas-\uf067", "addrecord_new", "Add a record [a]"
-        )
+            ctx.fillText("Record", (x1 + x) / 2, y1 + 5)
 
         return x - x1
 
@@ -1144,6 +1148,7 @@ class TopWidget(Widget):
             self._handle_button_press("nav_zoom_-1")
         elif e.key.lower() == "home" or e.key.lower() == "end":
             self._handle_button_press("nav_snap_now" + self._now_scale)
+        #
         elif e.key.lower() == "d":
             self._handle_button_press("nav_snap_now1D")
         elif e.key.lower() == "w":
@@ -1152,10 +1157,11 @@ class TopWidget(Widget):
             self._handle_button_press("nav_snap_now1M")
         elif e.key.lower() == "t":
             self._handle_button_press("nav_menu")
+        #
         elif e.key.lower() == "s":
-            self._handle_button_press("addrecord_start")
-        elif e.key.lower() == "a":
-            self._handle_button_press("addrecord_new")
+            self._handle_button_press("record_start")
+        elif e.key.lower() == "x":
+            self._handle_button_press("record_stopall")
         elif e.key.lower() == "r":
             self._handle_button_press("report")
         else:
@@ -1179,20 +1185,25 @@ class TopWidget(Widget):
             tags = self._canvas.widgets.AnalyticsWidget.selected_tags
             self._canvas.report_dialog.open(t1, t2, tags)
 
-        elif action.startswith("addrecord_"):
+        elif action.startswith("record_"):
             # A time tracking action
-            if action == "addrecord_start":
-                records = window.store.records.get_running_records()
-                if len(records) > 0:
-                    for record in records:
-                        record.t2 = max(record.t1 + 10, now)
-                        self._canvas.record_dialog.open("Stop", record, self.update)
-                else:
-                    record = window.store.records.create(now, now)
-                    self._canvas.record_dialog.open("Start", record, self.update)
-            elif action == "addrecord_new":
+            if action == "record_start":
+                record = window.store.records.create(now, now)
+                self._canvas.record_dialog.open("Start", record, self.update)
+            elif action == "record_new":
                 record = window.store.records.create(now - 1800, now)
                 self._canvas.record_dialog.open("New", record, self.update)
+            elif action == "record_stop":
+                records = window.store.records.get_running_records()
+                if len(records) > 0:
+                    record = records[0]
+                    record.t2 = max(record.t1 + 10, now)
+                    self._canvas.record_dialog.open("Stop", record, self.update)
+            elif action == "record_stopall":
+                records = window.store.records.get_running_records()
+                for record in records:
+                    record.t2 = max(record.t1 + 10, now)
+                    window.store.records.put(record)
 
         elif action.startswith("nav_"):
             # A navigation action
