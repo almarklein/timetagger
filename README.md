@@ -34,17 +34,22 @@ purchase an account for $2 per month so you don't have to worry about
 maintaining a server, backups, and all that. Plus you'd sponsor this
 project and open source in general.
 
-
 ## Installation
+
+TimeTagger is a Python library and requires Python 3.6 or higher. The dependencies are listed in `requirements.txt` - these are installed automatically when you install TimeTagger with Pip.
 
 ```
 # Latest release
 pip install -U timetagger
 
 # Latest from Github
-pip install https://github.com/almarklein/timetagger/archive/main.zip
+pip install -U https://github.com/almarklein/timetagger/archive/main.zip
+
+# Uninstall
+pip uninstall timetagger
 ```
 
+After installation, copy and execute  `python run.py` to get started.
 
 ## License
 
