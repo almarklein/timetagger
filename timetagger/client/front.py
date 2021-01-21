@@ -1529,8 +1529,9 @@ class RecordsWidget(Widget):
         # Select all records in this range. Sort so that smaller records are drawn on top.
         records = window.store.records.get_records(t1, t2).values()
 
-        # Sort records by start time
-        records.sort(key=lambda record: record.t1)
+        # Sort records by end time
+        now = self._canvas.now()
+        records.sort(key=lambda r: now if (r.t1 == r.t2) else r.t2)
 
         # Set record-times for snapping and more
         self._record_times = {}
