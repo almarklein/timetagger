@@ -172,10 +172,7 @@ def get_tags_and_parts_from_string(s=""):
 def get_better_tag_order_from_stats(stats, selected_tags, remove_selected):
     """Given a stats dict (tagz -> times) put the tags of each item in a
     sensible order. Returns a dict that maps the old tagz to the new. The items
-    in the dict
-
-    the keys are modified so that the tags are in an order that matches
-    the time for that tag.
+    in the dict are ordered by the time for that tag.
     """
 
     # Select tags (discart unselected)

@@ -1473,9 +1473,6 @@ class RecordsWidget(Widget):
         else:
             self._can_interact_with_records = False
             t3 = dt.floor(t1, stat_period)
-            fontsize = utils.fit_font_size(
-                ctx, (x3 - x1 - 30), FONT.condensed, "XXXX"
-            )  # pre-calc fontsize
             while t3 < t2:
                 t4 = dt.add(t3, stat_period)
                 y3 = y1 + (t3 - t1) * pps
@@ -1483,8 +1480,8 @@ class RecordsWidget(Widget):
                 self._picker.register(
                     x1, y3, x3, y4, {"statrect": True, "t1": t3, "t2": t4}
                 )
-                # self._draw_stats(ctx, t3, t4, x1+10, y3, x3-10, y4, stat_period, fontsize)
-                self._draw_stats(ctx, t3, t4, x2, y3, x3, y4, stat_period, fontsize)
+                # self._draw_stats(ctx, t3, t4, x1+10, y3, x3-10, y4, stat_period)
+                self._draw_stats(ctx, t3, t4, x2, y3, x3, y4, stat_period)
                 ctx.lineWidth = 2
                 ctx.strokeStyle = COLORS.tick_stripe1
                 ctx.beginPath()
@@ -1928,7 +1925,7 @@ class RecordsWidget(Widget):
                 duration_text = dt.duration_string(duration, True)
                 ctx.fillText(duration_text, 0.5 * (x1 + x2), 0.5 * (ry1 + ry2))
 
-    def _draw_stats(self, ctx, t1, t2, x1, y1, x2, y2, stat_period, fontsize):
+    def _draw_stats(self, ctx, t1, t2, x1, y1, x2, y2, stat_period):
 
         # Determine header for this block
         t = 0.5 * (t1 + t2)
@@ -1951,15 +1948,24 @@ class RecordsWidget(Widget):
         # Get stats for the given time range
         stats_dict = window.store.records.get_stats(t1, t2)
 
-        # Turn stats into tuples and sort
-        stats = []
-        maxcount = 0
+        # Score each tag
+        selected_tags = self._canvas.widgets.AnalyticsWidget.selected_tags
+        tag_scores1 = {}
         sumcount = 0
-        for name, count in stats_dict.items():
-            stats.push((name, count))
-            maxcount = max(maxcount, count)
-            sumcount += count
-        stats.sort(key=lambda x: -x[1])
+        for tagz, t in stats_dict.items():
+            tags = tagz.split(" ")
+            sumcount += t
+            if len(selected_tags):
+                if not all([tag in tags for tag in selected_tags]):
+                    continue
+            for tag in tags:
+                tag_scores1[tag] = tag_scores1.get(tag, 0) + t
+        # Sort
+        tags_scored = []
+        for tag, score in tag_scores1.items():
+            tags_scored.push((tag, score))
+        tags_scored.sort(key=lambda x: x[1])
+        tags_scored = [x[0] for x in tags_scored]
 
         # Calculate dimensions
         fullwidth = x2 - x1  # * (sumcount / (t2 - t1)) # ** 0.5
@@ -1972,38 +1978,41 @@ class RecordsWidget(Widget):
         ctx.fillRect(x1, y1, fullwidth, (y2 - y1))
         ctx.fillRect(x1, y1, fullwidth, fullheight)
 
-        # Stripes to indicate how time is divided over tags
-        ctx.beginPath()
-        x = x1
-        for i in range(len(stats) - 1):
-            _, count = stats[i]
-            width = fullwidth * count / sumcount
-            ctx.moveTo(x, y1)
-            ctx.lineTo(x, y1 + fullheight)
-            x += width  # next
-        ctx.strokeStyle = COLORS.tick_stripe3
-        ctx.lineWidth = 1.5
-        ctx.stroke()
+        # Draw tags
+        ctx.font = FONT.size + "px " + FONT.condensed
+        ctx.textBaseline = "top"
+        ctx.textAlign = "left"
+        ctx.fillStyle = COLORS.tick_stripe1
+        x, y = x2, y1 - 10
+        for tag in tags_scored:
+            w = ctx.measureText(tag).width
+            if x + w > x2 - 5:
+                x = x1 + 10
+                y += 20
+                if y > y2 - 10:
+                    break
+            ctx.fillText(tag, x, y)
+            x += w + 10
 
-        # Draw big text on top
-        fontsize = min(fontsize, y2 - y1)
-        if fontsize > 6:
-            if t1 < self._canvas.now() < t2:
-                show_secs = len(window.store.records.get_running_records()) > 0
-                ctx.fillStyle = COLORS.button_title
-            else:
-                ctx.fillStyle = COLORS.tick_stripe2
-            ctx.font = f"bold {fontsize}px {FONT.condensed}"
-            ctx.textBaseline = "middle"
-            ctx.textAlign = "center"
-            ctx.fillText(text, 0.5 * (x1 + x2), 0.5 * (y1 + y2))
-
-            ctx.font = FONT.size + "px " + FONT.condensed
-            ctx.textBaseline = "top"
-            ctx.textAlign = "left"
+        # Draw big text in blue if it is the timerange containing today
+        if t1 < self._canvas.now() < t2:
+            show_secs = len(window.store.records.get_running_records()) > 0
+            ctx.fillStyle = COLORS.button_title
+        else:
             ctx.fillStyle = COLORS.tick_text
-            show_secs = False
-            ctx.fillText(f"{dt.duration_string(sumcount, show_secs)}", x1 + 10, y1 + 5)
+
+        # Draw duration at the left
+        ctx.font = FONT.size * 3 + "px " + FONT.condensed
+        ctx.textBaseline = "bottom"
+        ctx.textAlign = "left"
+        show_secs = False
+        ctx.fillText(f"{dt.duration_string(sumcount, show_secs)}", x1 + 10, y2 - 15)
+
+        # Draw time-range indication at the right
+        ctx.font = f"bold {FONT.size * 3}px {FONT.condensed}"
+        ctx.textBaseline = "bottom"
+        ctx.textAlign = "right"
+        ctx.fillText(text, x2 - 10, y2 - 15)
 
     def on_wheel(self, ev):
         """Handle wheel event.
