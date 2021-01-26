@@ -1284,8 +1284,8 @@ class RecordDialog(BaseDialog):
         _, parts = utils.get_tags_and_parts_from_string(to_str(self._ds_input.value))
         record.ds = parts.join("")
         window.store.records.put(record)
-        # Apply local changes, and close the dialog
-        self.submit()
+        # Close the dialog - don't apply local changes
+        self.close()
 
 
 class TagManageDialog(BaseDialog):
