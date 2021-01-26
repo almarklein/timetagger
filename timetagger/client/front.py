@@ -81,8 +81,9 @@ def set_colors():
         COLORS.record_bg = "rgb(50, 55, 62)"
         COLORS.record_text = "rgb(190, 190, 190)"
         COLORS.record_shadow = "rgba(0, 0, 0, 0.4)"
-        COLORS.record_timeline_bg = "rgba(80, 80, 80, 0.7)"
+        COLORS.record_timeline_bg = COLORS.record_bg
         COLORS.record_timeline_edge = "rgb(75, 75, 75)"
+        COLORS.overview_bg = "rgb(30, 35, 42)"
 
         window.document.body.classList.add("darkmode")
         window.document.body.style.background = "rgb(0, 0, 0)"
@@ -93,11 +94,12 @@ def set_colors():
         COLORS.background1 = "rgba(252, 252, 252, 1)"
         COLORS.background2 = "rgba(255, 255, 255, 1)"
 
-        COLORS.record_bg = "rgb(247, 247, 247)"
+        COLORS.record_bg = "rgb(245, 247, 250)"
         COLORS.record_text = "rgb(25, 25, 25)"
         COLORS.record_shadow = "rgba(0, 0, 0, 0.4)"
-        COLORS.record_timeline_bg = "rgba(185, 185, 185, 0.7)"
-        COLORS.record_timeline_edge = "rgb(195, 195, 195)"
+        COLORS.record_timeline_bg = COLORS.record_bg
+        COLORS.record_timeline_edge = "rgb(210, 217, 220)"
+        COLORS.overview_bg = "rgb(250, 250, 250)"
 
         window.document.body.classList.remove("darkmode")
         bg3, bg4 = "rgb(255, 255, 255)", "rgb(245, 245, 245)"
@@ -1303,8 +1305,8 @@ class RecordsWidget(Widget):
             )
             return
 
-        x3 = self._canvas.grid_round(x1 + 65)
-        x4 = self._canvas.grid_round(x3 + 40)
+        x3 = self._canvas.grid_round(x1 + 64)
+        x4 = self._canvas.grid_round(x3 + 46)
 
         # Draw background of "active region"
         ctx.fillStyle = COLORS.background2
@@ -1575,6 +1577,7 @@ class RecordsWidget(Widget):
                 npixels,
                 nsecs,
                 yy,
+                True,
             )
             self._draw_selected_record_extras(
                 ctx,
@@ -1590,7 +1593,21 @@ class RecordsWidget(Widget):
                 yy,
             )
 
-    def _draw_one_record(self, ctx, record, t0, t1, x1, x2, x3, y0, npixels, nsecs, yy):
+    def _draw_one_record(
+        self,
+        ctx,
+        record,
+        t0,
+        t1,
+        x1,
+        x2,
+        x3,
+        y0,
+        npixels,
+        nsecs,
+        yy,
+        selected_in_timeline=False,
+    ):
         PSCRIPT_OVERLOAD = False  # noqa
         grid_round = self._canvas.grid_round
         now = self._canvas.now()
@@ -1607,8 +1624,17 @@ class RecordsWidget(Widget):
             ty2 -= min(40, 0.5 * npixels * (t0 - t2_or_now) / nsecs)
         yy = ty2 + 8  # margin between records
 
+        # Get tag info, and determine if this record is "selected"
+        tags, ds_parts = utils.get_tags_and_parts_from_string(record.ds)
+        tags_selected = True
+        selected_tags = self._canvas.widgets.AnalyticsWidget.selected_tags
+        if len(selected_tags):
+            if not all([tag in tags for tag in selected_tags]):
+                tags_selected = False
+
         ctx.font = FONT.size + "px " + FONT.condensed  # or FONT.default?
         ctx.textBaseline = "middle"
+        faded_clr = COLORS.tick_stripe1
 
         # Get position in pixels
         ry1 = y0 + npixels * (record.t1 - t1) / nsecs
@@ -1658,13 +1684,13 @@ class RecordsWidget(Widget):
             ctx.fillStyle = COLORS.record_bg
             ctx.fill()
 
-            # Draw subtle stripes
-            ctx.beginPath()
-            for ry in range(ty1 + 6, ty2 - 5, 7):
-                ctx.moveTo(x3, ry)
-                ctx.lineTo(x4, ry)
-            ctx.strokeStyle = COLORS.record_subtle_stripes
-            ctx.stroke()
+            # # Draw subtle stripes
+            # ctx.beginPath()
+            # for ry in range(ty1 + 6, ty2 - 5, 7):
+            #     ctx.moveTo(x3, ry)
+            #     ctx.lineTo(x4, ry)
+            # ctx.strokeStyle = COLORS.record_subtle_stripes
+            # ctx.stroke()
 
             # Draw duration text
             duration = record.t2 - record.t1
@@ -1672,7 +1698,7 @@ class RecordsWidget(Widget):
             if duration <= 0:
                 duration = now - record.t1
                 duration_text = dt.duration_string(duration, True)
-            ctx.fillStyle = COLORS.record_text
+            ctx.fillStyle = COLORS.record_text if tags_selected else faded_clr
             ctx.textAlign = "right"
             ctx.fillText(duration_text, x4 - 8, ty1 + 23)
 
@@ -1680,14 +1706,13 @@ class RecordsWidget(Widget):
             ctx.textAlign = "left"
             max_x = x4 - ctx.measureText(duration_text).width - 8
             space_width = ctx.measureText(" ").width + 2
-            _, parts = utils.get_tags_and_parts_from_string(record.ds)
             x = x3 + 8
-            for part in parts:
+            for part in ds_parts:
                 if part.startswith("#"):
-                    ctx.fillStyle = COLORS.tag
+                    ctx.fillStyle = COLORS.tag if tags_selected else faded_clr
                     texts = [part]
                 else:
-                    ctx.fillStyle = COLORS.record_text
+                    ctx.fillStyle = COLORS.record_text if tags_selected else faded_clr
                     texts = part.split(" ")
                 for text in texts:
                     if len(text) == 0:
@@ -1705,7 +1730,7 @@ class RecordsWidget(Widget):
         rn = min(rn, 0.5 * (ry2 - ry1))
         rn = grid_round(rn)
 
-        # Draw body in colors of the tags, and a subtle line around to
+        # Draw body in same color as above, and a subtle line around to
         # better separate records when they align
         ctx.beginPath()
         ctx.arc(x2 - rn, ry1 + rn, rn, 1.5 * PI, 2.0 * PI)
@@ -1716,8 +1741,18 @@ class RecordsWidget(Widget):
         ctx.fillStyle = COLORS.record_timeline_bg
         ctx.fill()
         ctx.strokeStyle = COLORS.record_timeline_edge
+        if selected_in_timeline:
+            ctx.strokeStyle = COLORS.record_text
         ctx.lineWidth = 1.5
         ctx.stroke()
+
+        # # Draw subtle stripes
+        # ctx.beginPath()
+        # for ry in range(ry1 + 6, ry2 - 5, 7):
+        #     ctx.moveTo(x1, ry)
+        #     ctx.lineTo(x2, ry)
+        # ctx.strokeStyle = COLORS.record_subtle_stripes
+        # ctx.stroke()
 
         # The marker that indicates whether the record has been modified
         if record.st == 0:
@@ -1791,8 +1826,8 @@ class RecordsWidget(Widget):
         x3 = x2 + 25
 
         # Prepare styles
-        body_style = COLORS.record_timeline_edge
-        border_style = COLORS.record_timeline_bg
+        body_style = COLORS.record_timeline_bg
+        border_style = COLORS.record_text
         text_style = COLORS.tick_text
 
         # Get position in pixels
@@ -1813,11 +1848,11 @@ class RecordsWidget(Widget):
 
         # Prepare for drawing flaps
         # x1f, x2f = x1 + (x2 - x1) / 6, x2 - (x2 - x1) / 6
-        x1f, x2f = x1 + 4, x2 - 4
+        x1f, x2f = x1 + 7, x2 - 7
         inset = min(28, max(1, (ry2 - ry1) ** 0.5))
         outset = 30 - inset  # inset + outset = grab height
         rn = grid_round(RECORD_ROUNDNESS)
-        shadow_inset = 5
+        shadow_inset = 8
 
         # Disable tooltip at the flaps
         self._canvas.register_tooltip(x1f, ry1 - outset - 1, x2f, ry1 + inset + 1, None)
@@ -1840,15 +1875,15 @@ class RecordsWidget(Widget):
             ctx.arc(x2f - rn, ry1 - outset + rn, rn, 1.5 * PI, 2.0 * PI)
             ctx.lineTo(x2f, ry1 + inset)
             ctx.fillStyle = body_style
-            ctx.strokeStyle = border_style
             ctx.fill()
+            ctx.strokeStyle = border_style
             ctx.stroke()
             # Shadow line
             ctx.beginPath()
             for y in [ry1 + inset]:
                 ctx.moveTo(x1f + shadow_inset, y)
                 ctx.lineTo(x2f - shadow_inset, y)
-            ctx.strokeStyle = COLORS.record_timeline_bg
+            ctx.strokeStyle = COLORS.record_timeline_edge
             ctx.stroke()
             # Text
             timetext = dt.time2localstr(record.t1)[11:16]
@@ -1867,15 +1902,15 @@ class RecordsWidget(Widget):
             ctx.arc(x1f + rn, ry2 + outset - rn, rn, 0.5 * PI, 1.0 * PI)
             ctx.lineTo(x1f, ry2 - inset)
             ctx.fillStyle = body_style
-            ctx.strokeStyle = border_style
             ctx.fill()
+            ctx.strokeStyle = border_style
             ctx.stroke()
             # Shadow line
             ctx.beginPath()
             for y in [ry2 - inset]:
                 ctx.moveTo(x1f + shadow_inset, y)
                 ctx.lineTo(x2f - shadow_inset, y)
-            ctx.strokeStyle = COLORS.record_timeline_bg
+            ctx.strokeStyle = COLORS.record_timeline_edge
             ctx.stroke()
             # Text
             timetext = dt.time2localstr(record.t2)[11:16]
@@ -2807,7 +2842,7 @@ class AnalyticsWidget(Widget):
         npixels = min(y3 - y2, target_npixels)
 
         # Define colors
-        body_style = COLORS.record_bg
+        body_style = COLORS.overview_bg
         top_style = COLORS.tick_stripe2
         left_style = COLORS.tick_stripe1
         text_style = COLORS.record_text
