@@ -1082,7 +1082,7 @@ class RecordDialog(BaseDialog):
         self._lmode = lmode = mode.lower()
         self._title_div.innerText = f"{mode} record"
         is_running = self._record.t1 == self._record.t2
-        has_running = len(window.store.records.get_running_records()) > 0
+        # has_running = len(window.store.records.get_running_records()) > 0
         # Set description placeholder
         if lmode == "start":
             self._ds_input.setAttribute("placeholder", "What are you going to do?")
@@ -1108,7 +1108,7 @@ class RecordDialog(BaseDialog):
             title_mode = "Edit running" if is_running else "Edit"
             self._title_div.innerText = f"{title_mode} record"
             self._submit_but.disabled = self._no_user_edit_yet
-            self._resume_but.style.display = "none" if has_running else "block"
+            self._resume_but.style.display = "none" if is_running else "block"
             self._delete_but1.style.display = "block"
         elif lmode == "stop":
             self._submit_but.innerHTML = "<i class='fas'>\uf04d</i>&nbsp;&nbsp;Stop"
