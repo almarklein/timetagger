@@ -1612,11 +1612,11 @@ class ReportDialog(BaseDialog):
         # Get better names
         name_map = utils.get_better_tag_order_from_stats(stats, self._tags, True)
 
-        # Create list of pairs of stat-name, stat-key, and sort it.
-        statnames = []
+        # Create list of pairs of stat-name, stat-key, and sort
+        statobjects = []
         for tagz1, tagz2 in name_map.items():
-            statnames.append((tagz2, tagz1))
-        statnames.sort(key=lambda x: x[0].lower())
+            statobjects.append({"oritagz": tagz1, "tagz": tagz2, "t": stats[tagz1]})
+        utils.order_stats_by_duration_and_name(statobjects)
 
         # Collect per tag combi, filter if necessary
         records_per_tagz = {}
@@ -1639,17 +1639,17 @@ class ReportDialog(BaseDialog):
             total += stats[tagz]
         rows.append(["head", duration2str(total), "Total", 0])
 
-        for name, tagz in statnames:
+        for statobject in statobjects:
             # Add row for total of this tag combi
-            duration = duration2str(stats[tagz])
+            duration = duration2str(statobject.t)
             pad = 1
             if showrecords:
                 rows.append(["blank"])
-            rows.append(["head", duration, name, pad])
+            rows.append(["head", duration, statobject.tagz, pad])
 
             # Add row for each record
             if showrecords:
-                records = records_per_tagz[tagz]
+                records = records_per_tagz[statobject.oritagz]
                 for i in range(len(records)):
                     record = records[i]
                     sd1, st1 = dt.time2localstr(record.t1).split(" ")

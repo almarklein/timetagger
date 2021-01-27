@@ -171,9 +171,10 @@ def get_tags_and_parts_from_string(s=""):
 
 def get_better_tag_order_from_stats(stats, selected_tags, remove_selected):
     """Given a stats dict (tagz -> times) put the tags of each item in a
-    sensible order. Returns a dict that maps the old tagz to the new. The items
-    in the dict are ordered by the time for that tag.
+    sensible order. Returns a dict that maps the old tagz to the new.
     """
+
+    # The task seems so simple, but doing this well is not trivial at all :)
 
     # Select tags (discart unselected)
     if len(selected_tags) > 0:
@@ -184,7 +185,7 @@ def get_better_tag_order_from_stats(stats, selected_tags, remove_selected):
             if all([tag in tags for tag in selected_tags]):
                 stats[tagz] = ori_stats[tagz]
 
-    # Score the individual tags, so we can sort them later
+    # Score the individual tags based on duration, so we can sort them later
     tag_scores1 = {}
     tag_connections = {}
     depth = 0
@@ -215,7 +216,8 @@ def get_better_tag_order_from_stats(stats, selected_tags, remove_selected):
         tag_scores1[tag] = tag_scores1.get(tag, 0) + d
 
     # Sort the tagz (tag combis), based on the tag_scores.
-    # This will be the order for the renaming process.
+    # This will be the order for the renaming process. This is important,
+    # because the order of processing determines the way things are grouped.
     sorted_tagz = []
     for tagz in stats.keys():
         score1 = 0
@@ -257,6 +259,44 @@ def get_better_tag_order_from_stats(stats, selected_tags, remove_selected):
                 position_votes[pos_key] = position_votes.get(pos_key, 0) + s
 
     return name_map
+
+
+def order_stats_by_duration_and_name(items):
+    """Given a list of "stat items", each a dict with (at least) fields "tagz"
+    and "t", sort the items by duration (t), while grouping items with the
+    same base tags.
+    """
+
+    # Calculate sub-scores
+    sub_tagz_scores = {}
+    for d in items:
+        tags = d.tagz.split(" ")
+        for i in range(len(tags)):
+            tagz = tags[: i + 1].join(" ")
+            sub_tagz_scores[tagz] = sub_tagz_scores.get(tagz, 0) + d.t
+
+    def sortfunc(d1, d2):
+        tags1 = d1.tagz.split(" ")
+        tags2 = d2.tagz.split(" ")
+        # Find the minimal truncated tagz that is different
+        for i in range(max(len(tags1), len(tags2))):
+            tagz1 = tags1[: i + 1].join(" ")
+            tagz2 = tags2[: i + 1].join(" ")
+            if tagz1 != tagz2:
+                break
+        # Sort based on the corresponding sub-score
+        t1, t2 = sub_tagz_scores[tagz1], sub_tagz_scores[tagz2]
+        if t1 < t2:
+            return +1
+        elif t1 > t2:
+            return -1
+        else:
+            # Must be deterministic even in rare case of equal t
+            # Note that tagz cannot be equal
+            return -1 if (d1.tagz < d2.tagz) else +1
+
+    # Sort - note the JS API, not Py
+    items.sort(sortfunc)
 
 
 def positions_mean_and_std(positions):
