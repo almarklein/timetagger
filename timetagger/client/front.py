@@ -1509,6 +1509,7 @@ class RecordsWidget(Widget):
 
         y0, y3 = 0, self._canvas.h
         t1, t2 = self._canvas.range.get_range()
+        now = self._canvas.now()
 
         # Get range, in seconds and pixels for the time range
         npixels = y2 - y1  # number if logical pixels we can use
@@ -1528,8 +1529,7 @@ class RecordsWidget(Widget):
         # Select all records in this range. Sort so that smaller records are drawn on top.
         records = window.store.records.get_records(t1, t2).values()
 
-        # Sort records by end time
-        now = self._canvas.now()
+        # Sort records by end time, so we can draw them recursively
         records.sort(key=lambda r: now if (r.t1 == r.t2) else r.t2)
 
         # Set record-times for snapping and more
@@ -1538,7 +1538,7 @@ class RecordsWidget(Widget):
             record = records[i]
             self._record_times[record.key] = record.t1, record.t2
 
-        # Draw record rectangle fills, alpha < 1 is extra overlap detection
+        # Draw record representation with description next to the timeline
         ctx.lineWidth = self._canvas.grid_linewidth2
         yy = y1
         selected_record = None, 0
@@ -1547,64 +1547,35 @@ class RecordsWidget(Widget):
                 if record.key == self._selected_record[0].key:
                     selected_record = record, yy
             yy = self._draw_one_record(
-                ctx,
-                record,
-                t0,
-                t1,
-                x1,
-                x2,
-                x3,
-                y0,
-                npixels,
-                nsecs,
-                yy,
+                ctx, record, t0, t1, x1, x2, x3, y0, npixels, nsecs, yy
             )
 
+        # Sort records by size, so records cannot be completely overlapped by another
+        records.sort(key=lambda r: r.t1 - (now if (r.t1 == r.t2) else r.t2))
+
+        # Draw record representation in timeline
+        for record in records:
+            self._draw_one_record_in_timeline(
+                ctx, record, t0, t1, x1, x2, x3, y0, npixels, nsecs
+            )
+
+        # Draw the selected record, again, and with extra stuff to allow
+        # manipulating it. This is mostly for the timeline
+        # representation. Though we also re-draw the representation
+        # next to the timeline to make its shadow thicker :)
         if selected_record[0] is not None:
             record, yy = selected_record
             self._draw_one_record(
-                ctx,
-                record,
-                t0,
-                t1,
-                x1,
-                x2,
-                x3,
-                y0,
-                npixels,
-                nsecs,
-                yy,
-                True,
+                ctx, record, t0, t1, x1, x2, x3, y0, npixels, nsecs, yy
+            )
+            self._draw_one_record_in_timeline(
+                ctx, record, t0, t1, x1, x2, x3, y0, npixels, nsecs
             )
             self._draw_selected_record_extras(
-                ctx,
-                record,
-                t0,
-                t1,
-                x1,
-                x2,
-                x3,
-                y0,
-                npixels,
-                nsecs,
-                yy,
+                ctx, record, t0, t1, x1, x2, x3, y0, npixels, nsecs, yy
             )
 
-    def _draw_one_record(
-        self,
-        ctx,
-        record,
-        t0,
-        t1,
-        x1,
-        x2,
-        x3,
-        y0,
-        npixels,
-        nsecs,
-        yy,
-        selected_in_timeline=False,
-    ):
+    def _draw_one_record(self, ctx, record, t0, t1, x1, x2, x3, y0, npixels, nsecs, yy):
         PSCRIPT_OVERLOAD = False  # noqa
         grid_round = self._canvas.grid_round
         now = self._canvas.now()
@@ -1647,87 +1618,147 @@ class RecordsWidget(Widget):
         rn = RECORD_ROUNDNESS
         rn = grid_round(rn)
 
-        # Draw record description bars
-        if t2_or_now > t0:
-            # Draw area between two representations of the record
-            ctx.beginPath()
-            ctx.moveTo(x2 + rn / 2, ry1)
-            ctx.lineTo(x3 - rn / 2, ty1)
-            ctx.lineTo(x3 - rn / 2, ty2)
-            ctx.lineTo(x2 + rn / 2, ry2)
-            ctx.closePath()
-            ctx.fillStyle = COLORS.record_between
-            ctx.fill()
+        # Do we actually draw this one?
+        if t2_or_now < t0:
+            return yy
 
-            # Draw shadow
-            ctx.fillStyle = COLORS.record_bg
-            ctx.shadowColor = COLORS.record_shadow
-            ctx.beginPath()
-            ctx.moveTo(x3, ty1 + rn)
-            ctx.lineTo(x3, ty2)
-            ctx.lineTo(x4 - rn, ty2)
-            ctx.closePath()
-            ctx.shadowBlur = rn
-            ctx.fill()
-            ctx.shadowBlur = 0
+        # Draw area between two representations of the record
+        ctx.beginPath()
+        ctx.moveTo(x2 + rn / 2, ry1)
+        ctx.lineTo(x3 - rn / 2, ty1)
+        ctx.lineTo(x3 - rn / 2, ty2)
+        ctx.lineTo(x2 + rn / 2, ry2)
+        ctx.closePath()
+        ctx.fillStyle = COLORS.record_between
+        ctx.fill()
 
-            # Draw Body
-            ctx.beginPath()
-            ctx.arc(x4 - rn, ty1 + rn, rn, 1.5 * PI, 2.0 * PI)
-            ctx.arc(x4 - rn, ty2 - rn, rn, 0.0 * PI, 0.5 * PI)
-            ctx.arc(x3 + rn, ty2 - rn, rn, 0.5 * PI, 1.0 * PI)
-            ctx.arc(x3 + rn, ty1 + rn, rn, 1.0 * PI, 1.5 * PI)
-            ctx.closePath()
-            ctx.fillStyle = COLORS.record_bg
-            ctx.fill()
+        # Draw shadow
+        ctx.fillStyle = COLORS.record_bg
+        ctx.shadowColor = COLORS.record_shadow
+        ctx.beginPath()
+        ctx.moveTo(x3, ty1 + rn)
+        ctx.lineTo(x3, ty2)
+        ctx.lineTo(x4 - rn, ty2)
+        ctx.closePath()
+        ctx.shadowBlur = rn
+        ctx.fill()
+        ctx.shadowBlur = 0
 
-            # # Draw subtle stripes
-            # ctx.beginPath()
-            # for ry in range(ty1 + 6, ty2 - 5, 7):
-            #     ctx.moveTo(x3, ry)
-            #     ctx.lineTo(x4, ry)
-            # ctx.strokeStyle = COLORS.record_subtle_stripes
-            # ctx.stroke()
+        # Draw Body
+        ctx.beginPath()
+        ctx.arc(x4 - rn, ty1 + rn, rn, 1.5 * PI, 2.0 * PI)
+        ctx.arc(x4 - rn, ty2 - rn, rn, 0.0 * PI, 0.5 * PI)
+        ctx.arc(x3 + rn, ty2 - rn, rn, 0.5 * PI, 1.0 * PI)
+        ctx.arc(x3 + rn, ty1 + rn, rn, 1.0 * PI, 1.5 * PI)
+        ctx.closePath()
+        ctx.fillStyle = COLORS.record_bg
+        ctx.fill()
 
-            # Draw duration text
-            duration = record.t2 - record.t1
-            duration_text = dt.duration_string(duration, False)
-            if duration <= 0:
-                duration = now - record.t1
-                duration_text = dt.duration_string(duration, True)
-            ctx.fillStyle = COLORS.record_text if tags_selected else faded_clr
-            ctx.textAlign = "right"
-            ctx.fillText(duration_text, x4 - 8, ty1 + 23)
+        # # Draw subtle stripes
+        # ctx.beginPath()
+        # for ry in range(ty1 + 6, ty2 - 5, 7):
+        #     ctx.moveTo(x3, ry)
+        #     ctx.lineTo(x4, ry)
+        # ctx.strokeStyle = COLORS.record_subtle_stripes
+        # ctx.stroke()
 
-            # Show desciption
-            ctx.textAlign = "left"
-            max_x = x4 - ctx.measureText(duration_text).width - 8
-            space_width = ctx.measureText(" ").width + 2
-            x = x3 + 8
-            for part in ds_parts:
-                if part.startswith("#"):
-                    ctx.fillStyle = COLORS.tag if tags_selected else faded_clr
-                    texts = [part]
+        # Draw duration text
+        duration = record.t2 - record.t1
+        duration_text = dt.duration_string(duration, False)
+        if duration <= 0:
+            duration = now - record.t1
+            duration_text = dt.duration_string(duration, True)
+        ctx.fillStyle = COLORS.record_text if tags_selected else faded_clr
+        ctx.textAlign = "right"
+        ctx.fillText(duration_text, x4 - 8, ty1 + 23)
+
+        # Show desciption
+        ctx.textAlign = "left"
+        max_x = x4 - ctx.measureText(duration_text).width - 8
+        space_width = ctx.measureText(" ").width + 2
+        x = x3 + 8
+        for part in ds_parts:
+            if part.startswith("#"):
+                ctx.fillStyle = COLORS.tag if tags_selected else faded_clr
+                texts = [part]
+            else:
+                ctx.fillStyle = COLORS.record_text if tags_selected else faded_clr
+                texts = part.split(" ")
+            for text in texts:
+                if len(text) == 0:
+                    continue
+                if x > max_x:
+                    continue
+                new_x = x + ctx.measureText(text).width + space_width
+                if new_x <= max_x:
+                    ctx.fillText(text, x, ty1 + 23, max_x - x)
                 else:
-                    ctx.fillStyle = COLORS.record_text if tags_selected else faded_clr
-                    texts = part.split(" ")
-                for text in texts:
-                    if len(text) == 0:
-                        continue
-                    if x > max_x:
-                        continue
-                    new_x = x + ctx.measureText(text).width + space_width
-                    if new_x <= max_x:
-                        ctx.fillText(text, x, ty1 + 23, max_x - x)
-                    else:
-                        ctx.fillText("…", x, ty1 + 23, max_x - x)
-                    x = new_x
+                    ctx.fillText("…", x, ty1 + 23, max_x - x)
+                x = new_x
 
-        # For the repr in the time bar, we may neen to scale down the roundness
+        # Make it clickable - the pick region is increased if needed
+        d = {
+            "button": True,
+            "action": "editrecord",
+            "help": "Click to edit",
+            "key": record.key,
+        }
+        self._picker.register(x3, ty1, x4, ty2, d)
+
+        return yy
+
+    def _draw_one_record_in_timeline(
+        self,
+        ctx,
+        record,
+        t0,
+        t1,
+        x1,
+        x2,
+        x3,
+        y0,
+        npixels,
+        nsecs,
+    ):
+        PSCRIPT_OVERLOAD = False  # noqa
+        grid_round = self._canvas.grid_round
+        now = self._canvas.now()
+        t2_or_now = now if (record.t1 == record.t2) else record.t2
+
+        # # Get tag info, and determine if this record is "selected"
+        # tags, ds_parts = utils.get_tags_and_parts_from_string(record.ds)
+        # tags_selected = True
+        # selected_tags = self._canvas.widgets.AnalyticsWidget.selected_tags
+        # if len(selected_tags):
+        #     if not all([tag in tags for tag in selected_tags]):
+        #         tags_selected = False
+
+        # Determine wheter this record is selected in the timeline
+        selected_in_timeline = False
+        if self._selected_record is not None:
+            if record.key == self._selected_record[0].key:
+                selected_in_timeline = True
+
+        ctx.font = FONT.size + "px " + FONT.condensed  # or FONT.default?
+        ctx.textBaseline = "middle"
+
+        # Get position in pixels
+        ry1 = y0 + npixels * (record.t1 - t1) / nsecs
+        ry2 = y0 + npixels * (t2_or_now - t1) / nsecs
+        if ry1 > ry2:
+            ry1, ry2 = ry2, ry1  # started timer, then changed time offset
+        # Round to pixels? Not during interaction to avoid jumps!
+        if self._round_top_bottom:
+            ry1 = grid_round(ry1)
+            ry2 = grid_round(ry2)
+
+        # Define roundness and how much each slab moves outward
+        # For the repr in the time bar, we may need to scale down the roundness
+        rn = RECORD_ROUNDNESS
         rn = min(rn, 0.5 * (ry2 - ry1))
         rn = grid_round(rn)
 
-        # Draw body in same color as above, and a subtle line around to
+        # Draw body in same color as to the right, and a subtle line around to
         # better separate records when they align
         ctx.beginPath()
         ctx.arc(x2 - rn, ry1 + rn, rn, 1.5 * PI, 2.0 * PI)
@@ -1742,20 +1773,6 @@ class RecordsWidget(Widget):
             ctx.strokeStyle = COLORS.record_text
         ctx.lineWidth = 1.5
         ctx.stroke()
-
-        # # Draw subtle stripes
-        # ctx.beginPath()
-        # for ry in range(ry1 + 6, ry2 - 5, 7):
-        #     ctx.moveTo(x1, ry)
-        #     ctx.lineTo(x2, ry)
-        # ctx.strokeStyle = COLORS.record_subtle_stripes
-        # ctx.stroke()
-
-        # The marker that indicates whether the record has been modified
-        if record.st == 0:
-            ctx.beginPath()
-            ctx.arc(x1 + 5, 0.5 * (ry1 + ry2), 2, 0, 2 * PI)
-            ctx.stroke()
 
         # Running records have a small outset
         inset, outset = 0, 0
@@ -1773,7 +1790,7 @@ class RecordsWidget(Widget):
             if int(now) % 2 == 1:
                 ctx.fillStyle = ctx.strokeStyle
                 ctx.beginPath()
-                ctx.arc(0.5 * (x1 + x2), ry2 + outset / 2, 5, 0, 2 * PI)
+                ctx.arc(0.5 * (x1 + x2), ry2 + outset / 2, 4, 0, 2 * PI)
                 ctx.fill()
             self._picker.register(
                 x1f,
@@ -1783,18 +1800,18 @@ class RecordsWidget(Widget):
                 {"recordrect": True, "region": 0, "record": record},
             )
 
-        # Make it clickable - the pick region is increased if needed
+        # The marker that indicates whether the record has been modified
+        if record.st == 0:
+            ctx.beginPath()
+            ctx.arc(x1 + 5, 0.5 * (ry1 + ry2), 2, 0, 2 * PI)
+            ctx.strokeStyle = COLORS.record_timeline_edge
+            ctx.stroke()
+
+        # Make the record clickable - the pick region is increased if needed
         if ry2 - ry1 < 16:
             ry1, ry2 = 0.5 * (ry1 + ry2) - 8, 0.5 * (ry1 + ry2) + 8
         self._picker.register(
             x1, ry1, x2, ry2, {"recordrect": True, "region": 0, "record": record}
-        )
-        self._picker.register(
-            x3,
-            ty1,
-            x4,
-            ty2,
-            {"button": True, "action": "editrecord", "help": "", "key": record.key},
         )
 
         # Register duration tooltip
@@ -1808,8 +1825,6 @@ class RecordsWidget(Widget):
         self._canvas.register_tooltip(
             x1, ry1, x2, ry2 + outset, tags.join(" ") + "\n" + duration_text
         )
-
-        return yy
 
     def _draw_selected_record_extras(
         self, ctx, record, t0, t1, x1, x2, x3, y0, npixels, nsecs, yy
