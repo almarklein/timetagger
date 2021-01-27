@@ -757,13 +757,16 @@ class TopWidget(Widget):
 
     def _draw_sync_feedback_work(self, register=True):
         PSCRIPT_OVERLOAD = False  # noqa
+
+        w, h = 10, BUTTON_RADIUS * 2
+
         if window.document.hidden:
-            return
+            return w
+
         ctx = self._canvas.node.getContext("2d")
 
         x1, y1 = self._sync_feedback_xy
         x, y = x1, y1 + self._top_offset
-        w, h = 10, BUTTON_RADIUS * 2
 
         # Get factor 0..1
         factor = window.store.sync_time
