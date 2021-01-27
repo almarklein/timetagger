@@ -961,11 +961,11 @@ class TopWidget(Widget):
             (7, "fas-\uf309", "nav_forward", "Step forward [↓/pageDown]"),
             (
                 9,
-                "fas-\uf0d7",
+                "fas-\uf073 \uf0d7",
                 "nav_menu",
                 "Select time range [t]",
                 window.undefined,
-                BUTTON_RADIUS * 1.5,
+                BUTTON_RADIUS * 2.4,
             ),
         ]
 
@@ -1114,13 +1114,13 @@ class TopWidget(Widget):
         # Draw content
         ctx.fillStyle = tcolor
         if text.startswith("fas-"):
-            ctx.font = "bold " + int(0.6 * w) + "px FontAwesome"
+            ctx.font = "bold " + int(0.55 * h) + "px FontAwesome"
             ctx.fillText(text[4:], x + w / 2, y + h / 2)
         else:
             if len(text) > 1:
-                utils.fit_font_size(ctx, w * 0.88, FONT.condensed, text, 1.25 * w)
+                utils.fit_font_size(ctx, w * 0.88, FONT.condensed, text, 1.25 * h)
             else:
-                ctx.font = int(w) + "px " + FONT.condensed
+                ctx.font = int(h) + "px " + FONT.condensed
             ctx.fillText(text, x + w / 2, y + h / 2)
         return w
 
