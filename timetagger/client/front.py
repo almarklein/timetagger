@@ -81,8 +81,7 @@ def set_colors():
         COLORS.record_bg = "rgb(50, 55, 62)"
         COLORS.record_text = "rgb(190, 190, 190)"
         COLORS.record_shadow = "rgba(0, 0, 0, 0.4)"
-        COLORS.record_timeline_bg = COLORS.record_bg
-        COLORS.record_timeline_edge = "rgb(75, 75, 75)"
+        COLORS.record_edge = "rgb(75, 75, 75)"
         COLORS.overview_bg = "rgb(30, 35, 42)"
 
         window.document.body.classList.add("darkmode")
@@ -94,11 +93,10 @@ def set_colors():
         COLORS.background1 = "rgba(252, 252, 252, 1)"
         COLORS.background2 = "rgba(255, 255, 255, 1)"
 
-        COLORS.record_bg = "rgb(245, 247, 250)"
+        COLORS.record_bg = "rgb(240, 241, 245)"
         COLORS.record_text = "rgb(25, 25, 25)"
         COLORS.record_shadow = "rgba(0, 0, 0, 0.4)"
-        COLORS.record_timeline_bg = COLORS.record_bg
-        COLORS.record_timeline_edge = "rgb(210, 217, 220)"
+        COLORS.record_edge = "rgb(210, 217, 220)"
         COLORS.overview_bg = "rgb(250, 250, 250)"
 
         window.document.body.classList.remove("darkmode")
@@ -1700,7 +1698,7 @@ class RecordsWidget(Widget):
         d = {
             "button": True,
             "action": "editrecord",
-            "help": "Click to edit",
+            "help": "",
             "key": record.key,
         }
         self._picker.register(x3, ty1, x4, ty2, d)
@@ -1766,9 +1764,9 @@ class RecordsWidget(Widget):
         ctx.arc(x1 + rn, ry2 - rn, rn, 0.5 * PI, 1.0 * PI)
         ctx.arc(x1 + rn, ry1 + rn, rn, 1.0 * PI, 1.5 * PI)
         ctx.closePath()
-        ctx.fillStyle = COLORS.record_timeline_bg
+        ctx.fillStyle = COLORS.record_bg
         ctx.fill()
-        ctx.strokeStyle = COLORS.record_timeline_edge
+        ctx.strokeStyle = COLORS.record_edge
         if selected_in_timeline:
             ctx.strokeStyle = COLORS.record_text
         ctx.lineWidth = 1.5
@@ -1804,7 +1802,7 @@ class RecordsWidget(Widget):
         if record.st == 0:
             ctx.beginPath()
             ctx.arc(x1 + 5, 0.5 * (ry1 + ry2), 2, 0, 2 * PI)
-            ctx.strokeStyle = COLORS.record_timeline_edge
+            ctx.strokeStyle = COLORS.record_edge
             ctx.stroke()
 
         # Make the record clickable - the pick region is increased if needed
@@ -1838,7 +1836,7 @@ class RecordsWidget(Widget):
         x3 = x2 + 25
 
         # Prepare styles
-        body_style = COLORS.record_timeline_bg
+        body_style = COLORS.record_bg
         border_style = COLORS.record_text
         text_style = COLORS.tick_text
 
@@ -1895,7 +1893,7 @@ class RecordsWidget(Widget):
             for y in [ry1 + inset]:
                 ctx.moveTo(x1f + shadow_inset, y)
                 ctx.lineTo(x2f - shadow_inset, y)
-            ctx.strokeStyle = COLORS.record_timeline_edge
+            ctx.strokeStyle = COLORS.record_edge
             ctx.stroke()
             # Text
             timetext = dt.time2localstr(record.t1)[11:16]
@@ -1922,7 +1920,7 @@ class RecordsWidget(Widget):
             for y in [ry2 - inset]:
                 ctx.moveTo(x1f + shadow_inset, y)
                 ctx.lineTo(x2f - shadow_inset, y)
-            ctx.strokeStyle = COLORS.record_timeline_edge
+            ctx.strokeStyle = COLORS.record_edge
             ctx.stroke()
             # Text
             timetext = dt.time2localstr(record.t2)[11:16]
