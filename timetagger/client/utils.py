@@ -173,6 +173,7 @@ def get_better_tag_order_from_stats(stats, selected_tags, remove_selected):
     """Given a stats dict (tagz -> times) put the tags of each item in a
     sensible order. Returns a dict that maps the old tagz to the new.
     """
+    PSCRIPT_OVERLOAD = False  # noqa
 
     # The task seems so simple, but doing this well is not trivial at all :)
 
@@ -266,6 +267,7 @@ def order_stats_by_duration_and_name(items):
     and "t", sort the items by duration (t), while grouping items with the
     same base tags.
     """
+    PSCRIPT_OVERLOAD = False  # noqa
 
     # Calculate sub-scores
     sub_tagz_scores = {}
