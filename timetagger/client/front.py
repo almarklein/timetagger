@@ -2409,8 +2409,8 @@ class AnalyticsWidget(Widget):
         self._tag_bars = {}  # name -> bar-info
         self._tag_bars[""] = {
             "key": "",
-            "fullname": "",
-            "subname": "",
+            "tagz": "",
+            "subtagz": "",
             "t": 0,
             "cum_t": 0,
             "inset": 0,
@@ -2533,17 +2533,17 @@ class AnalyticsWidget(Widget):
         t1, t2 = self._canvas.range.get_range()
         stats = window.store.records.get_stats(t1, t2)
 
-        # Get better names
+        # Get better names (order of tags in each tag combo)
         name_map = utils.get_better_tag_order_from_stats(
             stats, self.selected_tags, False
         )
 
-        # Replace the stats with the sorted version
+        # Replace the stats with the fixed names
         new_stats = {}
         for tagz1, tagz2 in name_map.items():
             new_stats[tagz2] = stats[tagz1]
 
-        # Group tags
+        # Group tags - creating "indentation"
         group_counts = {}
         if len(self.selected_tags) > 0:
             selected_tagz = self.selected_tags.join(" ")
@@ -2573,8 +2573,8 @@ class AnalyticsWidget(Widget):
                     else:
                         d = {
                             "key": key,
-                            "fullname": tagz,
-                            "subname": tagz[len(dprev.fullname) :].lstrip(" "),
+                            "tagz": tagz,
+                            "subtagz": tagz[len(dprev.tagz) :].lstrip(" "),
                             "t": the_t,
                             "cum_t": 0,
                             "inset": 0,
@@ -2587,7 +2587,8 @@ class AnalyticsWidget(Widget):
                             "subs": [],
                         }
                         dprev.subs.push(d)
-                        dprev.subs.sort(key=lambda x: x.subname.lower())
+                        # dprev.subs.sort(key=lambda x: x.subtagz.lower())
+                        # sort_items(dprev.subs)
                         self._tag_bars[key] = d
                         dprev = d
 
@@ -2595,7 +2596,7 @@ class AnalyticsWidget(Widget):
         # known_names = window.Set()
         #
         # def collect_names(d):
-        #     known_names.add(d.fullname)
+        #     known_names.add(d.tagz)
         #     for sub in d.subs:
         #         collect_names(sub)
         #
@@ -2696,7 +2697,7 @@ class AnalyticsWidget(Widget):
         d.is_selected = 0
         if parent_is_selected:
             d.is_selected = 3
-        # elif self.selected_tags and d.fullname == self.selected_tags.join(" "):
+        # elif self.selected_tags and d.tagz == self.selected_tags.join(" "):
         #     d.is_selected = 2
 
         # Recurse to subs
@@ -2713,6 +2714,9 @@ class AnalyticsWidget(Widget):
         d.percent_t = 1  # default or root
         for sub in d.subs:
             sub.percent_t = sub.cum_t / max(0.001, d.cum_t)
+
+        # Sort the items
+        utils.order_stats_by_duration_and_name(d.subs)
 
         # Set level count now that we know whether we are selected
         if d.is_selected == 0 and sub_is_selected:
@@ -2932,10 +2936,7 @@ class AnalyticsWidget(Widget):
         show_secs = False
         if t1 < self._canvas.now() < t2:
             for record in window.store.records.get_running_records():
-                if (
-                    window.store.records.tags_from_record(record).join(" ")
-                    == unit.fullname
-                ):
+                if window.store.records.tags_from_record(record).join(" ") == unit.tagz:
                     show_secs = True
         duration = dt.duration_string(unit.cum_t, show_secs)
 
@@ -2960,7 +2961,7 @@ class AnalyticsWidget(Widget):
         else:
             ctx.textAlign = "right"
             ctx.fillText(duration, x_ref + 60, ty)
-            tags = [tag for tag in unit.subname.split(" ")]
+            tags = [tag for tag in unit.subtagz.split(" ")]
             for tag in tags:
                 if tag in self.selected_tags:
                     texts.push([tag, ""])
