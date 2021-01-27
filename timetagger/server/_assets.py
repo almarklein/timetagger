@@ -13,10 +13,9 @@ import pscript
 import markdown
 
 from .. import __version__
-from ._utils import get_commit_hash
 
 
-versionstring = ("v" + __version__ + " " + get_commit_hash()).strip()
+versionstring = "v" + __version__
 
 
 logger = logging.getLogger("asgineer")
