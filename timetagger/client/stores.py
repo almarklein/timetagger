@@ -412,7 +412,6 @@ class RecordStore(BaseStore):
                 nr2 = cur_record.t2 // _min_heap_bin_size
                 for nr in range(nr1, nr2 + 1):
                     if bin2record_keys.get(nr, None) is not None:
-                        # bin2record_keys[nr].pop(key, None)
                         bin2record_keys[nr].pop(key, None)
                         changed_bins[nr] = True
                 self._running_records.pop(key, None)
@@ -895,13 +894,14 @@ class ConnectedDataStore(BaseDataStore):
                     self.settings._put_received(*ob.settings)
                 except Exception as err:
                     self._set_state("warning")
-                    window.alert(str(err))
+                    console.error(err)
+                    window.alert("Sync error (settings), see dev console for details.")
                 try:
                     self.records._put_received(*ob.records)
                 except Exception as err:
                     self._set_state("warning")
-                    window.alert(str(err))
-                    console.exception(err)
+                    console.error(err)
+                    window.alert("Sync error (records), see dev console for details.")
 
                 # Set state to ok if we got new items, and if there were no errors
                 if ob.settings or ob.records:
