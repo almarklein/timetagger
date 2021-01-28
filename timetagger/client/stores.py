@@ -411,8 +411,10 @@ class RecordStore(BaseStore):
                 nr1 = cur_record.t1 // _min_heap_bin_size
                 nr2 = cur_record.t2 // _min_heap_bin_size
                 for nr in range(nr1, nr2 + 1):
-                    changed_bins[nr] = True
-                    bin2record_keys[nr].pop(key)
+                    if bin2record_keys.get(nr, None) is not None:
+                        # bin2record_keys[nr].pop(key, None)
+                        bin2record_keys[nr].pop(key, None)
+                        changed_bins[nr] = True
                 self._running_records.pop(key, None)
 
             # Add new_record to bins in layer 0
@@ -899,6 +901,7 @@ class ConnectedDataStore(BaseDataStore):
                 except Exception as err:
                     self._set_state("warning")
                     window.alert(str(err))
+                    console.exception(err)
 
                 # Set state to ok if we got new items, and if there were no errors
                 if ob.settings or ob.records:
