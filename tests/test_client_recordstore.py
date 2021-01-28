@@ -1,5 +1,5 @@
 from _common import run_tests
-from timetagger.client.stores import RecordStore
+from timetagger.client.stores import RecordStore, make_hidden
 
 
 class DataStoreStub:
@@ -301,6 +301,62 @@ def test_record_running():
     assert rs2.get_running_records() == []
     assert rs2.get_stats(0, 1e15)["#p11"] == 10
     assert len(rs2.get_records(0, 1e15)) == 1
+
+
+def test_deleting_records():
+
+    datastore = DataStoreStub()
+    rs = RecordStore(datastore)
+
+    assert len(rs._items.keys()) == 0
+
+    # Put one record in
+    r = rs.create("2021-01-28 10:00:00", "2021-01-28 11:00:00", "#p1")
+    rs.put(r)
+    assert len(rs._items.keys()) == 1
+    assert len(rs.get_records(0, 1e15)) == 1
+
+    # Mark deleted
+    make_hidden(r)
+    assert r.ds == "HIDDEN #p1"
+    make_hidden(r)
+    assert r.ds == "HIDDEN #p1"
+
+    # Update it
+    rs.put(r)
+    assert len(rs._items.keys()) == 1
+    assert len(rs.get_records(0, 1e15)) == 0
+
+    # And again (emulating coming back from the server, guards against issue #48)
+    rs.put(r)
+    assert len(rs._items.keys()) == 1
+    assert len(rs.get_records(0, 1e15)) == 0
+
+    # Revive it
+    r.ds = "#p1"
+    rs.put(r)
+    assert len(rs._items.keys()) == 1
+    assert len(rs.get_records(0, 1e15)) == 1
+
+    # Put another record in
+    r2 = rs.create("2021-01-28 11:00:00", "2021-01-28 12:00:00", "#p1")
+    rs.put(r2)
+    assert len(rs._items.keys()) == 2
+    assert len(rs.get_records(0, 1e15)) == 2
+    assert len(rs.get_stats(0, 1e15)) == 1  # because same project
+
+    # Delete the record again, and push
+    make_hidden(r)
+    rs.put(r)
+    assert len(rs._items.keys()) == 2
+    assert len(rs.get_records(0, 1e15)) == 1
+    assert len(rs.get_stats(0, 1e15)) == 1
+
+    # Again (guards against issue #48)
+    rs.put(r)
+    assert len(rs._items.keys()) == 2
+    assert len(rs.get_records(0, 1e15)) == 1
+    assert len(rs.get_stats(0, 1e15)) == 1
 
 
 if __name__ == "__main__":
