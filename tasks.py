@@ -48,7 +48,15 @@ def lint(ctx):
 
     # We use flake8 with minimal settings
     # http://pep8.readthedocs.io/en/latest/intro.html#error-codes
-    cmd = [sys.executable, "-m", "flake8", "."]
+    cmd = [
+        sys.executable,
+        "-m",
+        "flake8",
+        ROOT_DIR,
+        "--max-line-length=999",
+        "--extend-ignore=N,E731,E203,F541",
+        "--exclude=build,dist,*.egg-info",
+    ]
     ret_code = subprocess.call(cmd, cwd=ROOT_DIR)
     if ret_code == 0:
         print("No style errors found")
@@ -63,7 +71,7 @@ def checkformat(ctx):
 
 
 @task
-def autoformat(ctx):
+def format(ctx):
     """Automatically format the code (using black)."""
     black_wrapper(True)
 
@@ -109,6 +117,12 @@ def clean(ctx):
 def bumpversion(ctx, version):
     """Bump the version. If no version is specified, show the current version."""
     version = version.lstrip("v")
+    # Check that we're not missing any libraries
+    for x in ("setuptools", "twine"):
+        try:
+            importlib.import_module(x)
+        except ImportError:
+            sys.exit(f"You need to ``pip install {x}`` to do a version bump")
     # Check that there are no outstanding changes
     lines = (
         subprocess.check_output(["git", "status", "--porcelain"]).decode().splitlines()

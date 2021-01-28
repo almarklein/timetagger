@@ -62,12 +62,14 @@ to grant the right to use contributions at e.g. the TimeTagger.app service.
 
 Additional developer dependencies:
 ```
-pip install black flake8 pytest requests
+pip install invoke black flake8 pytest requests
 ```
 
-* `black .` to autoformat.
-* `flake8 .` to check for linting errors.
-* `pytest .` to run the unit tests.
+* `invoke -l` to see available invoke tasks
+* `invoke clean` to remove temporary files
+* `invoke format` to autoformat the code (using black)
+* `invoke lint` to detect linting errors (using flake8)
+* `invoke tests` to run tests (using pytest)
 
 
 ## API
