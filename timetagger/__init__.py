@@ -1,5 +1,5 @@
 """
-Timetagger - Tag your time, and see where it has gone.
+Timetagger - Tag your time, get the insight.
 """
 
 __version__ = "21.1.1"
