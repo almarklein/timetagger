@@ -20,8 +20,8 @@ versionstring = "v" + __version__
 
 logger = logging.getLogger("asgineer")
 
-image_exts = ".png", ".jpg", ".gif", ".ico", ".mp4", ".svg"
-font_exts = ".ttf", ".otf", ".woff", ".woff2"
+IMAGE_EXTS = ".png", ".jpg", ".gif", ".ico", ".mp4", ".svg"
+FONT_EXTS = ".ttf", ".otf", ".woff", ".woff2"
 
 re_fas = re.compile(r"\>(\\uf[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F])\<")
 
@@ -69,6 +69,8 @@ def md2html(text, template):
     # Turn md into html and store
     main = markdown.markdown(text, extensions=[])
 
+    if isinstance(template, str):
+        template = jinja2.Template(template)
     return template.render(
         title=title,
         description=description,
@@ -79,13 +81,15 @@ def md2html(text, template):
     )
 
 
-def create_assets_from_dir(dirname):
+def create_assets_from_dir(dirname, template=None):
     """Get a dictionary of assets from a directory."""
 
     assets = {}
 
     thtml = default_template
-    if os.path.isfile(os.path.join(dirname, "_template.html")):
+    if template is not None:
+        thtml = template
+    elif os.path.isfile(os.path.join(dirname, "_template.html")):
         thtml = open(os.path.join(dirname, "_template.html"), "rb").read().decode()
     template = jinja2.Template(thtml)
 
@@ -121,7 +125,7 @@ def create_assets_from_dir(dirname):
         elif fname.endswith((".txt", ".js", ".css", ".json")):
             # Text assets
             assets[fname] = open(os.path.join(dirname, fname), "rb").read().decode()
-        elif fname.endswith(image_exts + font_exts):
+        elif fname.endswith(IMAGE_EXTS + FONT_EXTS):
             # Binary assets
             assets[fname] = open(os.path.join(dirname, fname), "rb").read()
         else:

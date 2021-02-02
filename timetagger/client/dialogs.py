@@ -2142,7 +2142,7 @@ class ImportDialog(BaseDialog):
             "tags": ["tags", "tag"],
             "t1": ["start", "begin", "start time", "begin time"],
             "t2": ["stop", "end", "stop time", "end time"],
-            "description": ["summary", "comment", "ds"],
+            "description": ["summary", "comment", "title", "ds"],
             "projectpath": ["project path"],
             "date": [],
             "duration": [
