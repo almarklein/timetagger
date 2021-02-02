@@ -18,7 +18,7 @@ else:
 RECORD_AREA_ROUNDNESS = 5
 RECORD_ROUNDNESS = 5
 ANALYSIS_ROUNDNESS = 5
-BUTTON_RADIUS = 16
+BUTTON_RADIUS = 18
 
 PI = 3.141_592_653_589_793
 
@@ -957,8 +957,8 @@ class TopWidget(Widget):
                 now_clr,
                 BUTTON_RADIUS * 2.4,
             ),
-            (7, "fas-\uf30c", "nav_backward", "Step backward [↑/pageUp]"),
-            (7, "fas-\uf309", "nav_forward", "Step forward [↓/pageDown]"),
+            (7, "fas-\uf077", "nav_backward", "Step backward [↑/pageUp]"),
+            (7, "fas-\uf078", "nav_forward", "Step forward [↓/pageDown]"),
             (
                 9,
                 "fas-\uf073 \uf0d7",
@@ -986,7 +986,24 @@ class TopWidget(Widget):
             priority, text, action, help, tcolor, w = buttons[i]
             tcolor = tcolor or None
             if priority >= ref_priority:
-                x += self._draw_button(ctx, x, y1, text, action, help, tcolor, w)
+                if action == "nav_backward":
+                    self._draw_button(
+                        ctx, x, y1, text, action, help, tcolor, w, BUTTON_RADIUS
+                    )
+                elif action == "nav_forward":
+                    x += self._draw_button(
+                        ctx,
+                        x,
+                        y1 + BUTTON_RADIUS,
+                        text,
+                        action,
+                        help,
+                        tcolor,
+                        w,
+                        BUTTON_RADIUS,
+                    )
+                else:
+                    x += self._draw_button(ctx, x, y1, text, action, help, tcolor, w)
 
         # Draw summary text
         ctx.textBaseline = "top"
@@ -1114,11 +1131,11 @@ class TopWidget(Widget):
         # Draw content
         ctx.fillStyle = tcolor
         if text.startswith("fas-"):
-            ctx.font = "bold " + int(0.55 * h) + "px FontAwesome"
+            ctx.font = "bold " + int(0.5 * h) + "px FontAwesome"
             ctx.fillText(text[4:], x + w / 2, y + h / 2)
         else:
             if len(text) > 1:
-                utils.fit_font_size(ctx, w * 0.88, FONT.condensed, text, 1.25 * h)
+                utils.fit_font_size(ctx, w * 0.80, FONT.condensed, text, 1.25 * h)
             else:
                 ctx.font = int(h) + "px " + FONT.condensed
             ctx.fillText(text, x + w / 2, y + h / 2)
