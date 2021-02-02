@@ -384,19 +384,15 @@ class MenuDialog(BaseDialog):
 
         self.maindiv.innerHTML = f"""
             <div class='loggedinas'></div>
-            <div style="min-height: 1px; margin:0; "></div>
+            <div class='divider'></div>
             <a href="/"><img style='width:18px; height:18px;vertical-align:middle;' src='timetagger192.png' />&nbsp;&nbsp;Homepage</a>
-            <a href="/login"><i class='fas'>\uf2f6</i>&nbsp;&nbsp;Login</a>
-            <a href="/logout"><i class='fas'>\uf2f5</i>&nbsp;&nbsp;Logout</a>
-            <a href="/support"><i class='fas'>\uf059</i>&nbsp;&nbsp;Support & FAQs</a>
-            <div style="min-height: 1px; margin:0; "></div>
+            <a href="https://timetagger.app/support"><i class='fas'>\uf059</i>&nbsp;&nbsp;Get tips and help</a>
             <a href="/account"><i class='fas'>\uf2bd</i>&nbsp;&nbsp;Account</a>
-        """
+            <div class='divider'></div>
+        """.rstrip()
 
         # Unpack
         loggedinas = self.maindiv.children[0]
-        loginbut = self.maindiv.children[3]
-        logoutbut = self.maindiv.children[4]
 
         # Valid store?
         if window.store.get_auth:
@@ -412,14 +408,16 @@ class MenuDialog(BaseDialog):
         ):
             is_the_app = False
 
-        # Hide login or logout button, or both
-        if True:
-            loginbut.style.display = "none"
-            logoutbut.style.display = "none"
-        elif logged_in:
-            loginbut.style.display = "none"
-        else:
-            logoutbut.style.display = "none"
+        logged_in  # noqaM
+        # <a href="/login"><i class='fas'>\uf2f6</i>&nbsp;&nbsp;Login</a>
+        # <a href="/logout"><i class='fas'>\uf2f5</i>&nbsp;&nbsp;Logout</a>
+        # # Hide login or logout button, or both
+        # loginbut = self.maindiv.children[3]
+        # logoutbut = self.maindiv.children[4]
+        # if logged_in:
+        #     loginbut.style.display = "none"
+        # else:
+        #     logoutbut.style.display = "none"
 
         # Display sensible text in "header"
         if window.store.__name__.startswith("Demo"):
@@ -441,7 +439,6 @@ class MenuDialog(BaseDialog):
             ("\uf013", store_valid, "Settings", self._show_settings),
             ("\uf02c", store_valid, "Search & manage tags", self._manage_tags),
             ("\uf3fa", is_the_app, "Install this app", self._show_install_instructions),
-            (None, True, None, None),
             ("\uf56f", store_valid, "Import records", self._import),
             ("\uf56e", store_valid, "Export all records", self._export),
         ]:
@@ -449,7 +446,7 @@ class MenuDialog(BaseDialog):
                 continue
             elif title is None:
                 el = window.document.createElement("div")
-                el.setAttribute("style", "min-height: 1px; margin:0;")
+                el.setAttribute("class", "divider")
                 container.appendChild(el)
             else:
                 el = window.document.createElement("a")
