@@ -1297,9 +1297,9 @@ class TagManageDialog(BaseDialog):
             <h1><i class='fas'>\uf02b</i>&nbsp;&nbsp;Search & manage tags
                 <button type='button'><i class='fas'>\uf00d</i></button>
                 </h1>
-            <p>This dialog allows you to search records by tag names, and to
-            rename/remove/merge/split the tags in these records. See the
-            <a href="/support#app">support page</a> for details.<br><br>
+            <p>This tool allows you to search records by tag name(s), and to
+            rename/remove/merge/split the tags in these records. See
+            <a href="https://timetagger.app/articles/tags/#manage" target='new'>this article</a> for details.<br><br>
             </p>
             <div class='formlayout'>
                 <div>Tags:</div>
@@ -1908,8 +1908,7 @@ class ExportDialog(BaseDialog):
             <p>
             The table below contains all your records. This can be
             useful for backups, processing, or to move your data
-            elsewhere. See the <a href='/support#importexport'>support page</a>
-            for details.
+            elsewhere.
             </p><p>&nbsp;</p>
             <div>
                 <span>Date-time format:</span>
@@ -2014,8 +2013,8 @@ class ImportDialog(BaseDialog):
             <p>
             Copy your table data (from e.g. a CSV file, a text file, or
             directly from Excel) and paste it in the text field below.
-            CSV files can be dragged directly into the text field.
-            See the <a href='/support#importexport'>support page</a>
+            CSV files can be dragged into the text field.
+            See <a href='https://timetagger.app/articles/importing/'>this article</a>
             for details.
             </p><p>&nbsp;</p>
             <button type='button'>Analyse</button>
