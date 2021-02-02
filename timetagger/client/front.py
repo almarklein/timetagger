@@ -1994,12 +1994,16 @@ class RecordsWidget(Widget):
         ctx.fillRect(x1, y1, fullwidth, (y2 - y1))
         ctx.fillRect(x1, y1, fullwidth, fullheight)
 
+        bigfontsize = min(FONT.size * 2, (y2 - y1) / 3)
+        bigfontsize = max(FONT.size, bigfontsize)
+        ymargin = (y2 - y1) / 20
+
         # Draw tags
         ctx.font = FONT.size + "px " + FONT.condensed
         ctx.textBaseline = "top"
         ctx.textAlign = "left"
         ctx.fillStyle = COLORS.tick_stripe1
-        x, y = x2, y1 - 10
+        x, y = x2, y1 + (ymargin - 20)
         for tag in tags_scored:
             w = ctx.measureText(tag).width
             if x + w > x2 - 5:
@@ -2015,20 +2019,22 @@ class RecordsWidget(Widget):
             show_secs = len(window.store.records.get_running_records()) > 0
             ctx.fillStyle = COLORS.button_title
         else:
-            ctx.fillStyle = COLORS.tick_text
+            ctx.fillStyle = COLORS.tick_stripe1
 
         # Draw duration at the left
-        ctx.font = FONT.size * 3 + "px " + FONT.condensed
+        ctx.font = f"{bigfontsize}px {FONT.condensed}"
         ctx.textBaseline = "bottom"
         ctx.textAlign = "left"
         show_secs = False
-        ctx.fillText(f"{dt.duration_string(sumcount, show_secs)}", x1 + 10, y2 - 15)
+        ctx.fillText(
+            f"{dt.duration_string(sumcount, show_secs)}", x1 + 10, y2 - ymargin
+        )
 
         # Draw time-range indication at the right
-        ctx.font = f"bold {FONT.size * 3}px {FONT.condensed}"
+        ctx.font = f"bold {bigfontsize}px {FONT.condensed}"
         ctx.textBaseline = "bottom"
         ctx.textAlign = "right"
-        ctx.fillText(text, x2 - 10, y2 - 15)
+        ctx.fillText(text, x2 - 10, y2 - ymargin)
 
     def on_wheel(self, ev):
         """Handle wheel event.
