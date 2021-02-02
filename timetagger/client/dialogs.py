@@ -1506,11 +1506,13 @@ class ReportDialog(BaseDialog):
         self._tags = tags or []
 
         # Transform time int to dates.
-        self._t1_date = t1_date = dt.time2localstr(dt.floor(t1, "1D")).split(" ")[0]
-        self._t2_date = t2_date = dt.time2localstr(dt.round(t2, "1D")).split(" ")[0]
+        t1_date = dt.time2localstr(dt.round(t1, "1D")).split(" ")[0]
+        t2_date = dt.time2localstr(dt.round(t2, "1D")).split(" ")[0]
         if t1_date != t2_date:
             # The date range is inclusive (and we add 1D later): move back one day
             t2_date = dt.time2localstr(dt.add(dt.round(t2, "1D"), "-1D")).split(" ")[0]
+        self._t1_date = t1_date
+        self._t2_date = t2_date
 
         # Generate preamble
         if self._tags:
@@ -1590,7 +1592,7 @@ class ReportDialog(BaseDialog):
             self._table_element.classList.remove("darkheaders")
 
         # Also apply in the app itself!
-        window.canvas.range.set_range(t1, t2)  # animate_range() will snap
+        window.canvas.range.animate_range(t1, t2, None, False)  # without snap
 
     def _generate_table_rows(self, t1, t2):
 
