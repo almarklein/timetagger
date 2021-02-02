@@ -960,13 +960,14 @@ class DemoDataStore(BaseDataStore):
 
     def _create_tags(self):
 
-        self._tag_groups = [
-            ["#unpaid #networking"],
-            ["#unpaid #traveling"],
-            ["#unpaid #reading"],
-            ["#unpaid #admin"],
-            ["#client1 #meeting", "#client1 #consulting", "#client1 #admin"],
-            ["#client1 #meeting", "#client1 #admin", "#client1 #code"],
+        self._tag_groups1 = [
+            ["#unpaid #admin", "#unpaid #reading"],
+            ["#unpaid #admin", "#unpaid #traveling"],
+        ]
+
+        self._tag_groups2 = [
+            ["#client1 #meeting", "#client1 #training", "#client1 #admin"],
+            ["#client1 #meeting", "#client1 #code", "#client1 #design"],
             [
                 "#client2 #code #writing",
                 "#client2 #code",
@@ -979,17 +980,8 @@ class DemoDataStore(BaseDataStore):
                 "#client2 #code",
                 "#client2 #design",
                 "#client2 #meeting",
+                "#client2 #training",
                 "#client2 #admin",
-            ],
-            [
-                "#client3 #meeting",
-                "#client3 #code",
-                "#client3 #training",
-            ],
-            [
-                "#client3 #meeting",
-                "#client3 #training",
-                "#client3 #coaching",
             ],
         ]
 
@@ -1009,8 +1001,12 @@ class DemoDataStore(BaseDataStore):
             # For each month, we select tags from the tag groups,
             # we may not have all, and we may have duplicates.
             tags = []
-            for i in range(10):
-                tag_group = self._tag_groups[int(random() * len(self._tag_groups))]
+            for i in range(1):
+                tag_group = self._tag_groups1[int(random() * len(self._tag_groups1))]
+                for tag in tag_group:
+                    tags.append(tag)
+            for i in range(2):
+                tag_group = self._tag_groups2[int(random() * len(self._tag_groups2))]
                 for tag in tag_group:
                     tags.append(tag)
 
@@ -1032,11 +1028,11 @@ class DemoDataStore(BaseDataStore):
                     if y == nowyear and m == nowmonth and d == nowday:
                         for start, stop, tag in [
                             ("08:51", "09:11", "#unpaid #admin"),
-                            ("09:11", "10:19", "#client1 #design"),
-                            ("10:19", "11:52", "#client1 #code"),
-                            ("12:51", "13:36", "#client1 #design"),
-                            ("13:36", "14:28", "#client2 #meeting"),
-                            ("14:34", "16:11", "#client2 #code"),
+                            ("09:11", "10:27", "#client1 #meeting"),
+                            ("10:29", "11:52", "#client1 #code"),
+                            ("12:51", "13:32", "#client1 #code"),
+                            ("13:32", "14:28", "#client2 #meeting"),
+                            ("14:34", "16:11", "#client2 #design"),
                         ]:
                             t1 = dt.to_time_int(f"{sy}-{sm}-{sd}T{start}:00")
                             t2 = dt.to_time_int(f"{sy}-{sm}-{sd}T{stop}:00")
