@@ -153,14 +153,15 @@ main a.ctabutton:hover {
     color: #222;
     display: block;
     box-sizing: border-box;
-    border-top: 1px solid #bbb;
+    border-bottom: 1px solid #bbb;
+    border-right: 1px solid #bbb;
     margin: 0;
     padding: 0.5em;
 }
 .dialog.verticalmenu .divider {
     user-select: none;
     -moz-user-select: none;
-    border-top: 1px solid #bbb;
+    border-bottom: 1px solid #bbb;
     box-sizing: border-box;
     margin: 0;
     height: 2px;
