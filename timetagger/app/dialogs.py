@@ -3,7 +3,7 @@ Implementation of HTML-based dialogs.
 """
 
 from pscript import this_is_js
-from pscript.stubs import window, console, Math, isFinite, Date, isNaN
+from pscript.stubs import window, console, location, Math, isFinite, Date, isNaN
 
 
 if this_is_js():
@@ -436,12 +436,14 @@ class MenuDialog(BaseDialog):
             ("\uf02c", store_valid, "Search & manage tags", self._manage_tags),
             ("\uf56f", store_valid, "Import records", self._import),
             ("\uf56e", store_valid, "Export all records", self._export),
+            ("\uf56e", store_valid, "About", self._about),
             (
                 "\uf3fa",
                 is_installable,
                 "<span class='acc_color'>Install this app</span>",
                 self._do_install,
             ),
+
         ]:
             if not isvalid:
                 continue
@@ -492,6 +494,10 @@ class MenuDialog(BaseDialog):
     def _import(self):
         self.close()
         self._canvas.import_dialog.open()
+
+    def _about(self):
+        self.close()
+        self._canvas.about_dialog.open()
 
 
 class TimeSelectionDialog(BaseDialog):
@@ -2544,6 +2550,109 @@ class SettingsDialog(BaseDialog):
         stopwatch = bool(self._stopwatch_check.checked)
         ob = window.store.settings.create("stopwatch", stopwatch)
         window.store.settings.put(ob)
+
+
+class AboutDialog(BaseDialog):
+    """Dialog to show about dialog."""
+
+    def __init__(self, canvas):
+        super().__init__(canvas)
+
+    def open(self, callback=None):
+        self.maindiv.innerHTML = f"""
+            <h1><i class='fas'>\uf3fa</i>&nbsp;&nbsp;About TimeTagger
+                <button type='button'><i class='fas'>\uf00d</i></button>
+            </h1>
+            <h2>API token</h2>
+            <div>
+                <p>
+                An API token enables direct access to the server for
+                3d party applications. Revoke the token to deny access for all
+                applications using the current token.
+                </p>
+                <button type='button'>Reset</button>
+                <button type='button'><i class='fas'>\uf0ea</i></button>
+                <span class='monospace' style='margin-left: 5px; font-size:80%;'>Obtaining token ...</span>
+            </div>
+            <h2>Foo</h2>
+            <p>Bar</p>
+            """
+
+        (
+            _,  # Dialog title
+            _,  # API token header
+            self._tokendiv,
+            _,  # Foo header
+            self._bar,
+        ) = self.maindiv.children
+
+        (
+            _,
+            self._token_reset,
+            self._token_copy,
+            self._token_text,
+        ) = self._tokendiv.children
+
+        # Connect
+        self._token_reset.onclick = self._on_token_reset
+        self._token_copy.onclick = self._on_token_copy
+        self._cancel_but = self.maindiv.children[0].children[-1]
+        self._cancel_but.onclick = self.close
+
+        self._token = ""
+        self._token_reset.disabled = True
+        self._token_copy.disabled = True
+        if window.store.get_auth:
+            self._get_token()
+        else:
+            self._tokendiv.innerHTML = "The API token is only visible in the app."
+
+        super().open(callback)
+
+    def _on_token_reset(self):
+        self._token_reset.disabled = True
+        if self._token:
+            self._get_token("DELETE")
+        else:
+            self._get_token("PUT")
+
+    def _on_token_copy(self):
+        copy_dom_node(self._token_text)
+        self._token_copy.innerHTML = "<i class='fas'>\uf46c</i>"
+        window.setTimeout(self._reset_copy_but_text, 800)
+
+    def _reset_copy_but_text(self):
+        self._token_copy.innerHTML = "<i class='fas'>\uf0ea</i>"
+
+    async def _get_token(self, method="GET"):
+        url = location.protocol + "//" + location.hostname + ":" + location.port
+        url = url.rstrip(":") + "/api/v1/apitoken"
+        authtoken = window.store.get_auth().token
+        init = dict(method=method, headers={"authtoken": authtoken})
+        try:
+            response = await window.fetch(url, init)
+            if response.status != 200:
+                raise ValueError(response.statusText)
+            data = await response.json()
+        except Exception as err:
+            console.error(err)
+            self._token_text.innerText = "Error getting token, see console for details."
+            return
+
+        # Set token
+        if data.token:
+            print(data)
+            self._token = data.token
+            self._token_text.innerText = data.token
+            self._token_reset.innerHTML = "Revoke"
+            self._token_reset.disabled = False
+            self._token_copy.disabled = False
+        else:
+            self._token = ""
+            self._token_text.innerText = "No token set."
+            self._token_reset.innerHTML = "Create"
+            self._token_reset.disabled = False
+            self._token_copy.disabled = True
 
 
 class InstallInstructionsDialog(BaseDialog):

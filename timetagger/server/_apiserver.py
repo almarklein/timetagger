@@ -6,6 +6,8 @@ import os
 import json
 import time
 import logging
+import secrets
+from base64 import urlsafe_b64encode as b64encode, urlsafe_b64decode as b64decode
 
 from itemdb import ItemDB
 
@@ -117,6 +119,12 @@ async def api_handler(request, apipath, user):
         else:
             return 405, {}, "/api/v1/forcereset can only be used with PUT"
 
+    elif apipath == "apitoken":
+        if request.method in ("GET", "PUT", "DELETE"):
+            return await apitoken_handler(request, user)
+        else:
+            return 405, {}, "/api/v1/apitoken can only be used with GET, PUT, DELETE"
+
     else:
         return 404, {}, "invalid API call"
 
@@ -149,6 +157,33 @@ def _force_reset(user):
         db.put_one("userinfo", key="reset_time", st=st, mt=st, value=st)
 
     return 200, {}, {"status": "ok"}
+
+
+async def apitoken_handler(request, user):
+    """Get/revoke/reset API key."""
+    return await asyncthis(_apitoken, user, request.method)
+
+
+def _apitoken(user, method):
+
+    db, mtime = get_user_db(user)
+    st = time.time()
+    db.ensure_table("userinfo", *INDICES["userinfo"])
+
+    if method == "GET":
+        ob = db.select_one("userinfo", "key = 'apitoken'") or {}
+        token = ob.get("value", "")
+    elif method == "DELETE":
+        token = ""
+        with db:
+            db.put_one("userinfo", key="apitoken", st=st, mt=st, value=token)
+    elif method == "PUT":
+        token_b = user.encode() + b" " + secrets.token_bytes(32)
+        token = b64encode(token_b).decode()
+        with db:
+            db.put_one("userinfo", key="apitoken", st=st, mt=st, value=token)
+
+    return 200, {}, {"token": token}
 
 
 async def get_updates_handler(request, user):
@@ -255,7 +290,6 @@ def _push_items(user, what, items):
         reset_time = float((ob or {}).get("value", -1))
 
         for item in items:
-
             # First check minimal requirement.
             if not (isinstance(item, dict) and isinstance(item.get("key", None), str)):
                 errors2.append("Got item that is not a dict with str 'key' field.")
