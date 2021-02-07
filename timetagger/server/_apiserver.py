@@ -129,6 +129,63 @@ async def api_handler(request, apipath, user):
         return 404, {}, "invalid API call"
 
 
+async def api_handler_v2(request, apipath):
+    # todo: I think it kinda makes sense to let apipath start with /
+    # todo: rate limiting
+
+    if not apipath and request.method == "GET":
+        return 200, {}, "See https://timetagger.readthedocs.io"
+
+    # Auth
+    user = "default"
+
+    if apipath == "records":
+
+        if request.method == "GET":
+            # Parse since option
+            since = None
+            since_str = request.querydict.get("since", "").strip()
+            if since_str:
+                try:
+                    since = float(since_str)
+                except ValueError:
+                    return 400, {}, "/api/v1/records since needs a number (timestamp)"
+            # Parse timerange option
+            timerange = None
+            timerange_str = request.querydict.get("timerange", "").strip()
+            if timerange_str:
+                timerange = timerange_str.split("-")
+                try:
+                    timerange = [float(x) for x in timerange]
+                    if len(timerange) != 2:
+                        raise ValueError()
+                except ValueError:
+                    return (
+                        400,
+                        {},
+                        "/api/v1/records timerange needs 2 numbers (timestamps)",
+                    )
+            # Parse pollmethod option
+            pollmethod = request.querydict.get("pollmethod", "").strip() or "short"
+            if pollmethod not in ("short", "long"):
+                return 400, {}, "/api/v1/records pollmethod must be 'short' or 'long'"
+            # Check
+            if since and range:
+                # todo: allowed or not?
+                raise RuntimeError("not ok")
+            # Go!
+            return await asyncthis(_get_records, user, since, timerange, pollmethod)
+
+        elif request.method == "PUT":
+            return await put_items_handler(request, user, "records")
+
+        else:
+            return 405, {}, "api/v2/records can only be used with GET and PUT"
+
+    else:
+        return 404, {}, f"/api/v2/{apipath} is not a valid API path"
+
+
 def get_user_db(user):
     """Open the user db and return the db and its mtime (which is -1 if the db did not yet exist)."""
     # Get database name and its mtime

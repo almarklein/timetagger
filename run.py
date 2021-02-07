@@ -9,7 +9,7 @@ import logging
 from pkg_resources import resource_filename
 
 import asgineer
-from timetagger.server import api_handler, create_assets_from_dir, enable_service_worker
+from timetagger.server import api_handler, api_handler_v2, create_assets_from_dir, enable_service_worker
 
 
 logger = logging.getLogger("asgineer")
@@ -58,12 +58,15 @@ async def main_handler(request):
         if request.path.startswith("/timetagger/api/"):
             # Get apipath
             prefix = "/timetagger/api/v1/"
-            if not request.path.startswith(prefix):
-                return 404, {}, "invalid API path"
             apipath = request.path[len(prefix) :].strip("/")
-            # This is where you'd handle authentication ...
-            user = "default"
-            return await api_handler(request, apipath, user)
+            if request.path.startswith("/api/v1/"):
+                # This is where you'd handle authentication ...
+                user = "default"
+                return await api_handler(request, apipath, user)
+            elif request.path.startswith("/api/v2/"):
+                return await api_handler_v2(request, apipath)
+            else:
+                return 404, {}, "invalid API path"
         elif request.path.startswith("/timetagger/app/"):
             path = request.path[16:]
             status, headers, body = await app_asset_handler(request, path)
