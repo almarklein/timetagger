@@ -2997,6 +2997,15 @@ class AnalyticsWidget(Widget):
         ctx.fill()
         ctx.stroke()
 
+        # Draw coloured edge
+        if not is_root:
+            ctx.fillStyle = COLORS.tag
+            ctx.beginPath()
+            ctx.arc(x2 + rn, y3 - rn, rn, 0.5 * PI, 1.0 * PI)
+            ctx.arc(x2 + rn, y2 + rn, rn, 1.0 * PI, 1.5 * PI)
+            ctx.closePath()
+            ctx.fill()
+
         # Subtle stripes
         ctx.strokeStyle = COLORS.record_subtle_stripes
         ctx.lineWidth = 1
@@ -3058,7 +3067,7 @@ class AnalyticsWidget(Widget):
             if clr:
                 ctx.fillStyle = clr
             elif text.startswith("#"):
-                ctx.fillStyle = COLORS.tag
+                ctx.fillStyle = COLORS.record_text
             else:
                 ctx.fillStyle = text_style
             ctx.fillText(text, tx, ty)
