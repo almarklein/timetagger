@@ -1285,6 +1285,112 @@ class RecordDialog(BaseDialog):
         self.close()
 
 
+class ColorDialog(BaseDialog):
+    """Dialog to set the color for a tag combination."""
+
+    def open(self, tagz):
+
+        # Put in deterministic order
+        tags = tagz.split(" ")
+        tags.sort()
+        self._tagz = tagz = tags.join(" ")
+
+        self._default_color = utils.hex_from_hue(utils.hue_from_name(self._tagz))
+
+        self.maindiv.innerHTML = f"""
+            <h1><i class='fas'>\uf53f</i>&nbsp;&nbsp;Set color for {tagz}
+                <button type='button'><i class='fas'>\uf00d</i></button>
+                </h1>
+            <input type='text' style='width: 210px; border: 5px solid #eee'></input>
+            <br>
+            <button type='button'><i class='fas'>\uf12d</i> Auto</button>
+            <button type='button' style='margin-left: 2px'><i class='fas'>\uf2f1</i> Random</button>
+            <br>
+            <div style='display: inline-grid; grid-gap: 2px;'></div>
+            <div style='margin-top:2em;'></div>
+            <div style='display: flex;justify-content: flex-end;'>
+                <button type='button' class='actionbutton'><i class='fas'>\uf00d</i>&nbsp;&nbsp;Cancel</button>
+                <button type='button' class='actionbutton submit'><i class='fas'>\uf00c</i>&nbsp;&nbsp;Apply</button>
+            </div>
+        """
+
+        close_but = self.maindiv.children[0].children[-1]
+
+        (
+            _,  # h1
+            self._color_input,
+            _,  # br
+            self._default_button,
+            self._random_button,
+            _,  # br
+            self._color_grid,
+            _,  # gap
+            buttons,
+        ) = self.maindiv.children
+
+        # Connect things up
+        close_but.onclick = self.close
+        buttons.children[0].onclick = self.close
+        buttons.children[1].onclick = self.submit
+        self._color_input.onchange = lambda: self._set_color(self._color_input.value)
+        self._default_button.onclick = self._set_default_color
+        self._random_button.onclick = self._set_random_color
+
+        n_hues = 8
+        self._color_grid.style.gridTemplateColumns = "auto ".repeat(n_hues)
+
+        gh_colors = (
+            "#B60205 #D93F0B #FBCA04 #0E8A16 #006B75 #1D76DB #0052CC #5319E7 "
+            + "#E99695 #F9D0C4 #FEF2C0 #C2E0C6 #BFDADC #C5DEF5 #BFD4F2 #D4C5F9"
+        ).split(" ")
+
+        hsv_colors = []
+        for lightness, sat in [(0.5, 0.9), (0.7, 0.9), (0.7, 0.4)]:
+            for i in range(n_hues):
+                hue = 360 * i / n_hues + 25
+                hex = utils.hex_from_hue(hue, lightness, sat)
+                hsv_colors.push(hex)
+
+        for hex in hsv_colors + gh_colors:
+            el = document.createElement("span")
+            el.style.background = hex
+            el.style.width = "30px"
+            el.style.height = "30px"
+            self._make_clickable(el, hex)
+            self._color_grid.appendChild(el)
+
+        self._set_color(window.store.settings.get_color_for_tagz(tagz))
+        super().open(None)
+
+    def _make_clickable(self, el, hex):
+        # def clickcallback():
+        #     self._color_input.value = hex
+        el.onclick = lambda: self._set_color(hex)
+
+    def _set_default_color(self):
+        self._set_color(self._default_color)
+
+    def _set_random_color(self):
+        clr = "#" + Math.floor(Math.random() * 16777215).toString(16)
+        self._set_color(clr)
+
+    def _set_color(self, clr):
+        if not clr or clr in ["auto", "undefined", "null"]:
+            clr = self._default_color
+        self._color_input.value = clr
+        self._color_input.style.borderColor = clr
+
+    def submit(self):
+        clr = self._color_input.value
+        cur_color = window.store.settings.get_color_for_tagz(self._tagz)
+        if clr != cur_color:
+            if clr == self._default_color:
+                window.store.settings.set_color_for_tagz(self._tagz, "")
+            else:
+                window.store.settings.set_color_for_tagz(self._tagz, clr)
+        super().submit()
+
+
 class TagManageDialog(BaseDialog):
     """Dialog to manage tags."""
 

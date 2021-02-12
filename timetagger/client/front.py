@@ -39,7 +39,6 @@ def set_colors():
     # Unaffected by dark mode
     COLORS.background3 = "rgb(22, 27, 34)"  # of the top
     COLORS.header_text = "rgb(230, 230, 230)"
-    COLORS.tag = utils.color_from_hue(130, 1, 0.6, 0.99)  # 07A82C
 
     COLORS.button_text = "rgb(230, 230, 230)"
     COLORS.button_text_disabled = "#555"
@@ -140,6 +139,7 @@ class TimeTaggerCanvas(BaseCanvas):
         self.timeselection_dialog = dialogs.TimeSelectionDialog(self)
         self.settings_dialog = dialogs.SettingsDialog(self)
         self.record_dialog = dialogs.RecordDialog(self)
+        self.color_dialog = dialogs.ColorDialog(self)
         self.report_dialog = dialogs.ReportDialog(self)
         self.tag_manage_dialog = dialogs.TagManageDialog(self)
         self.export_dialog = dialogs.ExportDialog(self)
@@ -1777,7 +1777,7 @@ class RecordsWidget(Widget):
         ctx.stroke()
 
         # Draw coloured edge
-        ctx.fillStyle = COLORS.tag
+        ctx.fillStyle = window.store.settings.get_color_for_tagz(tags.join(" "))
         ctx.beginPath()
         ctx.arc(x2 + rne, ry2 - rne, rne, 0.5 * PI, 1.0 * PI)
         ctx.arc(x2 + rne, ry1 + rne, rne, 1.0 * PI, 1.5 * PI)
@@ -1825,16 +1825,15 @@ class RecordsWidget(Widget):
         )
 
         # Register duration tooltip
-        tags = window.store.records.tags_from_record(record)
+        # tags = window.store.records.tags_from_record(record)  already defined above
         duration = record.t2 - record.t1
         if duration > 0:
             duration_text = dt.duration_string(duration, True)
         else:
             duration = now - record.t1
             duration_text = dt.duration_string(duration, True)
-        self._canvas.register_tooltip(
-            x1, ry1, x2, ry2 + outset, tags.join(" ") + "\n" + duration_text
-        )
+        tt_text = tags.join(" ") + "\n" + duration_text + "\n(click to make draggable)"
+        self._canvas.register_tooltip(x2, ry1, x3, ry2 + outset, tt_text)
 
         # The rest is for the description part
         if timeline_only:
@@ -1882,6 +1881,8 @@ class RecordsWidget(Widget):
             "key": record.key,
         }
         self._picker.register(x5, ty1, x6, ty2, d)
+        tt_text = tags.join(" ") + "\n(Click to edit)"
+        self._canvas.register_tooltip(x5, ty1, x6, ty2, tt_text)
 
     def _draw_selected_record_extras(
         self, ctx, record, t1, x1, x4, x6, y0, y1, y2, npixels, nsecs, yy
@@ -2612,6 +2613,13 @@ class AnalyticsWidget(Widget):
         t1, t2 = self._canvas.range.get_range()
         stats = window.store.records.get_stats(t1, t2)
 
+        # Get per-tag info, for tooltips
+        self._time_per_tag = {}
+        for tagz, t in stats.items():
+            tags = tagz.split(" ")
+            for tag in tags:
+                self._time_per_tag[tag] = self._time_per_tag.get(tag, 0) + t
+
         # Get better names (order of tags in each tag combo)
         name_map = utils.get_better_tag_order_from_stats(
             stats, self.selected_tags, False
@@ -2999,12 +3007,17 @@ class AnalyticsWidget(Widget):
 
         # Draw coloured edge
         if not is_root:
-            ctx.fillStyle = COLORS.tag
+            ctx.fillStyle = window.store.settings.get_color_for_tagz(unit.tagz)
             ctx.beginPath()
             ctx.arc(x2 + rn, y3 - rn, rn, 0.5 * PI, 1.0 * PI)
             ctx.arc(x2 + rn, y2 + rn, rn, 1.0 * PI, 1.5 * PI)
             ctx.closePath()
             ctx.fill()
+
+        # That coloured edge is also a button
+        self._picker.register(x2 - rn, y2, x2 + 2 * rn, y3, "chosecolor:" + unit.tagz)
+        tt_text = "Color for " + unit.tagz + "\n(Click to change color)"
+        self._canvas.register_tooltip(x2 - rn, y2, x2 + 2 * rn, y3, tt_text)
 
         # Subtle stripes
         ctx.strokeStyle = COLORS.record_subtle_stripes
@@ -3038,7 +3051,7 @@ class AnalyticsWidget(Widget):
         if is_root:
             if len(self.selected_tags):
                 tx = x_ref
-                texts.push([" ←  back to all ", "select:"])
+                texts.push([" ←  back to all ", "select:", "Full overview"])
             else:
                 ctx.textAlign = "right"
                 ctx.fillText(duration, x_ref + 60, ty)
@@ -3054,7 +3067,10 @@ class AnalyticsWidget(Widget):
                 if tag in self.selected_tags:
                     texts.push([tag, ""])
                 else:
-                    texts.push([tag, "select:" + tag])
+                    tt = dt.duration_string(self._time_per_tag.get(tag, 0))
+                    tt += " total for this time range"
+                    tt += "\n(Click to filter)"
+                    texts.push([tag, "select:" + tag, tt])
             if len(self.selected_tags) and unit.level == 1:
                 texts.push(["(subtotal)", ""])
         if unit.is_selected >= 2 and unit.cum_t > 0:
@@ -3062,11 +3078,9 @@ class AnalyticsWidget(Widget):
         # Draw text labels
         ctx.textAlign = "left"
         ctx.lineWidth = 0.8
-        for text, action, clr in texts:
+        for text, action, tt in texts:
             dx = ctx.measureText(text).width
-            if clr:
-                ctx.fillStyle = clr
-            elif text.startswith("#"):
+            if text.startswith("#"):
                 ctx.fillStyle = COLORS.record_text
             else:
                 ctx.fillStyle = text_style
@@ -3085,6 +3099,10 @@ class AnalyticsWidget(Widget):
                 ctx.strokeStyle = COLORS.tick_stripe2
                 ctx.stroke()
                 self._picker.register(tx - 4, ty - dy, tx + dx + 4, ty + dy, action)
+                if tt:
+                    self._canvas.register_tooltip(
+                        tx - 4, ty - dy, tx + dx + 4, ty + dy, tt
+                    )
                 dx += 2
             tx += dx + 12
 
@@ -3111,6 +3129,10 @@ class AnalyticsWidget(Widget):
                         self.selected_tags.push(tag)
                 else:
                     self.selected_tags = []
+            elif picked.startswith("chosecolor:"):
+                _, _, tagz = picked.partition(":")
+                if tagz:
+                    self._canvas.color_dialog.open(tagz)
             self.update()
 
 
