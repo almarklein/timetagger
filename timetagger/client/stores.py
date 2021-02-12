@@ -320,6 +320,23 @@ class SettingsStore(BaseStore):
         for item in settings:
             self._items[item.key] = item
 
+    def set_color_for_tagz(self, tagz, color):
+        key = "color " + tagz
+        ob = self.create(key, color)
+        self.put(ob)
+
+    def get_color_for_tagz(self, tagz):
+        tags = tagz.split(" ")
+        tags.sort()
+        for i in range(len(tags), 0, -1):
+            key = "color " + tags[:i].join(" ")
+            ob = self.get_by_key(key)
+            if ob is not None and ob.value:
+                return ob.value
+        else:
+            hue = utils.hue_from_name(tags.join(" "))
+            return utils.hex_from_hue(hue)
+
 
 class RecordStore(BaseStore):
     """Data structure for storing time records in a way that allows

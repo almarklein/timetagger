@@ -56,6 +56,19 @@ def fit_font_size(ctx, available_width, font, text, maxsize=100):
     return size
 
 
+_lasthashedhues = {}  # memorization for hue_from_name()
+
+
+def hue_from_name(name):
+    PSCRIPT_OVERLOAD = False  # noqa
+    if _lasthashedhues[name] is window.undefined:
+        color = len(name) * 271  # prime number
+        for i in range(len(name)):
+            color += name.charCodeAt(i) * 71
+        _lasthashedhues[name] = color % 360
+    return _lasthashedhues[name]
+
+
 def color_from_hue(hue, alpha=1, lightness=0.7, saturation=0.75):
     """Generate a color based on the given hue."""
     PSCRIPT_OVERLOAD = False  # noqa
@@ -637,7 +650,7 @@ class BaseCanvas:
                 self._tooltipdiv.style.transition = "none"
                 self._tooltipdiv.style.opacity = 0
                 self._tooltipdiv.style.top = ob.rect[1] + "px"
-                if x < self.w / 2:
+                if x < self.w - 200:
                     self._tooltipdiv.style.left = ob.rect[2] + "px"
                     self._tooltipdiv.style.right = None
                 else:
