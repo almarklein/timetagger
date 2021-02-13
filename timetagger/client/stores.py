@@ -328,14 +328,13 @@ class SettingsStore(BaseStore):
     def get_color_for_tagz(self, tagz):
         tags = tagz.split(" ")
         tags.sort()
-        for i in range(len(tags), 0, -1):
-            key = "color " + tags[:i].join(" ")
-            ob = self.get_by_key(key)
-            if ob is not None and ob.value:
-                return ob.value
+        tagz = tags.join(" ")
+        key = "color " + tagz
+        ob = self.get_by_key(key)
+        if ob is not None and ob.value:
+            return ob.value
         else:
-            hue = utils.hue_from_name(tags.join(" "))
-            return utils.hex_from_hue(hue)
+            return utils.color_from_name(tagz)
 
 
 class RecordStore(BaseStore):

@@ -42,7 +42,7 @@ def set_colors():
 
     COLORS.button_text = "rgb(230, 230, 230)"
     COLORS.button_text_disabled = "#555"
-    COLORS.button_title = utils.color_from_hue(240, 1, 0.6, 0.99)  # 0B99DD
+    COLORS.button_title = utils.color_from_hue(240, 0.6, 0.99)  # 0B99DD
     COLORS.button_bg1 = "rgb(16, 16, 16)"
     COLORS.button_bg2 = "rgb(55, 55, 55)"
 
@@ -1706,6 +1706,8 @@ class RecordsWidget(Widget):
 
         # Get tag info, and determine if this record is selected in the overview
         tags, ds_parts = utils.get_tags_and_parts_from_string(record.ds)
+        if len(tags) == 0:
+            tags = ["#untagged"]
         tags_selected = True
         selected_tags = self._canvas.widgets.AnalyticsWidget.selected_tags
         if len(selected_tags):
@@ -1776,14 +1778,6 @@ class RecordsWidget(Widget):
         ctx.lineWidth = 1.5
         ctx.stroke()
 
-        # Draw coloured edge
-        ctx.fillStyle = window.store.settings.get_color_for_tagz(tags.join(" "))
-        ctx.beginPath()
-        ctx.arc(x2 + rne, ry2 - rne, rne, 0.5 * PI, 1.0 * PI)
-        ctx.arc(x2 + rne, ry1 + rne, rne, 1.0 * PI, 1.5 * PI)
-        ctx.closePath()
-        ctx.fill()
-
         # Running records have a small outset
         inset, outset = 0, 0
         if record.t1 == record.t2:
@@ -1797,9 +1791,9 @@ class RecordsWidget(Widget):
             ctx.fill()
             ctx.stroke()
             if int(now) % 2 == 1:
-                ctx.fillStyle = ctx.strokeStyle
+                ctx.fillStyle = COLORS.tick_text
                 ctx.beginPath()
-                ctx.arc(0.5 * (x1 + x2), ry2 + outset / 2, 4, 0, 2 * PI)
+                ctx.arc(0.5 * (x2 + x3), ry2 + outset / 2, 4, 0, 2 * PI)
                 ctx.fill()
             self._picker.register(
                 x1f,
@@ -1809,12 +1803,19 @@ class RecordsWidget(Widget):
                 {"recordrect": True, "region": 0, "record": record},
             )
 
+        # Draw coloured edge
+        ctx.fillStyle = window.store.settings.get_color_for_tagz(tags.join(" "))
+        ctx.beginPath()
+        ctx.arc(x2 + rne, ry2 - rne, rne, 0.5 * PI, 1.0 * PI)
+        ctx.arc(x2 + rne, ry1 + rne, rne, 1.0 * PI, 1.5 * PI)
+        ctx.closePath()
+        ctx.fill()
+
         # The marker that indicates whether the record has been modified
         if record.st == 0:
-            ctx.beginPath()
-            ctx.arc(x2 + rn / 2, 0.5 * (ry1 + ry2), 2, 0, 2 * PI)
-            ctx.strokeStyle = COLORS.record_edge
-            ctx.stroke()
+            ctx.textAlign = "center"
+            ctx.fillStyle = COLORS.tick_text
+            ctx.fillText("+", 0.5 * (x2 + x3), 0.5 * (ry1 + ry2))
 
         # Make the timeline-part clickable - the pick region is increased if needed
         ry1_, ry2_ = ry1, ry2
@@ -2935,7 +2936,7 @@ class AnalyticsWidget(Widget):
         y23, y14 = y3 - y2, y4 - y1
 
         # x_ref = self.rect[0] + self._max_cum_offset + 30
-        x_ref = self.rect[0] + 45
+        x_ref = self.rect[0] + 42
 
         is_root = unit.level == 0
         target_npixels = self._npixels_each
@@ -3005,20 +3006,6 @@ class AnalyticsWidget(Widget):
         ctx.fill()
         ctx.stroke()
 
-        # Draw coloured edge
-        if not is_root:
-            ctx.fillStyle = window.store.settings.get_color_for_tagz(unit.tagz)
-            ctx.beginPath()
-            ctx.arc(x2 + rn, y3 - rn, rn, 0.5 * PI, 1.0 * PI)
-            ctx.arc(x2 + rn, y2 + rn, rn, 1.0 * PI, 1.5 * PI)
-            ctx.closePath()
-            ctx.fill()
-
-        # That coloured edge is also a button
-        self._picker.register(x2 - rn, y2, x2 + 2 * rn, y3, "chosecolor:" + unit.tagz)
-        tt_text = "Color for " + unit.tagz + "\n(Click to change color)"
-        self._canvas.register_tooltip(x2 - rn, y2, x2 + 2 * rn, y3, tt_text)
-
         # Subtle stripes
         ctx.strokeStyle = COLORS.record_subtle_stripes
         ctx.lineWidth = 1
@@ -3033,16 +3020,42 @@ class AnalyticsWidget(Widget):
         if unit.height / target_npixels < 0.3:
             return
 
+        ymid = y2 + 0.6 * npixels
+
+        # Draw coloured edge
+        if unit.level > 0 and unit.level == self._maxlevel:
+            x_clr = x3 - 15
+            ctx.beginPath()
+            ctx.arc(x_clr, ymid, 7, 0, 2 * PI)
+            ctx.closePath()
+            ctx.fillStyle = window.store.settings.get_color_for_tagz(unit.tagz)
+            ctx.fill()
+            # That coloured edge is also a button
+            self._picker.register(
+                x_clr - 9, ymid - 9, x_clr + 9, ymid + 9, "chosecolor:" + unit.tagz
+            )
+            tt_text = "Color for " + unit.tagz + "\n(Click to change color)"
+            self._canvas.register_tooltip(
+                x_clr - 9, ymid - 9, x_clr + 9, ymid + 9, tt_text
+            )
+
         # Get duration text
         show_secs = False
         if t1 < self._canvas.now() < t2:
             for record in window.store.records.get_running_records():
                 if window.store.records.tags_from_record(record).join(" ") == unit.tagz:
                     show_secs = True
-        duration = dt.duration_string(unit.cum_t, show_secs)
+        if show_secs:
+            duration, _, duration_sec = dt.duration_string(unit.cum_t, True).rpartition(
+                ":"
+            )
+            duration_sec = ":" + duration_sec
+        else:
+            duration = dt.duration_string(unit.cum_t, False)
+            duration_sec = ""
 
         # Draw text labels
-        tx, ty = x_ref + 75, y2 + 0.6 * npixels
+        tx, ty = x_ref + 92, ymid
         dy = min(14, 0.8 * (y3 - y2))
         ctx.font = font_size + "px " + FONT.default
         ctx.fillStyle = text_style
@@ -3062,6 +3075,9 @@ class AnalyticsWidget(Widget):
         else:
             ctx.textAlign = "right"
             ctx.fillText(duration, x_ref + 60, ty)
+            if duration_sec:
+                ctx.textAlign = "left"
+                ctx.fillText(duration_sec, x_ref + 60 + 1, ty)
             tags = [tag for tag in unit.subtagz.split(" ")]
             for tag in tags:
                 if tag in self.selected_tags:
@@ -3132,7 +3148,7 @@ class AnalyticsWidget(Widget):
             elif picked.startswith("chosecolor:"):
                 _, _, tagz = picked.partition(":")
                 if tagz:
-                    self._canvas.color_dialog.open(tagz)
+                    self._canvas.color_dialog.open(tagz, self.update)
             self.update()
 
 
