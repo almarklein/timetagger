@@ -995,7 +995,7 @@ class RecordDialog(BaseDialog):
                 <button type='button'><i class='fas'>\uf00d</i></button>
             </h1>
             <h2><i class='fas'>\uf305</i>&nbsp;&nbsp;Description</h2>
-            <input type="text" style='width: calc(100% - 4em);' />
+            <input type='text' style='width: calc(100% - 4em);' spellcheck='false' />
             <div style='color:#777;'></div>
             <div></div>
             <h2><i class='fas'>\uf017</i>&nbsp;&nbsp;Time</h2>
@@ -1288,20 +1288,20 @@ class RecordDialog(BaseDialog):
 class ColorDialog(BaseDialog):
     """Dialog to set the color for a tag combination."""
 
-    def open(self, tagz):
+    def open(self, tagz, callback=None):
 
         # Put in deterministic order
         tags = tagz.split(" ")
         tags.sort()
         self._tagz = tagz = tags.join(" ")
 
-        self._default_color = utils.hex_from_hue(utils.hue_from_name(self._tagz))
+        self._default_color = utils.color_from_name(self._tagz)
 
         self.maindiv.innerHTML = f"""
             <h1><i class='fas'>\uf53f</i>&nbsp;&nbsp;Set color for {tagz}
                 <button type='button'><i class='fas'>\uf00d</i></button>
                 </h1>
-            <input type='text' style='width: 210px; border: 5px solid #eee'></input>
+            <input type='text' style='width: 210px; border: 5px solid #eee' spellcheck='false' />
             <br>
             <button type='button'><i class='fas'>\uf12d</i> Auto</button>
             <button type='button' style='margin-left: 2px'><i class='fas'>\uf2f1</i> Random</button>
@@ -1336,22 +1336,9 @@ class ColorDialog(BaseDialog):
         self._default_button.onclick = self._set_default_color
         self._random_button.onclick = self._set_random_color
 
-        n_hues = 8
-        self._color_grid.style.gridTemplateColumns = "auto ".repeat(n_hues)
-
-        gh_colors = (
-            "#B60205 #D93F0B #FBCA04 #0E8A16 #006B75 #1D76DB #0052CC #5319E7 "
-            + "#E99695 #F9D0C4 #FEF2C0 #C2E0C6 #BFDADC #C5DEF5 #BFD4F2 #D4C5F9"
-        ).split(" ")
-
-        hsv_colors = []
-        for lightness, sat in [(0.5, 0.9), (0.7, 0.9), (0.7, 0.4)]:
-            for i in range(n_hues):
-                hue = 360 * i / n_hues + 25
-                hex = utils.hex_from_hue(hue, lightness, sat)
-                hsv_colors.push(hex)
-
-        for hex in hsv_colors + gh_colors:
+        # Generate palette
+        self._color_grid.style.gridTemplateColumns = "auto ".repeat(utils.PALETTE_COLS)
+        for hex in utils.PALETTE2:
             el = document.createElement("span")
             el.style.background = hex
             el.style.width = "30px"
@@ -1360,7 +1347,19 @@ class ColorDialog(BaseDialog):
             self._color_grid.appendChild(el)
 
         self._set_color(window.store.settings.get_color_for_tagz(tagz))
-        super().open(None)
+
+        super().open(callback)
+        if utils.looks_like_desktop():
+            self._color_input.focus()
+            self._color_input.select()
+
+    def _on_key(self, e):
+        key = e.key.lower()
+        if key == "enter" or key == "return":
+            e.preventDefault()
+            self.submit()
+        else:
+            super()._on_key(e)
 
     def _make_clickable(self, el, hex):
         # def clickcallback():
@@ -1375,9 +1374,10 @@ class ColorDialog(BaseDialog):
         self._set_color(clr)
 
     def _set_color(self, clr):
-        if not clr or clr in ["auto", "undefined", "null"]:
+        if not clr or clr.lower() in ["auto", "undefined", "null"]:
             clr = self._default_color
-        self._color_input.value = clr
+        if clr != self._color_input.value:
+            self._color_input.value = clr
         self._color_input.style.borderColor = clr
 
     def submit(self):
@@ -1406,9 +1406,9 @@ class TagManageDialog(BaseDialog):
             </p>
             <div class='formlayout'>
                 <div>Tags:</div>
-                <input type='text' placeholder='Tags to search for' />
+                <input type='text' placeholder='Tags to search for' spellcheck='false' />
                 <div>Replacement:</div>
-                <input type='text' placeholder='Replacement tags'/>
+                <input type='text' placeholder='Replacement tags' spellcheck='false' />
                 <div></div>
                 <button type='button'>Find records</button>
                 <div></div>
@@ -1547,7 +1547,7 @@ class TagManageDialog(BaseDialog):
         lines = [find_html, f"Found {self._records.length} records:<br>"]
         for key in self._records:
             record = window.store.records.get_by_key(key)
-            ds = record.ds
+            ds = record.ds or ""
             date = dt.time2str(record.t1).split("T")[0]
             lines.append(
                 f"""

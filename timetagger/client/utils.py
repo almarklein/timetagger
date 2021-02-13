@@ -56,20 +56,7 @@ def fit_font_size(ctx, available_width, font, text, maxsize=100):
     return size
 
 
-_lasthashedhues = {}  # memorization for hue_from_name()
-
-
-def hue_from_name(name):
-    PSCRIPT_OVERLOAD = False  # noqa
-    if _lasthashedhues[name] is window.undefined:
-        color = len(name) * 271  # prime number
-        for i in range(len(name)):
-            color += name.charCodeAt(i) * 71
-        _lasthashedhues[name] = color % 360
-    return _lasthashedhues[name]
-
-
-def color_from_hue(hue, alpha=1, lightness=0.7, saturation=0.75):
+def rgba_from_hue(hue, alpha=1, lightness=0.7, saturation=0.75):
     """Generate a color based on the given hue."""
     PSCRIPT_OVERLOAD = False  # noqa
     # Classic HSV with color space
@@ -80,7 +67,7 @@ def color_from_hue(hue, alpha=1, lightness=0.7, saturation=0.75):
     return "rgba(" + r + "," + g + "," + b + "," + alpha + ")"
 
 
-def hex_from_hue(hue, lightness=0.7, saturation=0.95):
+def color_from_hue(hue, lightness=0.7, saturation=0.95):
     """Generate a color hex value for a given hue. Not used in the app,
     but convenient during dev.
     """
@@ -90,6 +77,51 @@ def hex_from_hue(hue, lightness=0.7, saturation=0.95):
     return (
         "#" + m[r // 16] + m[r % 16] + m[g // 16] + m[g % 16] + m[b // 16] + m[b % 16]
     )
+
+
+_lasthashedcolors = {}  # memorization for color_from_name()
+
+
+def color_from_name(name):
+    """Generate an arbitrary (but consistent) color from a palette,
+    by hashing the given name.
+    """
+    PSCRIPT_OVERLOAD = False  # noqa
+    if _lasthashedcolors[name] is window.undefined:
+        color = len(name) * 271  # prime number
+        for i in range(len(name)):
+            color += name.charCodeAt(i) * 71
+        _lasthashedcolors[name] = PALETTE1[color % len(PALETTE1)]
+    return _lasthashedcolors[name]
+
+
+def create_palettes():
+
+    # The Github color palette, consisting of 8 strong colors and 8 lighter variants.
+    # The difference between these variants is pretty big.
+    # gh_colors = (
+    #     "#B60205 #D93F0B #FBCA04 #0E8A16 #006B75 #1D76DB #0052CC #5319E7 "
+    #     + "#E99695 #F9D0C4 #FEF2C0 #C2E0C6 #BFDADC #C5DEF5 #BFD4F2 #D4C5F9"
+    # ).split(" ")
+    # return gh_colors, gh_colors, 8
+
+    # Generate a palette from the hsluv space. Avoid too bright values,
+    # since it loses uniformity there. We chose a palette with uniform
+    # saturation, varying lightness and hue only.
+    n_hues = 10
+    saturation = 0.75
+    hsv_colors = []
+    for lightness in (0.85, 0.70, 0.55, 0.40):
+        for i in range(n_hues):
+            hue = 360 * i / n_hues + 7  # Add a bit to obtain a nice red
+            hex = color_from_hue(hue, lightness, saturation)
+            hsv_colors.push(hex)
+    # Done. Use only the middle two rows for auto-assigning colors.
+    return hsv_colors[n_hues : 3 * n_hues], hsv_colors, n_hues
+
+
+# Generate a palette for auto-assigning colors, and one for user colors
+PALETTE1, PALETTE2, PALETTE_COLS = create_palettes()
 
 
 def is_valid_tag_charcode(cc):
