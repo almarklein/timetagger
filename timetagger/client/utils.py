@@ -681,13 +681,27 @@ class BaseCanvas:
                 self._tooltipdiv.style.display = "block"
                 self._tooltipdiv.style.transition = "none"
                 self._tooltipdiv.style.opacity = 0
-                self._tooltipdiv.style.top = ob.rect[1] + "px"
+                if ob.positioning == "mouse":
+                    self._tooltipdiv.ypos = y - 20
+                elif ob.positioning == "below":
+                    self._tooltipdiv.ypos = ob.rect[3]
+                else:  # ob.positioning == "ob"
+                    self._tooltipdiv.ypos = ob.rect[1]
+                self._tooltipdiv.style.top = self._tooltipdiv.ypos + "px"
                 if x < self.w - 200:
-                    self._tooltipdiv.style.left = ob.rect[2] + "px"
+                    if ob.positioning == "below":
+                        self._tooltipdiv.xpos = ob.rect[0] - 10
+                    else:
+                        self._tooltipdiv.xpos = ob.rect[2]
+                    self._tooltipdiv.style.left = self._tooltipdiv.xpos + "px"
                     self._tooltipdiv.style.right = None
                 else:
+                    if ob.positioning == "below":
+                        self._tooltipdiv.xpos = self.w - ob.rect[2] - 10
+                    else:
+                        self._tooltipdiv.xpos = self.w - ob.rect[0]
                     self._tooltipdiv.style.left = None
-                    self._tooltipdiv.style.right = self.w - ob.rect[0] + "px"
+                    self._tooltipdiv.style.right = self._tooltipdiv.xpos + "px"
                 window.setTimeout(self._tooltip_show, delay)
         elif self._tooltipdiv.rect is not None:
             # Hide tooltip, really un-display the div after a delay
@@ -707,18 +721,17 @@ class BaseCanvas:
 
     def _tooltip_show(self):
         if self._tooltipdiv.rect is not None:
-            rect = self._tooltipdiv.rect
             self._tooltipdiv.style.transition = None
             self._tooltipdiv.style.opacity = 1
-            self._tooltipdiv.style.top = rect[1] + "px"
+            self._tooltipdiv.style.top = self._tooltipdiv.ypos + "px"
             if self._tooltipdiv.style.left:
-                self._tooltipdiv.style.left = rect[2] + 10 + "px"
+                self._tooltipdiv.style.left = self._tooltipdiv.xpos + 10 + "px"
             else:
-                self._tooltipdiv.style.right = self.w - rect[0] + 10 + "px"
+                self._tooltipdiv.style.right = self._tooltipdiv.xpos + 10 + "px"
 
-    def register_tooltip(self, x1, y1, x2, y2, text):
+    def register_tooltip(self, x1, y1, x2, y2, text, positioning="ob"):
         """Register a tooltip at the given position."""
-        ob = {"rect": [x1, y1, x2, y2], "text": text}
+        ob = {"rect": [x1, y1, x2, y2], "text": text, "positioning": positioning}
         self._tooltips.register(x1, y1, x2, y2, ob)
 
     # To overload

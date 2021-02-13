@@ -1089,7 +1089,7 @@ class TopWidget(Widget):
         cm = 2  # click margin
         x, y = x1, y1 + self._top_offset
         self._picker.register(x - cm, y - cm, x + w + cm, y + h + cm, ob)
-        self._canvas.register_tooltip(x, y, x + w, y + h, help)
+        self._canvas.register_tooltip(x, y, x + w, y + h, help, "below")
         # Draw it
         return self._draw_button_noreg(ctx, x1, y1, text, action, help, tcolor, w, h)
 
@@ -1834,7 +1834,7 @@ class RecordsWidget(Widget):
             duration = now - record.t1
             duration_text = dt.duration_string(duration, True)
         tt_text = tags.join(" ") + "\n" + duration_text + "\n(click to make draggable)"
-        self._canvas.register_tooltip(x2, ry1, x3, ry2 + outset, tt_text)
+        self._canvas.register_tooltip(x2, ry1, x3, ry2 + outset, tt_text, "mouse")
 
         # The rest is for the description part
         if timeline_only:
@@ -3022,7 +3022,7 @@ class AnalyticsWidget(Widget):
 
         ymid = y2 + 0.6 * npixels
 
-        # Draw coloured edge
+        # Draw coloured dot
         if unit.level > 0 and unit.level == self._maxlevel:
             x_clr = x3 - 15
             ctx.beginPath()
@@ -3036,7 +3036,11 @@ class AnalyticsWidget(Widget):
             )
             tt_text = "Color for " + unit.tagz + "\n(Click to change color)"
             self._canvas.register_tooltip(
-                x_clr - 9, ymid - 9, x_clr + 9, ymid + 9, tt_text
+                x_clr - 9,
+                ymid - 9,
+                x_clr + 9,
+                ymid + 9,
+                tt_text,
             )
 
         # Get duration text
@@ -3084,7 +3088,7 @@ class AnalyticsWidget(Widget):
                     texts.push([tag, ""])
                 else:
                     tt = dt.duration_string(self._time_per_tag.get(tag, 0))
-                    tt += " total for this time range"
+                    tt += " in total"
                     tt += "\n(Click to filter)"
                     texts.push([tag, "select:" + tag, tt])
             if len(self.selected_tags) and unit.level == 1:
@@ -3117,7 +3121,12 @@ class AnalyticsWidget(Widget):
                 self._picker.register(tx - 4, ty - dy, tx + dx + 4, ty + dy, action)
                 if tt:
                     self._canvas.register_tooltip(
-                        tx - 4, ty - dy, tx + dx + 4, ty + dy, tt
+                        tx - 4,
+                        ty - dy,
+                        tx + dx + 4,
+                        ty + dy,
+                        tt,
+                        "below",
                     )
                 dx += 2
             tx += dx + 12
