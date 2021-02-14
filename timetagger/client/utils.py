@@ -121,7 +121,8 @@ def create_palettes():
 
 
 # Generate a palette for auto-assigning colors, and one for user colors
-PALETTE1, PALETTE2, PALETTE_COLS = create_palettes()
+if this_is_js():
+    PALETTE1, PALETTE2, PALETTE_COLS = create_palettes()
 
 
 def is_valid_tag_charcode(cc):
