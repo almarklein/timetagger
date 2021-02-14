@@ -289,17 +289,17 @@ class TimeTaggerCanvas(BaseCanvas):
 # The available scales to view the time at, and the corresponding step sizes
 SCALES = [
     ("5m", "1m"),
-    ("20m", "5m"),
-    ("1h", "10m"),
-    ("3h", "30m"),
-    ("6h", "1h"),  # Kind of the default view
-    ("12h", "2h"),
-    ("1D", "6h"),
+    ("20m", "1m"),
+    ("1h", "5m"),
+    ("3h", "5m"),
+    ("6h", "5m"),  # Kind of the default view
+    ("12h", "1h"),
+    ("1D", "1h"),
     ("1W", "1D"),  # step with 1D, 1W steps is awkward
-    ("1M", "1M"),  # 1M steps bit awkward, but what else?
+    ("1M", "1D"),  # 1M steps bit awkward, but what else?
     ("3M", "1M"),
     ("1Y", "1M"),  # step per quarter of month?
-    ("2Y", "3M"),
+    ("2Y", "1M"),
     ("5Y", "1Y"),
     ("10Y", "1Y"),
     ("20Y", "1Y"),
