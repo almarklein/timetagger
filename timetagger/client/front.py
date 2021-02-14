@@ -1833,7 +1833,7 @@ class RecordsWidget(Widget):
         else:
             duration = now - record.t1
             duration_text = dt.duration_string(duration, True)
-        tt_text = tags.join(" ") + "\n" + duration_text + "\n(click to make draggable)"
+        tt_text = tags.join(" ") + "\n(click to make draggable)"
         self._canvas.register_tooltip(x2, ry1, x3, ry2 + outset, tt_text, "mouse")
 
         # The rest is for the description part
@@ -1848,13 +1848,13 @@ class RecordsWidget(Widget):
             duration_text = dt.duration_string(duration, True)
         ctx.fillStyle = COLORS.record_text if tags_selected else faded_clr
         ctx.textAlign = "right"
-        ctx.fillText(duration_text, x6 - 8, ty1 + 23)
+        ctx.fillText(duration_text, x5 + 30, ty1 + 23)
 
         # Show desciption
         ctx.textAlign = "left"
-        max_x = x6 - ctx.measureText(duration_text).width - 8
+        max_x = x6 - 4
         space_width = ctx.measureText(" ").width + 2
-        x = x5 + 8
+        x = x5 + 50
         for part in ds_parts:
             if part.startswith("#"):
                 ctx.fillStyle = COLORS.record_text_tag if tags_selected else faded_clr
@@ -3020,25 +3020,31 @@ class AnalyticsWidget(Widget):
         if unit.height / target_npixels < 0.3:
             return
 
-        ymid = y2 + 0.6 * npixels
+        ymid = y2 + 0.55 * npixels
+        x_ref_color = x2 + 22  # center of dot
+        x_ref_duration = x_ref + 85  # right side of minute
+        x_ref_labels = x_ref + 120  # start of labels
 
         # Draw coloured dot
         if unit.level > 0 and unit.level == self._maxlevel:
-            x_clr = x3 - 15
             ctx.beginPath()
-            ctx.arc(x_clr, ymid, 7, 0, 2 * PI)
+            ctx.arc(x_ref_color, ymid, 8, 0, 2 * PI)
             ctx.closePath()
             ctx.fillStyle = window.store.settings.get_color_for_tagz(unit.tagz)
             ctx.fill()
             # That coloured edge is also a button
             self._picker.register(
-                x_clr - 9, ymid - 9, x_clr + 9, ymid + 9, "chosecolor:" + unit.tagz
+                x_ref_color - 9,
+                ymid - 9,
+                x_ref_color + 9,
+                ymid + 9,
+                "chosecolor:" + unit.tagz,
             )
             tt_text = "Color for " + unit.tagz + "\n(Click to change color)"
             self._canvas.register_tooltip(
-                x_clr - 9,
+                x_ref_color - 9,
                 ymid - 9,
-                x_clr + 9,
+                x_ref_color + 9,
                 ymid + 9,
                 tt_text,
             )
@@ -3059,7 +3065,7 @@ class AnalyticsWidget(Widget):
             duration_sec = ""
 
         # Draw text labels
-        tx, ty = x_ref + 92, ymid
+        tx, ty = x_ref_labels, ymid
         dy = min(14, 0.8 * (y3 - y2))
         ctx.font = font_size + "px " + FONT.default
         ctx.fillStyle = text_style
@@ -3071,17 +3077,17 @@ class AnalyticsWidget(Widget):
                 texts.push([" ←  back to all ", "select:", "Full overview"])
             else:
                 ctx.textAlign = "right"
-                ctx.fillText(duration, x_ref + 60, ty)
+                ctx.fillText(duration, x_ref_duration, ty)
                 if unit.cum_t > 0:
                     texts.push(["total", ""])
                 else:
                     texts.push(["(no records)", ""])
         else:
             ctx.textAlign = "right"
-            ctx.fillText(duration, x_ref + 60, ty)
+            ctx.fillText(duration, x_ref_duration, ty)
             if duration_sec:
                 ctx.textAlign = "left"
-                ctx.fillText(duration_sec, x_ref + 60 + 1, ty)
+                ctx.fillText(duration_sec, x_ref_duration + 1, ty)
             tags = [tag for tag in unit.subtagz.split(" ")]
             for tag in tags:
                 if tag in self.selected_tags:
