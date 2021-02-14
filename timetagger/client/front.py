@@ -1840,6 +1840,8 @@ class RecordsWidget(Widget):
         if timeline_only:
             return
 
+        text_ypos = ty1 + 0.55 * (ty2 - ty1)
+
         # Draw duration text
         duration = record.t2 - record.t1
         duration_text = dt.duration_string(duration, False)
@@ -1848,7 +1850,7 @@ class RecordsWidget(Widget):
             duration_text = dt.duration_string(duration, True)
         ctx.fillStyle = COLORS.record_text if tags_selected else faded_clr
         ctx.textAlign = "right"
-        ctx.fillText(duration_text, x5 + 30, ty1 + 23)
+        ctx.fillText(duration_text, x5 + 30, text_ypos)
 
         # Show desciption
         ctx.textAlign = "left"
@@ -1869,9 +1871,9 @@ class RecordsWidget(Widget):
                     continue
                 new_x = x + ctx.measureText(text).width + space_width
                 if new_x <= max_x:
-                    ctx.fillText(text, x, ty1 + 23, max_x - x)
+                    ctx.fillText(text, x, text_ypos, max_x - x)
                 else:
-                    ctx.fillText("…", x, ty1 + 23, max_x - x)
+                    ctx.fillText("…", x, text_ypos, max_x - x)
                 x = new_x
 
         # Make description part clickable - the pick region is increased if needed
