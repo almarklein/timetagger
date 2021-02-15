@@ -2024,72 +2024,90 @@ class RecordsWidget(Widget):
 
         # Get stats for the given time range
         stats_dict = window.store.records.get_stats(t1, t2)
-
-        # Score each tag
         selected_tags = self._canvas.widgets.AnalyticsWidget.selected_tags
-        tag_scores1 = {}
+
+        # Turn stats into tuples and sort. Also filter selected.
+        stats_list = []
         sumcount = 0
-        for tagz, t in stats_dict.items():
+        sumcount_selected = 0
+        for tagz, count in stats_dict.items():
+            sumcount += count  # of unfiltered tags
             tags = tagz.split(" ")
-            sumcount += t
             if len(selected_tags):
                 if not all([tag in tags for tag in selected_tags]):
                     continue
-            for tag in tags:
-                tag_scores1[tag] = tag_scores1.get(tag, 0) + t
-        # Sort
-        tags_scored = []
-        for tag, score in tag_scores1.items():
-            tags_scored.push((tag, score))
-        tags_scored.sort(key=lambda x: x[1])
-        tags_scored = [x[0] for x in tags_scored]
+            sumcount_selected += count
+            stats_list.push((tagz, count))
+        stats_list.sort(key=lambda x: -x[1])
 
         # Calculate dimensions
         fullwidth = x2 - x1  # * (sumcount / (t2 - t1)) # ** 0.5
         fullheight = (y2 - y1) * (sumcount / (t2 - t1))  # ** 0.5
 
-        # Show amount of time spend on toplevel categories. We fill the
-        # whole area with a relatively transparent color and fill a portion
-        # with a more solid color to indicate total amount of spend time.
-        ctx.fillStyle = COLORS.tick_stripe3
-        ctx.fillRect(x1, y1, fullwidth, (y2 - y1))
-        ctx.fillRect(x1, y1, fullwidth, fullheight)
+        # Show amount of time spend on each tagz.
+        x = x1
+        for i in range(len(stats_list)):
+            tagz, count = stats_list[i]
+            width = fullwidth * count / sumcount
+            ctx.fillStyle = window.store.settings.get_color_for_tagz(tagz)
+            ctx.fillRect(x, y1, width, (y2 - y1))
+            x += width  # Next
+
+        # Desaturate the colors by overlaying a semitransparent rectangle.
+        # Actually, we use two, as an indicator for the total spent time.
+        ctx.fillStyle = COLORS.background1.replace("1)", "0.7)")
+        ctx.fillRect(x1, y1, fullwidth, y2 - y1)
+        ctx.fillStyle = COLORS.background1.replace("1)", "0.5)")
+        ctx.fillRect(x1, y1 + fullheight, fullwidth, y2 - y1 - fullheight)
 
         bigfontsize = min(FONT.size * 2, (y2 - y1) / 3)
         bigfontsize = max(FONT.size, bigfontsize)
         ymargin = (y2 - y1) / 20
 
-        # Draw tags
-        ctx.font = FONT.size + "px " + FONT.condensed
-        ctx.textBaseline = "top"
-        ctx.textAlign = "left"
-        ctx.fillStyle = COLORS.tick_stripe1
-        x, y = x2, y1 + (ymargin - 20)
-        for tag in tags_scored:
-            w = ctx.measureText(tag).width
-            if x + w > x2 - 5:
-                x = x1 + 10
-                y += 20
-                if y > y2 - 10:
-                    break
-            ctx.fillText(tag, x, y)
-            x += w + 10
+        # if False:
+        #     # Score each tag
+        #     tag_scores1 = {}
+        #     for tagz, t in stats_dict.items():
+        #         tags = tagz.split(" ")
+        #         if len(selected_tags):
+        #             if not all([tag in tags for tag in selected_tags]):
+        #                 continue
+        #         for tag in tags:
+        #             tag_scores1[tag] = tag_scores1.get(tag, 0) + t
+        #     # Sort
+        #     tags_scored = []
+        #     for tag, score in tag_scores1.items():
+        #         tags_scored.push((tag, score))
+        #     tags_scored.sort(key=lambda x: x[1])
+        #     tags_scored = [x[0] for x in tags_scored]
+        #     # Draw tags
+        #     ctx.font = FONT.size + "px " + FONT.condensed
+        #     ctx.textBaseline = "top"
+        #     ctx.textAlign = "left"
+        #     ctx.fillStyle = COLORS.tick_stripe1
+        #     x, y = x2, y1 + (ymargin - 20)
+        #     for tag in tags_scored:
+        #         w = ctx.measureText(tag).width
+        #         if x + w > x2 - 5:
+        #             x = x1 + 10
+        #             y += 20
+        #             if y > y2 - 10:
+        #                 break
+        #         ctx.fillText(tag, x, y)
+        #         x += w + 10
 
         # Draw big text in blue if it is the timerange containing today
         if t1 < self._canvas.now() < t2:
-            show_secs = len(window.store.records.get_running_records()) > 0
             ctx.fillStyle = COLORS.button_title
         else:
-            ctx.fillStyle = COLORS.tick_stripe1
+            ctx.fillStyle = COLORS.tick_text
 
         # Draw duration at the left
         ctx.font = f"{bigfontsize}px {FONT.condensed}"
         ctx.textBaseline = "bottom"
         ctx.textAlign = "left"
-        show_secs = False
-        ctx.fillText(
-            f"{dt.duration_string(sumcount, show_secs)}", x1 + 10, y2 - ymargin
-        )
+        duration = sumcount_selected if len(selected_tags) else sumcount
+        ctx.fillText(f"{dt.duration_string(duration, False)}", x1 + 10, y2 - ymargin)
 
         # Draw time-range indication at the right
         ctx.font = f"bold {bigfontsize}px {FONT.condensed}"
