@@ -3042,8 +3042,8 @@ class AnalyticsWidget(Widget):
 
         ymid = y2 + 0.55 * npixels
         x_ref_color = x2 + 22  # center of dot
-        x_ref_duration = x_ref + 85  # right side of minute
-        x_ref_labels = x_ref + 120  # start of labels
+        x_ref_duration = x3 - 35  # right side of minute
+        x_ref_labels = x2 + 50  # start of labels
 
         # Draw coloured dot
         if unit.level > 0 and unit.level == self._maxlevel:
