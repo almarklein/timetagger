@@ -17,15 +17,42 @@ window.addEventListener("load", function() {
     window.store = new window.stores.ConnectedDataStore();
     var canvas_element = document.getElementById('canvas');
     window.canvas = new window.front.TimeTaggerCanvas(canvas_element);
-    // Register the service worker as soon as the user loads the app
-    //if ('serviceWorker' in navigator) {
-    //    navigator.serviceWorker.register('/sw.js');
-    //}
+
+    // Register the service worker as soon as the user loads the app.
+    // But not on localhost! The service worker is required for a PWA,
+    // but is also active when the PWA is not installed.
+    if (location.hostname !== "localhost" && location.hostname !== "127.0.0.1") {
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js');
+        }
+    }
     navigator.serviceWorker.addEventListener('controllerchange', function () {
         // This gets called when the browser detects a new version of
         // the service worker (when any byte has changed).
     });
 });
+
+// Logic for the PWA installation workflow.
+var pwa = {
+    deferred_prompt: null,
+    installable: false,
+    install: async function() {
+        window.pwa.deferred_prompt.prompt();
+        // Wait for the user to respond to the prompt
+        const { outcome } = await window.pwa.deferred_prompt.userChoice;
+        // Optionally, send analytics event with outcome of user choice
+        console.log(`User response to the install prompt: ${outcome}`);
+        // We've used the prompt, and can't use it again, throw it away
+        window.pwa.deferred_prompt = null;
+        window.pwa.installable = false;
+    }
+};
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();  // Prevent the mini-infobar from appearing on mobile
+  window.pwa.deferred_prompt = e;  // Store event for later use
+  window.pwa.installable = true;
+});
+
 </script>
 
 

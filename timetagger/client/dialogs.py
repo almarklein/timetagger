@@ -401,14 +401,10 @@ class MenuDialog(BaseDialog):
             store_valid = True
             logged_in = False
             # logged_in = bool(window.auth.get_auth_info())
-
-        is_the_app = True
-        if window.store.__name__.startswith("Demo") or window.store.__name__.startswith(
-            "Sandbox"
-        ):
-            is_the_app = False
-
         logged_in  # noqaM
+
+        is_installable = window.pwa and window.pwa.installable
+
         # <a href="/login"><i class='fas'>\uf2f6</i>&nbsp;&nbsp;Login</a>
         # <a href="/logout"><i class='fas'>\uf2f5</i>&nbsp;&nbsp;Logout</a>
         # # Hide login or logout button, or both
@@ -438,9 +434,14 @@ class MenuDialog(BaseDialog):
         for icon, isvalid, title, func in [
             ("\uf013", store_valid, "Settings", self._show_settings),
             ("\uf02c", store_valid, "Search & manage tags", self._manage_tags),
-            ("\uf3fa", is_the_app, "Install this app", self._show_install_instructions),
             ("\uf56f", store_valid, "Import records", self._import),
             ("\uf56e", store_valid, "Export all records", self._export),
+            (
+                "\uf3fa",
+                is_installable,
+                "<span style='color:#0B99DD'>Install this app</span>",
+                self._do_install,
+            ),
         ]:
             if not isvalid:
                 continue
@@ -463,9 +464,16 @@ class MenuDialog(BaseDialog):
         self.close()
         self._canvas.settings_dialog.open()
 
-    def _show_install_instructions(self):
+    def _do_install(self):
+        # There are quite a few components to make installation as a
+        # PWA possible. In our case:
+        # * We have a timetagger_manifest.json
+        # * We <link> to it in the template so it can be discovered.
+        # * We have a service worker in sw.js, which we activate it in app.md.
+        # * In app.md we also do the PWA beforeinstallprompt dance so that in
+        #   here we can detect whether it's installable and trigger the install
         self.close()
-        self._canvas.install_dialog.open()
+        window.pwa.install()
 
     def _open_report(self):
         self.close()
