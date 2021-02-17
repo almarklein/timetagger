@@ -1825,14 +1825,6 @@ class RecordsWidget(Widget):
             x2, ry1_, x3, ry2_, {"recordrect": True, "region": 0, "record": record}
         )
 
-        # Register duration tooltip
-        # tags = window.store.records.tags_from_record(record)  already defined above
-        duration = record.t2 - record.t1
-        if duration > 0:
-            duration_text = dt.duration_string(duration, True)
-        else:
-            duration = now - record.t1
-            duration_text = dt.duration_string(duration, True)
         tt_text = tags.join(" ") + "\n(click to make draggable)"
         self._canvas.register_tooltip(x2, ry1, x3, ry2 + outset, tt_text, "mouse")
 
@@ -1844,19 +1836,27 @@ class RecordsWidget(Widget):
 
         # Draw duration text
         duration = record.t2 - record.t1
-        duration_text = dt.duration_string(duration, False)
-        if duration <= 0:
+        if duration > 0:
+            duration_text = dt.duration_string(duration, False)
+            duration_sec = ""
+        else:
             duration = now - record.t1
-            duration_text = dt.duration_string(duration, True)
+            duration_text_full = dt.duration_string(duration, True)
+            duration_text, _, duration_sec = duration_text_full.rpartition(":")
+            duration_sec = ":" + duration_sec
         ctx.fillStyle = COLORS.record_text if tags_selected else faded_clr
         ctx.textAlign = "right"
         ctx.fillText(duration_text, x5 + 30, text_ypos)
+        if duration_sec:
+            ctx.fillStyle = faded_clr
+            ctx.textAlign = "left"
+            ctx.fillText(duration_sec, x5 + 30 + 1, text_ypos)
 
         # Show desciption
         ctx.textAlign = "left"
         max_x = x6 - 4
         space_width = ctx.measureText(" ").width + 2
-        x = x5 + 50
+        x = x5 + 55
         for part in ds_parts:
             if part.startswith("#"):
                 ctx.fillStyle = COLORS.record_text_tag if tags_selected else faded_clr
@@ -3107,6 +3107,7 @@ class AnalyticsWidget(Widget):
             ctx.fillText(duration, x_ref_duration, ty)
             if duration_sec:
                 ctx.textAlign = "left"
+                ctx.fillStyle = COLORS.tick_stripe1
                 ctx.fillText(duration_sec, x_ref_duration + 1, ty)
             tags = [tag for tag in unit.subtagz.split(" ")]
             for tag in tags:
