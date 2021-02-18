@@ -21,36 +21,56 @@ window.addEventListener("load", function() {
     // Register the service worker as soon as the user loads the app.
     // But not on localhost! The service worker is required for a PWA,
     // but is also active when the PWA is not installed.
-    if (location.hostname !== "localhost" && location.hostname !== "127.0.0.1") {
+    //if (location.hostname !== "localhost" && location.hostname !== "127.0.0.1") {
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js');
+            navigator.serviceWorker.register('sw.js').then(reg => {
+                window.reg= reg;
+                window.setInterval(() => {reg.update()}, 60 * 60 * 1000);
+            });
         }
-    }
-    navigator.serviceWorker.addEventListener('controllerchange', function () {
-        // This gets called when the browser detects a new version of
-        // the service worker (when any byte has changed).
-    });
+    //}
+
 });
+
+var page_start_time = performance.now();
+navigator.serviceWorker.addEventListener('controllerchange', function () {
+    console.log("new service worker detected.")
+    if (page_start_time === null) {
+        return;  // prevent continuous refresh when dev tool SW refresh is on
+    } else if (performance.now() - page_start_time < 3000) {
+        page_start_time = null;
+        window.location.reload();  // User just arrived/refreshed, auto-refresh is ok
+    } else {
+        show_refresh_button();
+    }
+});
+
+function show_refresh_button() {
+    let style, html;
+    style = 'background:#fff; color:#444; padding:0.3em; border: 1px solid #777; border-radius:4px; ';
+    style += 'position:absolute; top: 64px; left:4px; font-size:80%; '
+    html = "<div style='" + style + "'>";
+    html += "New version available, ";
+    html += "<a href='#' onclick='location.reload();'>refresh</a>";
+    html += " to update.</div>"
+    let el = document.createElement("div");
+    el.innerHTML = html;
+    el = el.children[0];
+    document.getElementById("canvas").parentNode.appendChild(el);
+}
 
 // Logic for the PWA installation workflow.
 var pwa = {
     deferred_prompt: null,
-    installable: false,
     install: async function() {
         window.pwa.deferred_prompt.prompt();
-        // Wait for the user to respond to the prompt
         const { outcome } = await window.pwa.deferred_prompt.userChoice;
-        // Optionally, send analytics event with outcome of user choice
-        console.log(`User response to the install prompt: ${outcome}`);
-        // We've used the prompt, and can't use it again, throw it away
         window.pwa.deferred_prompt = null;
-        window.pwa.installable = false;
     }
 };
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();  // Prevent the mini-infobar from appearing on mobile
   window.pwa.deferred_prompt = e;  // Store event for later use
-  window.pwa.installable = true;
 });
 
 </script>

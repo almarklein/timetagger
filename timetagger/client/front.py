@@ -953,7 +953,7 @@ class TopWidget(Widget):
         buttons = [
             (
                 8,
-                "Today",
+                "555",
                 "nav_snap_now" + now_scale,
                 "Snap to now [Home]",
                 now_clr,

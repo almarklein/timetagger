@@ -11,101 +11,76 @@
 // a new version of the app is available can be done via the service worker,
 // or in any other way - this approach allows decoupling that quite nicely.
 
-// The cache name. Update this name to trigger a clean cache.
-var currentCacheName = 'timetagger-cache-v2';
-
+// The cache name (deliberately not valid JS syntax). Update this name to trigger a clean cache.
+// This needs to be set by the server. We MUST change it when any of the assets
+// change. It's pretty safe to simply set it a different value each server startup.
+var currentCacheName = 'CACHENAME';
+// TODO: prefix the cachename so we don't delete caches intended for other apps on the same domain
 
 /***** installation *****/
 
-self.addEventListener('install', function(event) {
-  console.log('[Service Worker] Install ' + currentCacheName);
-  self.skipWaiting();  // proceed to activate
-  // Pre-cache, so that the user agent can see we support off-line
-  //const cache = await caches.open(currentCacheName);
-  //await cache.addAll(["/app"]);
+
+// Assets to fetch on installation of the SW. At least include /app, because
+// browsers try to fetch start_url in offline mode as a test for PWA compliance.
+var assets_prefetch = [ASSETS];
+
+self.addEventListener('install', event => {    
+    self.skipWaiting();  // Don't wait until the previous SW controls zero clients
+    event.waitUntil(on_install(event));
 });
 
 self.addEventListener('activate', function(event) {
-  event.waitUntil(
-    caches.keys().then(function(cacheNames) {
-      return Promise.all(
-        cacheNames.filter(should_delete_cache).map(function(cacheName) {
-          console.log('[Service Worker] clear cache: ' + cacheName);
-          return caches.delete(cacheName);
-        })
-      );
-    })
-  );
+    event.waitUntil(on_activate(event));
 });
 
-function should_delete_cache(cacheName) {
-    // Return true if you want to remove this cache, but remember that
-    // caches are shared across the whole origin
-    if (cacheName == currentCacheName) { return false; }
-    return true;
+async function on_install(event) {
+    console.log('[SW] Install ' + currentCacheName);  
+    let cache = await caches.open(currentCacheName);
+    await cache.addAll(assets_prefetch);  
+}
+
+async function on_activate(event) {
+    let cacheNames = await caches.keys();
+    for (let cacheName of cacheNames) {
+        if (cacheName != currentCacheName) {
+          console.log('[SW] clear cache: ' + cacheName);
+          await caches.delete(cacheName);
+        }
+    }
+    await clients.claim();
 }
 
 
 /***** Handling requests *****/
 
-var offlinemode = false;  // Whether to load supporting assets via cache
 
 self.addEventListener('fetch', function (event) {
   var requestURL = new URL(event.request.url);
-
-  if (requestURL.origin == location.origin) {
-
-    if (requestURL.pathname == '/stub') {
-        // At can use this to test for new sw version
-        return fetch(event.request);
-    } else if (requestURL.pathname.startsWith('/api/')) {
-        // API calls should not use cache
-        return fetch(event.request);
-    } else if (requestURL.pathname.indexOf(".") >= 0) {
-        // For "static" resources, use cache if in offline mode, otherwise use network
-        if (offlinemode) {
-            return cache_or_network(event);
-        } else {
-            return network_then_cache(event, false);
-        }
-    } else if (requestURL.pathname == '/app') {
-        // For some pages: call out to network and save to cache. Use cache as fallback.
-        return network_then_cache(event, true);
-    } else {
-        // Other pages do not cache
-        return fetch(event.request);
-    }
-
-  } else {
-    // Outside this site
-    return fetch(event.request);
+  if (requestURL.origin != location.origin) {
+    return fetch(event.request);  // Outside this site
+  } else if (requestURL.pathname.indexOf('/api/') >= 0) {    
+    return fetch(event.request);  // API calls should not use cache
+  } else if (requestURL.pathname.indexOf(".") >= 0) {
+    return respond_via_cache(event);
+  } else if (requestURL.pathname.endsWith('/app')) {
+    return respond_via_cache(event);
+  } else {    
+    return fetch(event.request);  // Other pages do not cache
   }
 
 });
 
-function cache_or_network(event) {
-    console.log('[Service Worker] load from cache (or network): '+event.request.url);
-    return event.respondWith(
-        caches.match(event.request)
-        .then(function (response) {
-            return response || fetch(event.request);
-        })
-    );
-}
 
-function network_then_cache(event, set_offlinemode) {
-    return event.respondWith(
-        fetch(event.request).then(function(response) {
-            // console.log('[Service Worker] Fetched and cached: '+event.request.url);
-            if (set_offlinemode) { offlinemode = false; }
-            return caches.open(currentCacheName).then(function(cache) {
-            cache.put(event.request, response.clone());
-            return response;
-            });
-        }, function(error) {
-            console.log('[Service Worker] fallback to cache: '+event.request.url);
-            if (set_offlinemode) { offlinemode = true; }
-            return caches.match(event.request);
+// Respond from cache. If not in cache, do a fetch and store the result in the cache.
+function respond_via_cache(event) {
+  event.respondWith(
+    caches.match(event.request).then(cacheRes => {
+      return cacheRes || fetch(event.request).then(fetchRes => {
+        return caches.open(currentCacheName).then(cache => {
+          cache.put(event.request.url, fetchRes.clone());
+          return fetchRes;
         })
-    );
+      });
+    })
+  );
 }

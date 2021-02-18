@@ -5,6 +5,7 @@ memory, thus allowing blazing fast serving.
 
 import os
 import re
+import secrets
 import logging
 import pkg_resources
 
@@ -130,6 +131,13 @@ def create_assets_from_dir(dirname, template=None):
             assets[fname] = open(os.path.join(dirname, fname), "rb").read()
         else:
             continue  # Skip unknown extensions
+
+    if "sw.js" in assets:
+        sw = assets.pop("sw.js")
+        asset_str = ", ".join(f"'{fname}'" for fname in assets if (fname == 'app' or '.' in fname))
+        sw = sw.replace("CACHENAME", secrets.token_hex(16))
+        sw = sw.replace("ASSETS", asset_str)
+        assets["sw.js"] = sw
 
     logger.info(f"Collected {len(assets)} assets from {dirname}")
     return assets

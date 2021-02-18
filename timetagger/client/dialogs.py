@@ -403,7 +403,7 @@ class MenuDialog(BaseDialog):
             # logged_in = bool(window.auth.get_auth_info())
         logged_in  # noqaM
 
-        is_installable = window.pwa and window.pwa.installable
+        is_installable = window.pwa and window.pwa.deferred_prompt
 
         # <a href="/login"><i class='fas'>\uf2f6</i>&nbsp;&nbsp;Login</a>
         # <a href="/logout"><i class='fas'>\uf2f5</i>&nbsp;&nbsp;Logout</a>
