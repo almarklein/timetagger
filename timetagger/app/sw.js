@@ -36,7 +36,7 @@ self.addEventListener('fetch', on_fetch);
 async function on_install(event) {
     console.log('[SW] Installling new app ' + currentCacheName);
     let cache = await caches.open(currentCacheName);
-    await cache.addAll(assets);
+    await cache.addAll(assets.map(asset => "./" + asset));
 }
 
 async function on_activate(event) {
