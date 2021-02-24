@@ -75,32 +75,9 @@ window.addEventListener('beforeinstallprompt', (e) => {
 
 </script>
 
-
 <!-- Force preloading the font used in the canvas -->
-<span style='font-family: "Ubuntu Condensed"; color: #eee;'>app</span>
+<img id='ttlogo' alt='TimeTagger logo' src='timetagger192.png' width='16px' />
 <span class='fas' style='color: #eee;'></span>
-<img id='ttlogo' alt='TimeTagger logo' src='timetagger192.png' width='2px' />
+<span style='font-family: "Ubuntu Condensed"; color: #eee;'>app</span>
 
 <canvas id='canvas'>This page needs a working (HTML5) canvas.</canvas>
-
-<style>
-#newappreload {
-  visibility: hidden;
-  position: fixed;
-  left: 20vw;
-  right: 20vw;
-  bottom: 20px;
-  background-color: #333;
-  color: #fff;
-  text-align: center;
-  border-radius: 2px;
-  padding: 16px;
-  z-index: 9999;
-}
-#newappreload.show {
-  visibility: visible;
-  -webkit-animation: fadein 0.5s;
-  animation: fadein 0.5s;
-}
-</style>
-<div id="newappreload"><a>A new version of TimeTagger is available. Click to refresh.</a></div>

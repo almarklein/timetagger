@@ -387,7 +387,7 @@ class MenuDialog(BaseDialog):
             <div class='divider'></div>
             <a href="/"><img style='width:18px; height:18px;vertical-align:middle;' src='timetagger192.png' />&nbsp;&nbsp;Homepage</a>
             <a href="https://timetagger.app/support"><i class='fas'>\uf059</i>&nbsp;&nbsp;Get tips and help</a>
-            <a href="/account"><i class='fas'>\uf2bd</i>&nbsp;&nbsp;Account</a>
+            <a href="account"><i class='fas'>\uf2bd</i>&nbsp;&nbsp;Account</a>
             <div class='divider'></div>
         """.rstrip()
 
@@ -405,8 +405,8 @@ class MenuDialog(BaseDialog):
 
         is_installable = window.pwa and window.pwa.deferred_prompt
 
-        # <a href="/login"><i class='fas'>\uf2f6</i>&nbsp;&nbsp;Login</a>
-        # <a href="/logout"><i class='fas'>\uf2f5</i>&nbsp;&nbsp;Logout</a>
+        # <a href="login"><i class='fas'>\uf2f6</i>&nbsp;&nbsp;Login</a>
+        # <a href="logout"><i class='fas'>\uf2f5</i>&nbsp;&nbsp;Logout</a>
         # # Hide login or logout button, or both
         # loginbut = self.maindiv.children[3]
         # logoutbut = self.maindiv.children[4]
@@ -2152,7 +2152,7 @@ class ImportDialog(BaseDialog):
             maintext = self.maindiv.children[2]
             maintext.innerHTML += """
                 Consider importing into the
-                <a target='new' href='/sandbox'>Sandbox</a> first.
+                <a target='new' href='sandbox'>Sandbox</a> first.
                 """
 
         self._analysis_out = self.maindiv.children[-2]

@@ -178,6 +178,12 @@ def sleepms(ms):
     return RawJS("new Promise(resolve => setTimeout(resolve, ms))")
 
 
+def build_api_url(suffix):
+    url = location.protocol + "//" + location.hostname + ":" + location.port
+    url = url.rstrip(":") + location.pathname.split("/app/")[0] + "/api/v1/"
+    return url + suffix
+
+
 # %% Sub stores
 
 
@@ -816,17 +822,12 @@ class ConnectedDataStore(BaseDataStore):
 
     async def _force_reset(self):
         # Set the reset flag at the server. Intended for testing.
+        url = build_api_url("forcereset")
         authtoken = self.get_auth().token
-        url = location.protocol + "//" + location.hostname + ":" + location.port
-        url = url.rstrip(":") + "/api/v1/forcereset"
         init = dict(method="PUT", headers={"authtoken": authtoken})
         await window.fetch(url, init)
 
     async def _push(self, kind, authtoken):
-
-        # Build url
-        url = location.protocol + "//" + location.hostname + ":" + location.port
-        url = url.rstrip(":") + "/api/v1/" + kind
 
         # Take items, only proceed if nonempty
         items = self._to_push[kind]
@@ -835,6 +836,7 @@ class ConnectedDataStore(BaseDataStore):
         self._to_push[kind] = {}
 
         # Fetch and wait for response
+        url = build_api_url(kind)
         init = dict(
             method="PUT",
             body=JSON.stringify(items.values()),
@@ -873,11 +875,8 @@ class ConnectedDataStore(BaseDataStore):
 
     async def _pull(self, authtoken):
 
-        # Build url
-        url = location.protocol + "//" + location.hostname + ":" + location.port
-        url = url.rstrip(":") + "/api/v1/updates?since=" + self._server_time
-
         # Fetch and wait for response
+        url = build_api_url("updates?since=" + self._server_time)
         init = dict(method="GET", headers={"authtoken": authtoken})
         try:
             res = await window.fetch(url, init)

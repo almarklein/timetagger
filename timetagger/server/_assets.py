@@ -5,7 +5,7 @@ memory, thus allowing blazing fast serving.
 
 import os
 import re
-import secrets
+import hashlib
 import logging
 import pkg_resources
 
@@ -27,12 +27,12 @@ FONT_EXTS = ".ttf", ".otf", ".woff", ".woff2"
 re_fas = re.compile(r"\>(\\uf[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F])\<")
 
 default_template = (
-    open(pkg_resources.resource_filename("timetagger.client", "_template.html"), "rb")
+    open(pkg_resources.resource_filename("timetagger.common", "_template.html"), "rb")
     .read()
     .decode()
 )
 style_embed = (
-    open(pkg_resources.resource_filename("timetagger.client", "_style_embed.css"), "rb")
+    open(pkg_resources.resource_filename("timetagger.common", "_style_embed.css"), "rb")
     .read()
     .decode()
 )
@@ -94,7 +94,7 @@ def create_assets_from_dir(dirname, template=None):
         thtml = open(os.path.join(dirname, "_template.html"), "rb").read().decode()
     template = jinja2.Template(thtml)
 
-    for fname in os.listdir(dirname):
+    for fname in sorted(os.listdir(dirname)):
 
         if fname.startswith("_"):
             continue
@@ -120,6 +120,7 @@ def create_assets_from_dir(dirname, template=None):
             exports = [
                 name for name in parser.vars.get_defined() if not name.startswith("_")
             ]
+            exports.sort()  # important to produce reproducable assets
             jscode = pscript.create_js_module(name, jscode, [], exports, "simple")
             assets[fname[:-2] + "js"] = jscode.encode()
             logger.info(f"Compiled pscript from {fname}")
@@ -132,12 +133,44 @@ def create_assets_from_dir(dirname, template=None):
         else:
             continue  # Skip unknown extensions
 
-    if "sw.js" in assets:
-        sw = assets.pop("sw.js")
-        asset_str = ", ".join(f"'{fname}'" for fname in assets if (fname == 'app' or '.' in fname))
-        sw = sw.replace("CACHENAME", secrets.token_hex(16))
-        sw = sw.replace("ASSETS", asset_str)
-        assets["sw.js"] = sw
-
     logger.info(f"Collected {len(assets)} assets from {dirname}")
     return assets
+
+
+def enable_service_worker(assets):
+    """Enable the service worker 'sw.js', by giving it a cacheName
+    based on a hash from all the assets.
+    """
+    assert "sw.js" in assets, "Expected sw.js in assets"
+    sw = assets.pop("sw.js")
+
+    # Generate hash based on content. Use sha1, just like Git does.
+    hash = hashlib.sha1()
+    for key in sorted(assets.keys()):
+        content = assets[key]
+        content = content.encode() if isinstance(content, str) else content
+        hash.update(content)
+
+    # Generate cache name. The name must start with "timetagger" so old
+    # caches are cleared correctly. The default name is
+    # "timetagger_nocache". When the nocache-suffix is present, the
+    # cache is disabled, making the SW a no-op. We include the version
+    # string for clarity. The hash is the most important part. It
+    # ensures that the SW is considered new whenever any of the assets
+    # change. It also means that two containers serving the same assets
+    # use the same hash.
+    hash_str = hash.hexdigest()[:12]  # 6 bytes should be more than enough
+    cachename = f"timetagger_{versionstring}_{hash_str}"
+
+    # Produce list of assets
+    asset_list = list(sorted(assets.keys()))
+
+    # Update the code
+    replacements = {
+        "timetagger_cache": cachename,
+        "assets = [];": f"assets = {asset_list};",
+    }
+    for needle, replacement in replacements.items():
+        assert needle in sw, f"Expected {needle} in sw.js"
+        sw = sw.replace(needle, replacement, 1)
+    assets["sw.js"] = sw

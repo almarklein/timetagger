@@ -9,21 +9,28 @@ import logging
 from pkg_resources import resource_filename
 
 import asgineer
-from timetagger.server import api_handler, create_assets_from_dir
+from timetagger.server import api_handler, create_assets_from_dir, enable_service_worker
 
 
 logger = logging.getLogger("asgineer")
 
 
 # Create dict with assets. You could add/replace assets here.
-assets = {}
-assets.update(create_assets_from_dir(resource_filename("timetagger.client", ".")))
-assets.update(create_assets_from_dir(resource_filename("timetagger.static", ".")))
-assets.update(create_assets_from_dir(resource_filename("timetagger.images", ".")))
+common_assets = create_assets_from_dir(resource_filename("timetagger.common", "."))
+app_assets = create_assets_from_dir(resource_filename("timetagger.app", "."))
+image_assets = create_assets_from_dir(resource_filename("timetagger.images", "."))
+page_assets = create_assets_from_dir(resource_filename("timetagger.pages", "."))
+
+root_assets = common_assets | image_assets | page_assets
+app_assets = common_assets | image_assets | app_assets
+
+# Enable the service worker so the app can be used offline and is installable
+enable_service_worker(app_assets)
 
 # Turn asset dict into a handler. This feature of Asgineer provides
 # lightning fast handlers that support compression and HTTP caching.
-asset_handler = asgineer.utils.make_asset_handler(assets, max_age=0)
+root_asset_handler = asgineer.utils.make_asset_handler(root_assets, max_age=0)
+app_asset_handler = asgineer.utils.make_asset_handler(app_assets, max_age=0)
 
 
 @asgineer.to_asgi
@@ -32,19 +39,30 @@ async def main_handler(request):
     asset handlers created above.
     """
 
-    if request.path.startswith("/api/"):
-        # Get apipath
-        prefix = "/api/v1/"
-        if not request.path.startswith(prefix):
-            return 404, {}, "invalid API path"
-        apipath = request.path[len(prefix) :].strip("/")
-        # This is where you'd handle authentication ...
-        user = "default"
-        return await api_handler(request, apipath, user)
+    if request.path == "/":
+        return 307, {"Location": "/timetagger/"}, b""
+
+    elif request.path.startswith("/timetagger/"):
+
+        if request.path.startswith("/timetagger/api/"):
+            # Get apipath
+            prefix = "/timetagger/api/v1/"
+            if not request.path.startswith(prefix):
+                return 404, {}, "invalid API path"
+            apipath = request.path[len(prefix) :].strip("/")
+            # This is where you'd handle authentication ...
+            user = "default"
+            return await api_handler(request, apipath, user)
+        elif request.path.startswith("/timetagger/app/"):
+            path = request.path[16:]
+            status, headers, body = await app_asset_handler(request, path)
+            headers["X-Frame-Options"] = "sameorigin"  # Prevent clickjacking
+            return status, headers, body
+        else:
+            path = request.path[12:]
+            return await root_asset_handler(request, path)
     else:
-        status, headers, body = await asset_handler(request)
-        headers["X-Frame-Options"] = "sameorigin"  # Prevent clickjacking
-        return status, headers, body
+        return 404, {}, "only serving at /timetagger/"
 
 
 if __name__ == "__main__":
