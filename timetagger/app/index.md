@@ -18,60 +18,76 @@ window.addEventListener("load", function() {
     var canvas_element = document.getElementById('canvas');
     window.canvas = new window.front.TimeTaggerCanvas(canvas_element);
 
-    // Register the service worker as soon as the user loads the app.
-    // But not on localhost! The service worker is required for a PWA,
-    // but is also active when the PWA is not installed.
-    //if (location.hostname !== "localhost" && location.hostname !== "127.0.0.1") {
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js').then(reg => {
-                window.reg= reg;
-                window.setInterval(() => {reg.update()}, 60 * 60 * 1000);
-            });
+    // Register service worker, only when loading the actual app.
+    register_service_worker();
+});
+
+
+function register_service_worker() {
+
+    // Could disable on localhost, but since the SW is local to /timetagger/app by default, it should be fine.
+    // if (location.hostname !== "localhost" && location.hostname !== "127.0.0.1") { return; }
+
+    // SW supported?
+    if (!('serviceWorker' in navigator)) { return; }
+
+    // Structure for the PWA installation workflow
+    window.pwa = {
+        sw_reg: null, // set when sw is registered
+        deferred_prompt: null,  // set when browser considers this a PWA
+        install: async function() {
+            window.pwa.deferred_prompt.prompt();
+            const { outcome } = await window.pwa.deferred_prompt.userChoice;
+            window.pwa.deferred_prompt = null;
+        },
+        update: function () {
+            if (window.pwa.sw_reg) { window.pwa.sw_reg.update(); }
         }
-    //}
+    };
 
-});
+    // Register the service worker
+    navigator.serviceWorker.register('sw.js').then(reg => { window.pwa.sw_reg = reg; });
 
-var page_start_time = performance.now();
-navigator.serviceWorker.addEventListener('controllerchange', function () {
-    console.log("new service worker detected.")
-    if (page_start_time === null) {
-        return;  // prevent continuous refresh when dev tool SW refresh is on
-    } else if (performance.now() - page_start_time < 3000) {
-        page_start_time = null;
-        window.location.reload();  // User just arrived/refreshed, auto-refresh is ok
-    } else {
-        show_refresh_button();
+    // Detect when the browser agrees that this is a PWA
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();  // Prevent the mini-infobar from appearing on mobile
+        window.pwa.deferred_prompt = e;  // Store event for later use
+    });
+
+    // Detect when a new service worker is activated. This happens after an update
+    // (or just after page load) when a new SW is found, installed, and activated.
+    var page_start_time = performance.now();
+    navigator.serviceWorker.addEventListener('controllerchange', function () {
+        console.log("New service worker detected.")
+        if (page_start_time === null) {
+            return;  // prevent continuous refresh when dev tool SW refresh is on
+        } else if (performance.now() - page_start_time < 3000) {
+            page_start_time = null;
+            window.location.reload();  // User just arrived/refreshed, auto-refresh is ok
+        } else {
+            show_refresh_button(); // Prompt the user to refresh instead
+        }
+    });
+
+    // Show a message to promt the user to refresh the page
+    function show_refresh_button() {
+        let style, html, el;
+        style = 'background:#fff; color:#444; padding:0.3em; border: 1px solid #777; border-radius:4px; ';
+        style += 'position:absolute; top: 64px; left:4px; font-size:80%; '
+        html = "<div style='" + style + "'>";
+        html += "New version available, ";
+        html += "<a href='#' onclick='location.reload();'>refresh</a>";
+        html += " to update.</div>"
+        el = document.createElement("div");
+        el.innerHTML = html;
+        el = el.children[0];
+        document.getElementById("canvas").parentNode.appendChild(el);
     }
-});
 
-function show_refresh_button() {
-    let style, html;
-    style = 'background:#fff; color:#444; padding:0.3em; border: 1px solid #777; border-radius:4px; ';
-    style += 'position:absolute; top: 64px; left:4px; font-size:80%; '
-    html = "<div style='" + style + "'>";
-    html += "New version available, ";
-    html += "<a href='#' onclick='location.reload();'>refresh</a>";
-    html += " to update.</div>"
-    let el = document.createElement("div");
-    el.innerHTML = html;
-    el = el.children[0];
-    document.getElementById("canvas").parentNode.appendChild(el);
+    // Auto-update each several hours
+    var nhours = 4
+    window.setInterval(() => {window.pwa.update()}, nhours * 60 * 60 * 1000);
 }
-
-// Logic for the PWA installation workflow.
-var pwa = {
-    deferred_prompt: null,
-    install: async function() {
-        window.pwa.deferred_prompt.prompt();
-        const { outcome } = await window.pwa.deferred_prompt.userChoice;
-        window.pwa.deferred_prompt = null;
-    }
-};
-window.addEventListener('beforeinstallprompt', (e) => {
-  e.preventDefault();  // Prevent the mini-infobar from appearing on mobile
-  window.pwa.deferred_prompt = e;  // Store event for later use
-});
 
 </script>
 
