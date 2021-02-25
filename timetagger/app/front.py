@@ -683,7 +683,7 @@ class TopWidget(Widget):
     def on_init(self):
         self._picker = utils.Picker()
         self._button_pressed = None
-        self._now_scale = ""
+        self._current_scale = {}
         self._sync_feedback_xy = 0, 0
         window.setInterval(self._draw_sync_feedback_callback, 100)
         self._top_offset = 20
@@ -903,7 +903,6 @@ class TopWidget(Widget):
 
         # Are we currently on one of the reference scales?
         now_clr = None
-        self._now_scale = now_scale
         if len(now_scale):
             t1_now = dt.floor(now, now_scale)
             if t1 == t1_now and t2 == dt.add(t1_now, now_scale):
@@ -944,9 +943,10 @@ class TopWidget(Widget):
         else:
             zoom_out_scale = "+1"
 
-        # fool flake
-        zoom_in_scale
-        zoom_out_scale
+        # Store for later
+        self._current_scale["now"] = now_scale
+        self._current_scale["in"] = zoom_in_scale
+        self._current_scale["out"] = zoom_out_scale
 
         # Define buttons and display priority
         # Alt home/day icons: uf783 uf015 uf185
@@ -1165,11 +1165,11 @@ class TopWidget(Widget):
         elif e.key.lower() == "arrowdown" or e.key.lower() == "pagedown":
             self._handle_button_press("nav_forward")
         elif e.key.lower() == "arrowleft":
-            self._handle_button_press("nav_zoom_+1")
+            self._handle_button_press("nav_zoom_" + self._current_scale["out"])
         elif e.key.lower() == "arrowright":
-            self._handle_button_press("nav_zoom_-1")
+            self._handle_button_press("nav_zoom_" + self._current_scale["in"])
         elif e.key.lower() == "home" or e.key.lower() == "end":
-            self._handle_button_press("nav_snap_now" + self._now_scale)
+            self._handle_button_press("nav_snap_now" + self._current_scale["now"])
         #
         elif e.key.lower() == "d":
             self._handle_button_press("nav_snap_now1D")
