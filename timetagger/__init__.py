@@ -2,7 +2,7 @@
 Timetagger - Tag your time, get the insight.
 """
 
-__version__ = "21.2.3"
+__version__ = "21.2.4"
 
 version_info = tuple(map(int, __version__.split(".")))
 
