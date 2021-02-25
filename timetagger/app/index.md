@@ -25,7 +25,8 @@ window.addEventListener("load", function() {
 
 function register_service_worker() {
 
-    // Could disable on localhost, but since the SW is local to /timetagger/app by default, it should be fine.
+    // Could disable on localhost, because localhost is also likely used for other things.
+    // However, since the SW is local to /timetagger/app by default, it should be fine.
     // if (location.hostname !== "localhost" && location.hostname !== "127.0.0.1") { return; }
 
     // SW supported?
@@ -42,6 +43,19 @@ function register_service_worker() {
         },
         update: function () {
             if (window.pwa.sw_reg) { window.pwa.sw_reg.update(); }
+        },
+        show_refresh_button: function () {
+            let style, html, el;
+            style = 'background:#fff; color:#444; padding:0.3em; border: 1px solid #777; border-radius:4px; ';
+            style += 'position:absolute; top: 64px; left:4px; font-size:80%; '
+            html = "<div style='" + style + "'>";
+            html += "New version available, ";
+            html += "<a href='#' onclick='location.reload();'>refresh</a>";
+            html += " to update.</div>"
+            el = document.createElement("div");
+            el.innerHTML = html;
+            el = el.children[0];
+            document.getElementById("canvas").parentNode.appendChild(el);
         }
     };
 
@@ -62,27 +76,15 @@ function register_service_worker() {
         if (page_start_time === null) {
             return;  // prevent continuous refresh when dev tool SW refresh is on
         } else if (performance.now() - page_start_time < 3000) {
-            page_start_time = null;
             window.location.reload();  // User just arrived/refreshed, auto-refresh is ok
         } else {
-            show_refresh_button(); // Prompt the user to refresh instead
+           window.pwa.show_refresh_button();  // Prompt the user to refresh instead
         }
+        page_start_time = null;
     });
 
     // Show a message to promt the user to refresh the page
-    function show_refresh_button() {
-        let style, html, el;
-        style = 'background:#fff; color:#444; padding:0.3em; border: 1px solid #777; border-radius:4px; ';
-        style += 'position:absolute; top: 64px; left:4px; font-size:80%; '
-        html = "<div style='" + style + "'>";
-        html += "New version available, ";
-        html += "<a href='#' onclick='location.reload();'>refresh</a>";
-        html += " to update.</div>"
-        el = document.createElement("div");
-        el.innerHTML = html;
-        el = el.children[0];
-        document.getElementById("canvas").parentNode.appendChild(el);
-    }
+
 
     // Auto-update each several hours
     var nhours = 4

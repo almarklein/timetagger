@@ -6,7 +6,7 @@
 // currentCacheName to a hash of the assets so that the SW is automatically renewed
 // when a change is made. Some advantages:
 // * This SW script is quite simple.
-// * The app just works offline.
+// * The app Just Works offline.
 // * A new SW means a new version, we can use that to notify the user to refresh.
 //
 // A note of warning: when doing rolling deploys, the server may produce a mix of old and
@@ -17,7 +17,7 @@
 // Another approach I considered is network-first, which tries to behave like a normal
 // website, but falls back to the cache when the fetch fails. This seems a "simple" behavior,
 // but becomes rather complicated to implement, since you want to move in and out of offline-mode,
-// and cancel running fetches when entering offline-mode. It also makes loading the app slow 
+// and cancel running fetches when entering offline-mode. It also makes loading the app slow
 // when being offline.
 
 // The cache name. The server should replace this name with a new name, which must have
@@ -42,11 +42,8 @@ async function on_install(event) {
 async function on_activate(event) {
     let cacheNames = await caches.keys();
     for (let cacheName of cacheNames) {
-        if (cacheName.startsWith("timetagger")) {
-            if (cacheName != currentCacheName) {
-            console.log('[SW] Clearing previous cache: ' + cacheName);
+        if (cacheName.startsWith("timetagger") && cacheName != currentCacheName) {
             await caches.delete(cacheName);
-            }
         }
     }
     await clients.claim();
@@ -55,13 +52,13 @@ async function on_activate(event) {
 function on_fetch(event) {
     var requestURL = new URL(event.request.url);
     if (
-        (requestURL.origin == location.origin) && 
+        (requestURL.origin == location.origin) &&
         (requestURL.pathname.indexOf('/api/') < 0) &&
         (assets.length > 0)
     ) {
-       event.respondWith(cache_or_network(event));       
+       event.respondWith(cache_or_network(event));
     }  // else do a normal fetch
-    
+
 }
 
 async function cache_or_network(event) {

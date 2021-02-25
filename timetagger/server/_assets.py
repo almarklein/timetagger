@@ -151,10 +151,8 @@ def enable_service_worker(assets):
         content = content.encode() if isinstance(content, str) else content
         hash.update(content)
 
-    # Generate cache name. The name must start with "timetagger" so old
-    # caches are cleared correctly. The default name is
-    # "timetagger_nocache". When the nocache-suffix is present, the
-    # cache is disabled, making the SW a no-op. We include the version
+    # Generate cache name. The name must start with "timetagger" so
+    # that old caches are cleared correctly. We include the version
     # string for clarity. The hash is the most important part. It
     # ensures that the SW is considered new whenever any of the assets
     # change. It also means that two containers serving the same assets
@@ -162,7 +160,8 @@ def enable_service_worker(assets):
     hash_str = hash.hexdigest()[:12]  # 6 bytes should be more than enough
     cachename = f"timetagger_{versionstring}_{hash_str}"
 
-    # Produce list of assets
+    # Produce list of assets. If we don't replace this, we get the default SW
+    # behavior, which is not doing any caching, essentially being a no-op.
     asset_list = list(sorted(assets.keys()))
 
     # Update the code
