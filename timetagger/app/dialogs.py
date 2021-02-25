@@ -387,7 +387,7 @@ class MenuDialog(BaseDialog):
             <div class='divider'></div>
             <a href="/"><img style='width:18px; height:18px;vertical-align:middle;' src='timetagger192.png' />&nbsp;&nbsp;Homepage</a>
             <a href="https://timetagger.app/support"><i class='fas'>\uf059</i>&nbsp;&nbsp;Get tips and help</a>
-            <a href="account"><i class='fas'>\uf2bd</i>&nbsp;&nbsp;Account</a>
+            <a href="../account"><i class='fas'>\uf2bd</i>&nbsp;&nbsp;Account</a>
             <div class='divider'></div>
         """.rstrip()
 
