@@ -9,11 +9,11 @@
 <h2 style='color:#222;'><span style='color:#07A82C;'>Tag</span> your time,<br>get the <span style='color:#07A82C;'>insight</span>.</h2>
 
 <div>
-    <a href='/demo' class='ctabutton'>
+    <a href='app/demo' class='ctabutton'>
         <i class='fas'>\uf04b</i>&nbsp;&nbsp;Demo</a>
-    <a href='/sandbox' class='ctabutton'>
+    <a href='app/sandbox' class='ctabutton'>
         <i class='fas'>\uf04b</i>&nbsp;&nbsp;Sandbox</a>
-    <a href='/app' class='ctabutton'>
+    <a href='app/' class='ctabutton'>
         <i class='fas'>\uf04b</i>&nbsp;&nbsp;App</a>
 </div>
 

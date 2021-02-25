@@ -5,7 +5,7 @@ Test other stores.
 import datetime
 
 from _common import run_tests
-from timetagger.client import stores
+from timetagger.app import stores
 
 
 class Stub:

@@ -1,0 +1,27 @@
+{
+    "name": "TimeTagger App",
+    "short_name": "TimeTagger",
+    "description": "Tag your time, get the insight. An open source time tracker for individuals.",
+    "categories": ["productivity"],
+    "lang": "en-US",
+    "start_url": "./",
+    "scope": "./",
+    "display": "fullscreen",
+    "theme_color": "#30b7ff",
+    "background_color": "#30b7ff",
+    "icons": [
+        {
+            "src": "timetagger192filled.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "timetagger512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ],
+    "screenshots": [
+    ]
+}

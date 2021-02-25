@@ -7,4 +7,8 @@ __version__ = "21.2.2"
 version_info = tuple(map(int, __version__.split(".")))
 
 
-from . import server  # noqa
+from . import server  # noqa - server logic
+from . import common  # noqa - common assets
+from . import images  # noqa - image assets
+from . import app  # noqa - app assets
+from . import pages  # noqa - pages

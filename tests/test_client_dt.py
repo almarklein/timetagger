@@ -4,8 +4,8 @@ import pscript
 from pscript import py2js, evaljs as _evaljs
 
 from _common import run_tests
-from timetagger.client import dt
-from timetagger.client.dt import to_time_int, time2str
+from timetagger.app import dt
+from timetagger.app.dt import to_time_int, time2str
 
 
 def evaljs(code):

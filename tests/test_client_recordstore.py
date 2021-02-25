@@ -1,5 +1,5 @@
 from _common import run_tests
-from timetagger.client.stores import RecordStore, make_hidden
+from timetagger.app.stores import RecordStore, make_hidden
 
 
 class DataStoreStub:

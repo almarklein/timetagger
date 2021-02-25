@@ -5,7 +5,7 @@ Some of this is implicitly covered by the other tests, but not all.
 
 
 from _common import run_tests
-from timetagger.client.utils import (
+from timetagger.app.utils import (
     convert_text_to_valid_tag,
     get_tags_and_parts_from_string,
     get_better_tag_order_from_stats,
