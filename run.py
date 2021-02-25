@@ -22,28 +22,32 @@ image_assets = create_assets_from_dir(resource_filename("timetagger.images", "."
 page_assets = create_assets_from_dir(resource_filename("timetagger.pages", "."))
 
 root_assets = common_assets | image_assets | page_assets
-app_assets = common_assets | image_assets | app_assets
+client_assets = common_assets | image_assets | app_assets
 
 # Enable the service worker so the app can be used offline and is installable
-enable_service_worker(app_assets)
+enable_service_worker(client_assets)
 
-# Turn asset dict into a handler. This feature of Asgineer provides
+# Turn asset dicts into a handlers. This feature of Asgineer provides
 # lightning fast handlers that support compression and HTTP caching.
 root_asset_handler = asgineer.utils.make_asset_handler(root_assets, max_age=0)
-app_asset_handler = asgineer.utils.make_asset_handler(app_assets, max_age=0)
+client_asset_handler = asgineer.utils.make_asset_handler(client_assets, max_age=0)
 
 
 @asgineer.to_asgi
 async def main_handler(request):
-    """The main handler where we delegate to the API handler or the
+    """
+    The main handler where we delegate to the API handler or the
     asset handlers created above.
+
+    We serve at /timetagger for a few reasons, one being that the service
+    worker won't interfere with other stuff you might server at localhost.
     """
 
     if request.path == "/":
+        # Redirect
         return 307, {"Location": "/timetagger/"}, b""
 
     elif request.path.startswith("/timetagger/"):
-
         if request.path.startswith("/timetagger/api/"):
             # Get apipath
             prefix = "/timetagger/api/v1/"
@@ -55,7 +59,7 @@ async def main_handler(request):
             return await api_handler(request, apipath, user)
         elif request.path.startswith("/timetagger/app/"):
             path = request.path[16:]
-            status, headers, body = await app_asset_handler(request, path)
+            status, headers, body = await client_asset_handler(request, path)
             headers["X-Frame-Options"] = "sameorigin"  # Prevent clickjacking
             return status, headers, body
         else:

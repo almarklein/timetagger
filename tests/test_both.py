@@ -6,7 +6,7 @@ import timetagger
 
 
 server_fname = os.path.dirname(timetagger.server.__file__)
-client_fname = os.path.dirname(timetagger.client.__file__)
+client_fname = os.path.dirname(timetagger.app.__file__)
 
 
 def get_common_lines_from_module(filename):

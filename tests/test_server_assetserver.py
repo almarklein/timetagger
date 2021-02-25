@@ -9,8 +9,8 @@ from _common import run_tests
 
 # Create asset server
 assets = {}
-assets.update(create_assets_from_dir(resource_filename("timetagger.client", ".")))
-assets.update(create_assets_from_dir(resource_filename("timetagger.static", ".")))
+assets.update(create_assets_from_dir(resource_filename("timetagger.app", ".")))
+assets.update(create_assets_from_dir(resource_filename("timetagger.common", ".")))
 assets.update(create_assets_from_dir(resource_filename("timetagger.images", ".")))
 asset_handler = asgineer.utils.make_asset_handler(assets, max_age=0)
 
