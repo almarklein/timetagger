@@ -94,13 +94,13 @@ def test_consistent_hash_for_sw():
     different_code = hash_checker_code.replace("{}", """{"foo": "bar"}""")
     oneliner2 = ";".join(different_code.strip().splitlines())
 
-    x1 = subprocess.getoutput([sys.executable, "-c", oneliner1])
-    x2 = subprocess.getoutput([sys.executable, "-c", oneliner1])
-    x3 = subprocess.getoutput([sys.executable, "-c", oneliner2])
+    x1 = subprocess.check_output([sys.executable, "-c", oneliner1])
+    x2 = subprocess.check_output([sys.executable, "-c", oneliner1])
+    x3 = subprocess.check_output([sys.executable, "-c", oneliner2])
 
-    x1 = x1.strip().strip(" ';")
-    x2 = x2.strip().strip(" ';")
-    x3 = x3.strip().strip(" ';")
+    x1 = x1.decode().strip().strip(" ';")
+    x2 = x2.decode().strip().strip(" ';")
+    x3 = x3.decode().strip().strip(" ';")
 
     assert len(x1) > 20
     assert len(x2) > 20
