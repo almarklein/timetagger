@@ -1,36 +1,5 @@
-/**************** Main layout ****************/
-
-html {
-    height: 100%;
-}
-
 body {
-    height: 100%;
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-main, header, footer {
-    position: static;
-    box-sizing: border-box;
-    width: 100%;
-    border: 0;
-    margin: 0;
-    overflow-x: hidden;
-}
-main .content, header .content, footer .content {
-    position: static;
-    box-sizing: border-box;
-    width: 100%;
-    border: 0;
-    margin: 0;
-}
-
-main .content {
-    position: absolute;
-    top: 0px; bottom: 0; left: 0; right: 0;
-    padding: 0; margin: 0;  /* override centering for static position */
+    background: $bg1;
 }
 #canvas {
     position: absolute;
@@ -38,107 +7,8 @@ main .content {
     border: 0; margin: 0; padding: 0; outline: none;
     box-shadow: 0 0 4px rgba(0, 0, 0, 0.4);
     border-radius: 2px;
+    background: #f4f4f4;
 }
-@media screen and (min-width: 1024px) { main .content {
-        left: calc(50% - 512px); right: calc(50% - 512px); width: 1024px;
-}}
-
-
-/**************** Basic things ****************/
-
-body {
-    font-family: "Ubuntu", Verdana, sans-serif;
-    background: #fff;
-    color: #222;
-    font-weight: normal;
-}
-
-p {
-    line-height: 140%;
-}
-
-a:link, a:visited, a:active {
-    color: #0B99DD;
-    text-decoration: none;
-}
-p a:link, p a:visited, p a:active, li a:link, li a:visited, li a:active {
-    text-decoration: none;
-}
-a:hover, p a:hover {
-    color: #0B99DD;
-    text-decoration: underline;
-}
-
-h1, h2, h3, h4 {
-    color: #07A82C;
-}
-h1 {
-    color: #000;
-}
-h1 { font-size: 220%; }
-h2 { font-size: 170%; }
-h3 { font-size: 120%; }
-h2 > a:link, h2 > a:visited, h2 > a:active, h3 > a:link, h3 > a:visited, h3 > a:active {
-    color: inherit;
-}
-h2 > a:hover, h3 > a:hover {
-    text-decoration: none;
-}
-
-hr {
-    height: 1px;
-    background: #ccc;
-    border: none;
-}
-
-code, .monospace {
-    font-family: Consolas,"Andale Mono WT","Andale Mono","Lucida Console","Lucida Sans Typewriter","DejaVu Sans Mono","Bitstream Vera Sans Mono","Liberation Mono","Nimbus Mono L",Monaco,"Courier New",Courier,monospace;
-}
-
-code {
-    font-size: 90%;
-    color: #444;
-    background: #fff;
-    padding: 1px 5px;
-    white-space: nowrap;
-    border: solid 1px #e1e4e5;
-}
-
-button, a.button {
-    display: inline-block;
-    background: #eee;
-    color: #000;
-    padding: 0.3em 0.4em;
-    border-radius: 4px;
-    border: 1px solid #bbb;
-    transition: background 0.2s;
-}
-button:hover, a.button:hover {
-    text-decoration: none;
-    background: #f5f5f5;
-}
-button:disabled, button:disabled:hover {
-    background: #ddd;
-    color: #888;
-}
-
-main a.ctabutton {
-    display: inline-block;
-    border: none;
-    border-radius: 4px;
-    background: #0B99DD;
-    color: #fff;
-    padding: 1em;
-    box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.4);
-    transition: box-shadow 0.1s;
-    font-size: 120%;
-    margin: 0.5em;
-}
-main a.ctabutton:hover {
-    text-decoration: none;
-    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.4);
-}
-
 
 /**************** Popup Menu ****************/
 
@@ -150,7 +20,7 @@ main a.ctabutton:hover {
 .verticalmenu a, .dialog.verticalmenu .loggedinas {
     user-select: none;
     -moz-user-select: none;
-    color: #222;
+    color: $prim1_clr;
     display: block;
     box-sizing: border-box;
     border-bottom: 1px solid #bbb;
@@ -256,8 +126,8 @@ body.darkmode .tooltipdiv {
 .dialog {
     box-sizing: border-box;
     outline: none;
-    background: #fff;
-    border: 6px solid #31383F;
+    background: $sec2_clr;
+    border: 6px solid $prim1_clr;
     position: absolute;
     left: 5%;
     right: 5%;
@@ -276,6 +146,7 @@ body.darkmode .tooltipdiv {
 }
 .dialog h2, .dialog h3 {
     color: #000;  /* override red headers */
+    font-family: $normalfont;
 }
 @media screen and (min-height: 600px) { .dialog {
     max-height: 90vh;
@@ -305,11 +176,11 @@ body.darkmode .tooltipdiv {
     padding-bottom: 0;
     line-height: 150%;
     font-size: 1.2em;
-    background: #31383F;
-    color: #fff;
+    background: $prim1_clr;
+    color: $sec1_clr;
 }
 .dialog h1 > i.fas {
-    color: #fff;
+    color: $sec1_clr;
 }
 .dialog h2 {
     font-size: 1.1em;
@@ -359,7 +230,7 @@ body.darkmode .tooltipdiv {
 
 .dialog h1 button {
     font-size: 100%;
-    color: #fff;
+    color: $sec1_clr;
     padding: 3px 0.5em 5px 0.5em;  /* Note: match with h1 padding-bottom */
     background: rgba(255, 255, 255, 0.1);
     border-radius: 2px;
@@ -382,20 +253,25 @@ body.darkmode .tooltipdiv {
 
 body.darkmode .dialog {
     background: #D3D8DA;
-    border-color: #31383F
+    border-color: $prim1_clr
 }
 body.darkmode .dialog h1 {
-    background: #31383F;
-    border-color: #31383F
+    background: $prim1_clr;
+    border-color: $prim1_clr
 }
 
 .dialog button.actionbutton {
     margin-left: 1em;
     font-size: 100%;
     padding: 0.5em 0.6em;
+    background: #fff;
+    border: none;
+    box-shadow: 0px 2px 2px rgba(0, 0, 0, 0.4);
+    transition: box-shadow 0.1s;    
 }
-.dialog button.actionbutton.submit { background: #0B99DD; color: #fff; min-width: 8em; }
-.dialog button.actionbutton.submit:disabled { background: #0B99DD; color: #aaa; }
+.dialog button.actionbutton:hover { box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.4); }
+.dialog button.actionbutton.submit { background: $acc_clr; min-width: 8em; }
+.dialog button.actionbutton.submit:disabled { color: #aaa; }
 
 /* --- dialog table --- */
 
