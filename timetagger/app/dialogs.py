@@ -308,7 +308,7 @@ class DemoInfoDialog(BaseDialog):
         """Show/open the dialog ."""
         html = """
             <h1>Demo
-                <button type='button'>close <i class='fas'>\uf00d</i></button>
+                <button type='button'><i class='fas'>\uf00d</i></button>
             </h1>
             <p>
             This demo shows 5 years of randomly generated time tracking data.
@@ -333,7 +333,7 @@ class SandboxInfoDialog(BaseDialog):
         """Show/open the dialog ."""
         html = """
             <h1>Sandbox
-                <button type='button'>close <i class='fas'>\uf00d</i></button>
+                <button type='button'><i class='fas'>\uf00d</i></button>
             </h1>
             <p>
             The TimeTagger sandbox starts without any records. You can play around
@@ -359,7 +359,7 @@ class NotificationDialog(BaseDialog):
         """Show/open the dialog ."""
         html = f"""
             <h1>Notification
-                <button type='button'>close <i class='fas'>\uf00d</i></button>
+                <button type='button'><i class='fas'>\uf00d</i></button>
             </h1>
             <p>{message}</p>
         """
@@ -385,7 +385,7 @@ class MenuDialog(BaseDialog):
         self.maindiv.innerHTML = f"""
             <div class='loggedinas'></div>
             <div class='divider'></div>
-            <a href="/"><img style='width:18px; height:18px;vertical-align:middle;' src='timetagger192.png' />&nbsp;&nbsp;Homepage</a>
+            <a href="/"><img style='width:20px; height:20px;vertical-align:middle;' src='timetagger_sd.svg' />&nbsp;&nbsp;Homepage</a>
             <a href="https://timetagger.app/support"><i class='fas'>\uf059</i>&nbsp;&nbsp;Get tips and help</a>
             <a href="../account"><i class='fas'>\uf2bd</i>&nbsp;&nbsp;Account</a>
             <div class='divider'></div>
@@ -439,7 +439,7 @@ class MenuDialog(BaseDialog):
             (
                 "\uf3fa",
                 is_installable,
-                "<span style='color:#0B99DD'>Install this app</span>",
+                "<span class='acc_color'>Install this app</span>",
                 self._do_install,
             ),
         ]:
@@ -1158,7 +1158,7 @@ class RecordDialog(BaseDialog):
         tags_html = "Tags: "
         if len(tags) == 0:
             tags = ["#untagged"]
-        tags_list = [f"<span style='color:#07A82C'>{t}</span>" for t in tags]
+        tags_list = [f"<span style='color:#000'>{t}</span>" for t in tags]
         tags_html += "&nbsp; &nbsp;".join(tags_list)
         # Get suggested tags
         self._suggested_tags_list = []
@@ -1900,14 +1900,14 @@ class ReportDialog(BaseDialog):
         doc.setFontSize(24)
         doc.text("Time record report", margin, margin, {"baseline": "top"})
         img = document.getElementById("ttlogo")
-        doc.addImage(img, "PNG", width - margin - 20, margin, 20, 20)
-        doc.setFontSize(12)
-        doc.text(
-            "TimeTagger",
-            width - margin,
-            margin + 22,
-            {"align": "right", "baseline": "top"},
-        )
+        doc.addImage(img, "PNG", width - margin - 30, margin, 30, 30)
+        # doc.setFontSize(12)
+        # doc.text(
+        #     "TimeTagger",
+        #     width - margin,
+        #     margin + 22,
+        #     {"align": "right", "baseline": "top"},
+        # )
 
         tagname = self._tags.join(" ") if self._tags else "all"
         d1 = reversed(dt.time2localstr(self._last_t1)[:10].split("-")).join("-")

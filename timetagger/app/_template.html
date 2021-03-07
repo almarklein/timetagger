@@ -9,11 +9,19 @@
   <link rel="manifest" href="timetagger_manifest.json">
   <link rel="icon" sizes="192x192" href="timetagger192_sf.png">
   <link rel="apple-touch-icon" href="timetagger192_sf.png">
-  
+
   <style>
   {{ embedded_style }}
   </style>
   <link rel="stylesheet" href="app.css">
+
+  <script src='utils.js'></script>
+  <script src='dt.js'></script>
+  <script src='stores.js'></script>
+  <script src='dialogs.js'></script>
+  <script src='front.js'></script>
+  <script src='jspdf.js'></script>
+  <script src='Ubuntu-C-normal.js'></script>
 
   <script>
   window.timetaggerversion = '{{ versionstring }}';
@@ -25,11 +33,11 @@
       ) {
       window.browser_supported = true;  // probably
   }
-  // Update menu content
+  // Disable canvas if browser cannot run the app
   window.addEventListener("load", function() {
-    var menu = document.getElementById("header-content");
+    var el = document.getElementById("main-content");
     if (!window.browser_supported) {
-        menu.innerHTML = "This browser is not supported, please use (a modern version of) Firefox, Chrome, Safari, or Edge.";
+        el.innerHTML = "This browser is not supported, please use (a modern version of) Firefox, Chrome, Safari, or Edge.";
     }
   });
   </script>
@@ -41,6 +49,15 @@
 <main>
     <div class='content' id='main-content'>
         {{ main }}
+
+        <!-- Force preloading the font used in the canvas -->
+        <span class='narrowfont'>tt</span>
+        <span class='monofont'>tt</span>
+        <span class='fas' style='color: #eee;'></span>
+
+        <!-- Load images that we need an img element for -->
+        <img id='ttlogo' alt='TimeTagger logo' src='timetagger192_bd.png' width='2px' />
+        <img id='ttlogo_sl' alt='TimeTagger logo' src='timetagger192_sl.png' width='2px' />
     </div>
 </main>
 
