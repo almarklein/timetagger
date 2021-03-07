@@ -1,0 +1,11 @@
+* PNG's have their size in the name.
+* The suffix has 2 chars:
+  * type:
+    * "s" for small, square
+    * "w" for word, wide
+    * "b" for below, big
+  * coloring:
+    * "d" for dark (to be used on a light bg)
+    * "l" for light (to be used on a dark bg)
+    * "f" for filled (dark on a light circle)
+    * "m" for maskable (dark on a white square)
