@@ -12,6 +12,7 @@ import pkg_resources
 import jinja2
 import pscript
 import markdown
+import scss
 
 from .. import __version__
 
@@ -31,11 +32,33 @@ default_template = (
     .read()
     .decode()
 )
-style_embed = (
-    open(pkg_resources.resource_filename("timetagger.common", "_style_embed.css"), "rb")
-    .read()
-    .decode()
-)
+
+
+def _get_base_style():
+    text = (
+        open(
+            pkg_resources.resource_filename("timetagger.common", "_style_embed.scss"),
+            "rb",
+        )
+        .read()
+        .decode()
+    )
+    style_embed = scss.compiler.compile_string(text)
+    # Find lines that define scss variables
+    var_lines = []
+    for line in text.splitlines():
+        line = line.strip()
+        if line.startswith("$") and ": " in line and line.endswith(";"):
+            var_lines.append(line)
+    preamble = "\n".join(var_lines) + "\n"
+    return style_embed, preamble
+
+
+style_embed, style_preamble = _get_base_style()
+
+
+def compile_scss(text):
+    return scss.compiler.compile_string(style_preamble + text)
 
 
 def md2html(text, template):
@@ -104,6 +127,10 @@ def create_assets_from_dir(dirname, template=None):
             html = md2html(text, template)
             name, ext = os.path.splitext(fname)
             assets["" if name == "index" else name] = html
+        elif fname.endswith((".scss", ".sass")):
+            # An scss/sass file, a preprocessor of css
+            text = open(os.path.join(dirname, fname), "rb").read().decode()
+            assets[fname[:-5] + ".css"] = compile_scss(text)
         elif fname.endswith(".html"):
             # Raw HTML
             text = open(os.path.join(dirname, fname), "rb").read().decode()
