@@ -1,37 +1,20 @@
-/*! normalize.css v8.0.0 | MIT License | github.com/necolas/normalize.css */
-html{line-height:1.15;-webkit-text-size-adjust:100%}
-body{margin:0}
-h1{font-size:2em;margin:.67em 0}
-hr{box-sizing:content-box;height:0;overflow:visible}
-pre{font-family:monospace,monospace;font-size:1em}
-a{background-color:transparent}
-abbr[title]{border-bottom:none;text-decoration:underline;text-decoration:underline dotted}
-b,strong{font-weight:bolder}
-code,kbd,samp{font-family:monospace,monospace;font-size:1em}
-small{font-size:80%}
-sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline}
-sub{bottom:-.25em}
-sup{top:-.5em}
-img{border-style:none}
-button,input,optgroup,select,textarea{font-family:inherit;font-size:100%;line-height:1.15;margin:0}button,input{overflow:visible}
-button,select{text-transform:none}
-button,[type="button"],[type="reset"],[type="submit"]{-webkit-appearance:button}
-button::-moz-focus-inner,[type="button"]::-moz-focus-inner,[type="reset"]::-moz-focus-inner,[type="submit"]::-moz-focus-inner{border-style:none;padding:0}
-button:-moz-focusring,[type="button"]:-moz-focusring,[type="reset"]:-moz-focusring,[type="submit"]:-moz-focusring{outline:1px dotted ButtonText}
-fieldset{padding:.35em .75em .625em}
-legend{box-sizing:border-box;color:inherit;display:table;max-width:100%;padding:0;white-space:normal}
-progress{vertical-align:baseline}
-textarea{overflow:auto}
-[type="checkbox"],[type="radio"]{box-sizing:border-box;padding:0}
-[type="number"]::-webkit-inner-spin-button,[type="number"]::-webkit-outer-spin-button{height:auto}
-[type="search"]{-webkit-appearance:textfield;outline-offset:-2px}
-[type="search"]::-webkit-search-decoration{-webkit-appearance:none}
-::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}
-details{display:block}
-summary{display:list-item}
-template{display:none}
-[hidden]{display:none}
+$prim1_clr: #0F2C3E;
+$prim2_clr: #A4B0B8;
+$sec1_clr: #E6E7E5;
+$sec2_clr: #F4F4F4;
+$acc_clr: #DEAA22;
+$link_clr: #0B99DD;
 
+$bg1: #E6E7E5 url("paper1.jpg");
+$bg2: #F4F4F4 url("paper2.jpg");
+
+$normalfont: "Ubuntu", Verdana, sans-serif;
+$narrowfont: "Ubuntu Condensed", Verdana, sans-serif;
+$monofont: "Space Mono", Consolas, "DejaVu Sans Mono", Monaco, "Courier New", Courier, monospace;
+
+
+/*! normalize.css v8.0.1 | MIT License | github.com/necolas/normalize.css */
+html{line-height:1.15;-webkit-text-size-adjust:100%}body{margin:0}main{display:block}h1{font-size:2em;margin:.67em 0}hr{box-sizing:content-box;height:0;overflow:visible}pre{font-family:monospace,monospace;font-size:1em}a{background-color:transparent}abbr[title]{border-bottom:none;text-decoration:underline;text-decoration:underline dotted}b,strong{font-weight:bolder}code,kbd,samp{font-family:monospace,monospace;font-size:1em}small{font-size:80%}sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline}sub{bottom:-.25em}sup{top:-.5em}img{border-style:none}button,input,optgroup,select,textarea{font-family:inherit;font-size:100%;line-height:1.15;margin:0}button,input{overflow:visible}button,select{text-transform:none}[type=button],[type=reset],[type=submit],button{-webkit-appearance:button}[type=button]::-moz-focus-inner,[type=reset]::-moz-focus-inner,[type=submit]::-moz-focus-inner,button::-moz-focus-inner{border-style:none;padding:0}[type=button]:-moz-focusring,[type=reset]:-moz-focusring,[type=submit]:-moz-focusring,button:-moz-focusring{outline:1px dotted ButtonText}fieldset{padding:.35em .75em .625em}legend{box-sizing:border-box;color:inherit;display:table;max-width:100%;padding:0;white-space:normal}progress{vertical-align:baseline}textarea{overflow:auto}[type=checkbox],[type=radio]{box-sizing:border-box;padding:0}[type=number]::-webkit-inner-spin-button,[type=number]::-webkit-outer-spin-button{height:auto}[type=search]{-webkit-appearance:textfield;outline-offset:-2px}[type=search]::-webkit-search-decoration{-webkit-appearance:none}::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}details{display:block}summary{display:list-item}template{display:none}[hidden]{display:none}
 
 /**************** Fonts ****************/
 
@@ -55,6 +38,13 @@ template{display:none}
     unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
+@font-face {
+    font-family: 'Space Mono';
+    src: url('SpaceMono-Regular-webfont.woff') format('woff');
+    font-weight: normal;
+    font-style: normal;
+}
+
 /* FontAwesome 5 Free, only the solid version */
 @font-face {
     font-family: 'FontAwesome';
@@ -73,4 +63,132 @@ template{display:none}
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
     */
+}
+
+/**************** Main layout ****************/
+
+html {
+    height: 100%;
+}
+
+body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+main, header, footer {
+    position: static;
+    box-sizing: border-box;
+    width: 100%;
+    border: 0;
+    margin: 0;
+    overflow-x: hidden;
+}
+main .content, header .content, footer .content {
+    position: static;
+    box-sizing: border-box;
+    width: 100%;
+    border: 0;
+    margin: 0;
+}
+
+main .content {
+    position: absolute;
+    top: 0px; bottom: 0; left: 0; right: 0;
+    padding: 0; margin: 0;  /* override centering for static position */
+}
+@media screen and (min-width: 1024px) { main .content {
+    left: calc(50% - 512px); right: calc(50% - 512px); width: 1024px;
+}}
+
+/**************** Base styling ****************/
+
+body {
+    background: $bg2;
+    color: $prim1_clr;
+    font-family: $normalfont;
+    font-weight: normal;
+    font-size: 110%;
+}
+
+.acc_color { color: $acc_clr; }
+.normalfont { font-family: $normalfont; }
+.narrowfont { font-family: $narrowfont; }
+
+code, .monospace, .monofont { font-family: $monofont; }
+
+code {
+    font-size: 90%;
+    color: #444;
+    background: #fff;
+    padding: 1px 5px;
+    white-space: nowrap;
+    border: solid 1px #e1e4e5;
+}
+
+p {
+    line-height: 140%;
+}
+
+/**************** Links ****************/
+
+a:link, a:visited, a:active {
+    color: $link_clr;
+    text-decoration: none;
+}
+p a:link, p a:visited, p a:active, li a:link, li a:visited, li a:active {
+    text-decoration: none;
+}
+a:hover, p a:hover {
+    color: #0B99DD;
+    text-decoration: underline;
+}
+
+/**************** Headers ****************/
+
+h1, h2, h3, h4 {
+    color: $prim2_clr;
+}
+h1 {
+    color: $prim1_clr;
+}
+h1 { font-size: 220%; }
+h2 { font-size: 150%; }
+h3 { font-size: 120%; }
+h2 > a:link, h2 > a:visited, h2 > a:active, h3 > a:link, h3 > a:visited, h3 > a:active {
+    color: inherit;
+}
+h2 > a:hover, h3 > a:hover {
+    text-decoration: none;
+}
+h1, h2 {
+    font-family: $monofont;
+}
+
+hr {
+    height: 1px;
+    background: #ccc;
+    border: none;
+}
+
+/**************** Buttons appear in the app, and e.g. /account ****************/
+
+button, a.button {
+    display: inline-block;
+    background: #eee;
+    color: #000;
+    padding: 0.3em 0.4em;
+    border-radius: 4px;
+    border: 1px solid #bbb;
+    transition: background 0.2s;
+}
+button:hover, a.button:hover {
+    text-decoration: none;
+    background: #f5f5f5;
+}
+button:disabled, button:disabled:hover {
+    background: #ddd;
+    color: #888;
 }
