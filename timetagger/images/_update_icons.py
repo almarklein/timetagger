@@ -6,14 +6,14 @@ sizes = 16, 32, 48, 64, 128, 256
 
 icon = webruntime.util.icon.Icon()
 for size in sizes:
-    fname = f"timetagger{size}.png"
+    fname = f"timetagger{size}_sf.png"
     icon.read(fname)
     # imb = imageio.imread(fname)
     # imw = 255 - imb  # make white the inverse
     # imw[:, :, 3] = imb[:, :, 3]  # Transfer original alpha channel
     # imageio.imsave(f"timetagger{size}w.png", imw)
 
-icon.write(f"timetagger.ico")
+icon.write(f"timetagger_sf.ico")
 icon.write(f"favicon.ico")
 
 # %%
