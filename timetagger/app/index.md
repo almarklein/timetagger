@@ -2,16 +2,9 @@
 % The TimeTagger application.
 
 <script src='auth.js'></script>
-<script src='utils.js'></script>
-<script src='dt.js'></script>
-<script src='stores.js'></script>
-<script src='dialogs.js'></script>
-<script src='front.js'></script>
-<script src='jspdf.js'></script>
-<script src='Ubuntu-C-normal.js'></script>
-
 
 <script>
+
 window.addEventListener("load", function() {
     if (!window.browser_supported) {return;}
     window.store = new window.stores.ConnectedDataStore();
@@ -83,7 +76,7 @@ function register_service_worker() {
         page_start_time = null;
     });
 
-    // Show a message to promt the user to refresh the page
+    // Show a message to prompt the user to refresh the page
 
 
     // Auto-update each several hours
@@ -92,10 +85,5 @@ function register_service_worker() {
 }
 
 </script>
-
-<!-- Force preloading the font used in the canvas -->
-<img id='ttlogo' alt='TimeTagger logo' src='timetagger192.png' width='16px' />
-<span class='fas' style='color: #eee;'></span>
-<span style='font-family: "Ubuntu Condensed"; color: #eee;'>app</span>
 
 <canvas id='canvas'>This page needs a working (HTML5) canvas.</canvas>

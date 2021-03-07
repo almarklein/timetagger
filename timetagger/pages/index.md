@@ -1,12 +1,28 @@
 % TimeTagger - Tag your time, get the insight
 % An open source time tracker that feels lightweight and has powerful reporting.
 
+<img src='timetagger_wd.svg' width='350px' />
+<h1 class='normalfont'><span style='border-bottom: 3px solid #DEAA22;'>Tag</span> your time,<br>get the <span style='border-bottom: 3px solid  #DEAA22;'>insight</span>.</h1>
 
-<h1>
-    <img src='timetagger192.png' width='48px' />
-    TimeTagger
-</h1>
-<h2 style='color:#222;'><span style='color:#07A82C;'>Tag</span> your time,<br>get the <span style='color:#07A82C;'>insight</span>.</h2>
+<style>
+main a.ctabutton {
+    display: inline-block;
+    border: none;
+    border-radius: 4px;
+    background: #fff;
+    color: #0F2C3E;
+    padding: 1em;
+    box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.4);
+    transition: box-shadow 0.1s;
+    font-size: 120%;
+    margin: 0.5em;
+}
+main a.ctabutton:hover {
+    text-decoration: none;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.4);
+}
+
+</style>
 
 <div>
     <a href='app/demo' class='ctabutton'>

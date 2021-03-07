@@ -15,10 +15,11 @@ else:
     BaseCanvas = object
 
 
-RECORD_AREA_ROUNDNESS = 5
-RECORD_ROUNDNESS = 5
-ANALYSIS_ROUNDNESS = 5
-BUTTON_RADIUS = 18
+SMALLER = 0.85
+BUTTON_ROUNDNESS = 4
+RECORD_AREA_ROUNDNESS = 4
+RECORD_ROUNDNESS = 6
+ANALYSIS_ROUNDNESS = 6
 
 PI = 3.141_592_653_589_793
 
@@ -29,31 +30,49 @@ FONT = {
     "size": 16,
     "condensed": "Ubuntu Condensed, Arial, sans-serif",
     "wide": "Ubuntu, Arial, sans-serif",
+    "mono": "Space Mono, Consolas, Monospace, Courier New",
     "default": "Ubuntu, Arial, sans-serif",
 }
+
+
+def init_module():
+    set_colors()
+    if window.matchMedia:
+        try:
+            window.matchMedia("(prefers-color-scheme: dark)").addEventListener(
+                "change", set_colors
+            )
+        except Exception:
+            pass  # e.g. Mobile Safari
+
+
+window.addEventListener("load", init_module)
 
 
 # Also see e.g. https://www.canva.com/colors/color-wheel/
 def set_colors():
 
-    # Unaffected by dark mode
-    COLORS.background3 = "rgb(22, 27, 34)"  # of the top
-    COLORS.header_text = "rgb(230, 230, 230)"
+    # Theme palette
+    COLORS.prim1_clr = "#0F2C3E"
+    COLORS.prim2_clr = "#A4B0B8"
+    COLORS.sec1_clr = "#E6E7E5"
+    COLORS.sec2_clr = "#F4F4F4"
+    COLORS.acc_clr = "#DEAA22"
 
-    COLORS.button_text = "rgb(230, 230, 230)"
-    COLORS.button_text_disabled = "#555"
-    COLORS.button_title = utils.color_from_hue(240, 0.6, 0.99)  # 0B99DD
-    COLORS.button_bg1 = "rgb(16, 16, 16)"
-    COLORS.button_bg2 = "rgb(55, 55, 55)"
+    # Unaffected by dark mode
+    COLORS.background3 = COLORS.prim1_clr
+    COLORS.header_text = COLORS.sec1_clr
+
+    COLORS.button_bg = "#fff"
+    COLORS.button_shadow = "rgba(0, 0, 0, 0.4)"
+    COLORS.button_text = COLORS.prim1_clr
+    COLORS.button_text_disabled = COLORS.prim2_clr
 
     # Grays chosen to work in both light and dark mode
     COLORS.tick_text = "rgba(130, 130, 130, 1)"
     COLORS.tick_stripe1 = "rgba(130, 130, 130, 0.6)"  # day
     COLORS.tick_stripe2 = "rgba(130, 130, 130, 0.3)"  # major
     COLORS.tick_stripe3 = "rgba(130, 130, 130, 0.08)"  # minor
-
-    COLORS.record_between = "rgba(130, 130, 130, 0.1)"
-    COLORS.record_subtle_stripes = "rgba(130, 130, 130, 0.025)"
 
     # Dark vs light mode
     mode = 0
@@ -72,50 +91,27 @@ def set_colors():
                 dark = True
 
     if dark:
-
         # App background (use rgba so the color can be re-used with different alpha)
         COLORS.background1 = "rgba(13, 17, 23, 1)"
         COLORS.background2 = "rgba(3, 7, 13, 1)"
 
         COLORS.record_bg = "rgb(50, 55, 62)"
         COLORS.record_text = "rgb(170, 170, 170)"
-        COLORS.record_text_tag = "rgb(240, 240, 240)"
-        COLORS.record_shadow = "rgba(0, 0, 0, 0.4)"
         COLORS.record_edge = "rgb(75, 75, 75)"
-        COLORS.overview_bg = "rgb(30, 35, 42)"
 
         window.document.body.classList.add("darkmode")
         window.document.body.style.background = "rgb(0, 0, 0)"
 
     else:
-
         # App background (use rgba so the color can be re-used with different alpha)
-        COLORS.background1 = "rgba(252, 252, 252, 1)"
-        COLORS.background2 = "rgba(255, 255, 255, 1)"
+        COLORS.background1 = "rgba(244, 244, 244, 1)"  # == #f4f4f4
+        COLORS.background2 = COLORS.sec1_clr
 
-        COLORS.record_bg = "rgb(240, 241, 245)"
-        COLORS.record_text = "rgb(75, 75, 75)"
-        COLORS.record_text_tag = "rgb(5, 5, 5)"
-        COLORS.record_shadow = "rgba(0, 0, 0, 0.4)"
-        COLORS.record_edge = "rgb(210, 217, 220)"
-        COLORS.overview_bg = "rgb(250, 250, 250)"
+        COLORS.record_bg = "#fafafa"
+        COLORS.record_text = COLORS.prim1_clr
+        COLORS.record_edge = COLORS.prim2_clr
 
         window.document.body.classList.remove("darkmode")
-        bg3, bg4 = "rgb(255, 255, 255)", "rgb(245, 245, 245)"
-        window.document.body.style.background = (
-            f"linear-gradient(to bottom,{bg3},{bg4})"
-        )
-
-
-# Init colors
-set_colors()
-if window.matchMedia:
-    try:
-        window.matchMedia("(prefers-color-scheme: dark)").addEventListener(
-            "change", set_colors
-        )
-    except Exception:
-        pass  # e.g. Mobile Safari
 
 
 class TimeTaggerCanvas(BaseCanvas):
@@ -178,7 +174,7 @@ class TimeTaggerCanvas(BaseCanvas):
         """Perform layout; set sizes of widgets. We can go all responsive here."""
 
         margin = 5
-        margin2 = 5  # self.w / 40  --> handle margin inside analytics widget
+        margin2 = 40  # self.w / 40  --> handle margin inside analytics widget
         space_to_divide = self.w - margin - margin2 - margin
         if space_to_divide >= 785:
             records_width = space_to_divide / 2
@@ -205,21 +201,16 @@ class TimeTaggerCanvas(BaseCanvas):
         x4 = self.grid_round(x4)
 
         y0 = 0
-        y1 = self.grid_round(60)
-        y2 = self.grid_round(104)
+        y1 = self.grid_round(110)
+        y2 = self.grid_round(140)
         y3 = self.grid_round(self.h - 15)
 
         self.widgets["TopWidget"].rect = x0, y0, x5, y1
         self.widgets["RecordsWidget"].rect = x1, y2, x2, y3
         self.widgets["AnalyticsWidget"].rect = x3, y2, x4, y3
 
-        # Allocate space for fading in/out
-        self.future_pixels = self.grid_round(60)
-        self.past_pixels = self.grid_round(20)
-
-        # Determine reference font size
-        FONT.size = Math.round(min(max(space_to_divide / 30, 12), 16))
-        FONT.default = FONT.condensed if self.w < 600 else FONT.wide
+        # Determine reference font
+        FONT.default = FONT.condensed if self.w < 450 else FONT.wide
 
     def on_draw(self, ctx):
 
@@ -239,14 +230,15 @@ class TimeTaggerCanvas(BaseCanvas):
         self.range.animation_update()
 
         # Clear / draw background
-        ctx.fillStyle = COLORS.background1
-        ctx.fillRect(0, 0, self.w, self.h)
+        ctx.clearRect(0, 0, self.w, self.h)
+        # ctx.fillStyle = COLORS.background1
+        # ctx.fillRect(0, 0, self.w, self.h)
 
         if window.store.get_auth and not window.store.get_auth():
             # We need to be logged in, but we are not
             ctx.textAlign = "center"
             ctx.textBaseline = "middle"
-            ctx.fillStyle = COLORS.tick_text
+            ctx.fillStyle = COLORS.prim1_clr
             text = "You need to login to use the TimeTagger app."
             utils.fit_font_size(ctx, self.w - 100, FONT.default, text, 30)
             ctx.fillText(text, self.w / 2, self.h / 2)
@@ -562,17 +554,17 @@ class TimeRange:
         t1, t2 = self.get_range()
         nsecs = t2 - t1
         if nsecs > 3 * 300 * 86400:
-            stat_period = "1Y"
+            stat_period = "1Y", "year"
         elif nsecs > 5 * 30 * 86400:
-            stat_period = "3M"  # a quarter
+            stat_period = "3M", "quarter"
         elif nsecs > 2.6 * 20 * 86400:
-            stat_period = "1M"
+            stat_period = "1M", "month"
         elif nsecs >= 10 * 86400:
-            stat_period = "1W"
+            stat_period = "1W", "week"
         elif nsecs > 4.1 * 1 * 86400:
-            stat_period = "1D"
+            stat_period = "1D", "day"
         else:
-            stat_period = None  # Don't draw stats, but records!
+            stat_period = None, ""  # Don't draw stats, but records!
         return stat_period
 
     def get_context_header(self):
@@ -676,6 +668,110 @@ class Widget:
     def on_draw(self, ctx):
         pass
 
+    def _draw_button(self, ctx, x, y, given_w, h, text, action, tt, options):
+        PSCRIPT_OVERLOAD = False  # noqa
+
+        # Set and collect options
+        opt = {
+            "font": FONT.default,
+            "ref": "topleft",
+            "color": COLORS.button_text,
+            "padding": 7,
+            "space": 5,
+            "body": True,
+        }
+        opt.update(options)
+
+        if text.toUpperCase:  # is string
+            texts = [text]
+        else:
+            texts = list(text)
+
+        # Measure texts
+        widths = []
+        fonts = []
+        for i in range(len(texts)):
+            text = texts[i]
+            if text.startswith("fas-"):
+                text = text[4:]
+                font = int(0.5 * h) + "px FontAwesome"
+            else:
+                font = int(0.5 * h) + "px " + opt.font
+            ctx.font = font
+            width = ctx.measureText(text).width
+            texts[i] = text
+            fonts.push(font)
+            widths.push(width)
+
+        # Determine width
+        needed_w = sum(widths) + 2 * opt.padding + opt.space * (len(widths) - 1)
+        if given_w:
+            w = given_w
+            # scale = min(1, given_w / needed_w)
+        else:
+            w = needed_w
+            # scale = 1
+
+        # Determine bounding box
+        if opt.ref.indexOf("right") >= 0:
+            x2 = x
+            x1 = x2 - w
+        elif opt.ref.indexOf("center") >= 0:
+            x1 = x - w / 2
+            x2 = x + w / 2
+        else:
+            x1 = x
+            x2 = x1 + w
+        #
+        if opt.ref.indexOf("bottom") >= 0:
+            y2 = y
+            y1 = y2 - h
+        elif opt.ref.indexOf("middle") >= 0:
+            y1 = y - h / 2
+            y2 = y + h / 2
+        else:
+            y1 = y
+            y2 = y1 + h
+
+        # Draw button body and its shadow
+        if opt.body:
+            ctx.fillStyle = COLORS.button_bg
+            rn = BUTTON_ROUNDNESS
+            for i in range(2):
+                dy = 2 if i == 0 else 0
+                ctx.beginPath()
+                ctx.arc(x1 + rn, y1 + dy + rn, rn, 1.0 * PI, 1.5 * PI)
+                ctx.arc(x2 - rn, y1 + dy + rn, rn, 1.5 * PI, 2.0 * PI)
+                ctx.arc(x2 - rn, y2 + dy - rn, rn, 0.0 * PI, 0.5 * PI)
+                ctx.arc(x1 + rn, y2 + dy - rn, rn, 0.5 * PI, 1.0 * PI)
+                ctx.closePath()
+                if i == 0:
+                    ctx.shadowBlur = 3
+                    ctx.shadowColor = COLORS.button_shadow
+                ctx.fill()
+                ctx.shadowBlur = 0
+
+        # Register the button and tooltip
+        ob = {"button": True, "action": action}
+        self._picker.register(x1, y1, x2, y2, ob)
+        if tt:
+            self._canvas.register_tooltip(x1, y1, x2, y2, tt, "below")
+
+        # Get starting x
+        x = x1 + opt.padding + 0.5 * (w - needed_w)
+
+        # Draw the text on top
+        ctx.textBaseline = "middle"
+        ctx.textAlign = "left"
+        ctx.fillStyle = opt.color
+        for i in range(len(texts)):
+            text, width, font = texts[i], widths[i], fonts[i]
+            ctx.font = font
+            ctx.fillText(text, x, 0.5 * (y1 + y2))
+            x += width + opt.space
+
+        return w
+
 
 class TopWidget(Widget):
     """Widget with menu, buttons, and time header."""
@@ -686,7 +782,6 @@ class TopWidget(Widget):
         self._current_scale = {}
         self._sync_feedback_xy = 0, 0
         window.setInterval(self._draw_sync_feedback_callback, 100)
-        self._top_offset = 20
 
         # For navigation with keys. Listen to canvas events, and window events (in
         # case canvas does not have focus), but don't listen for events from dialogs.
@@ -698,33 +793,155 @@ class TopWidget(Widget):
         self._picker.clear()
         x1, y1, x2, y2 = self.rect
 
-        ctx.fillStyle = COLORS.background3
-        ctx.fillRect(x1, y1, x2 - x1, y2 - y1)
+        y4 = y2  # noqa - bottom
+        y2 = y1 + 50
+        y3 = y2 + 12
 
-        header_text_width = (x2 - x1) / 3
+        h = 36
+
+        # Dark background with accent at the bottom
+        ctx.beginPath()
+        n = 200
+        ctx.moveTo(x2 + 50, y2)
+        ctx.lineTo(x2 + 50, y1 - 50)
+        ctx.lineTo(x2, y1 - 50)
+        ctx.lineTo(x1, y1 - 50)
+        ctx.lineTo(x1 - 50, y1 - 50)
+        ctx.lineTo(x1 - 50, y2)
+        for i in range(n + 1):
+            x = x1 + i * (x2 - x1) / n
+            y = y2 + 4 * Math.cos(PI * 2 * i / n + 0.0)
+            ctx.lineTo(x, y)
+        ctx.closePath()
+
+        ctx.fillStyle = COLORS.background3
+        ctx.strokeStyle = COLORS.acc_clr
+        ctx.lineWidth = 5
+        ctx.fill()
+        ctx.stroke()
+
+        # ctx.fillRect(x1, y1, x2 - x1, y2 - y1)
+        # ctx.fillStyle = COLORS.button_text
+        # ctx.fillRect(x1, y2 - 8, x2 - x1, 4)
+        # ctx.fillStyle = COLORS.acc_clr
+        # ctx.fillRect(x1, y2 - 4, x2 - x1, 4)
+
         self._margin = margin = self._canvas.grid_round(max(2, (x2 - x1) / 30))
         x = x1 + 4
 
+        # Draw icon
+        iconsize = (x2 - x1) / 22
+        iconsize = 45  # max(16, min(45, iconsize))
+        if iconsize:
+            ctx.drawImage(
+                window.document.getElementById("ttlogo_sl"),
+                x2 - iconsize,
+                y1 + 2,
+                iconsize,
+                iconsize,
+            )
+
         # Always draw the menu button
-        x += self._draw_menu_button(ctx, x, y1, x2, y2)
+        self._draw_menu_button(ctx, x, y1, x2, y2)
+
+        # If menu-only, also draw login, then exit
+        if menu_only:
+            self._draw_button(
+                ctx,
+                0.5 * (x1 + x2),
+                y3,
+                None,
+                h,
+                "Login",
+                "login",
+                "",
+                {"ref": "topcenter"},
+            )
+            return
+
+        # Draw some more inside dark banner
+        self._draw_header_text(ctx, 60, y1, x2 - 60, y2 - 5)
+
+        # Draw buttons below the dark banner
+        # We go from the center to the sides
+        xc = 0.5 * (x1 + x2)
+
+        # Draw arrows
+        ha = 0.6 * h
+        yc = y3 + h / 2
+        dx = self._draw_button(
+            ctx,
+            xc,
+            yc - 1.5,
+            h,
+            ha,
+            "fas-\uf077",
+            "nav_backward",
+            "Step backward [↑/pageUp]",
+            {"ref": "bottomcenter"},
+        )
+        dx = self._draw_button(
+            ctx,
+            xc,
+            yc + 1.5,
+            h,
+            ha,
+            "fas-\uf078",
+            "nav_forward",
+            "Step forward [↓/pageDown]",
+            {"ref": "topcenter"},
+        )
+
+        # -- move to the left
+
+        x = xc - dx / 2 - 3
+
+        now_scale, now_clr = self._get_now_scale()
+        today_w = self._draw_button(
+            ctx,
+            x,
+            y3,
+            None,
+            h,
+            "Today",
+            "nav_snap_now" + now_scale,
+            "Snap to now [Home]",
+            {"ref": "topright", "color": now_clr, "font": FONT.condensed},
+        )
+
+        x -= today_w + margin
+
+        self._draw_tracking_buttons(ctx, x, y3, h)
+
+        # -- move to the right
+
+        x = xc + dx / 2 + 3
+
+        x += self._draw_button(
+            ctx,
+            x,
+            y3,
+            today_w,
+            h,
+            ["fas-\uf073", "fas-\uf0d7"],
+            "nav_menu",
+            "Select time range [t]",
+            {"ref": "topleft"},
+        )
+
         x += margin
 
-        if menu_only:
-            # If menu-only, also draw login
-            x += self._draw_button(ctx, x, y1, "login", "login", "Login")
-
-        else:
-            # Otherwise ...
-            x += self._draw_tracking_buttons(ctx, x, y1, x2, y2)
-            x += margin
-
-            x3 = x2 - header_text_width - 2 * BUTTON_RADIUS - margin
-            x += self._draw_nav_buttons(ctx, x, y1, x3, y2)
-            x += margin
-
-            x += self._draw_report_button(ctx, x, y1, x2, y2)
-
-            self._draw_header_text(ctx, x, y1, x2, y2)
+        x += self._draw_button(
+            ctx,
+            x,
+            y3,
+            None,
+            h,
+            ["fas-\uf15c", "Report"],
+            "report",
+            "Show report [r]",
+            {"ref": "topleft", "font": FONT.condensed},
+        )
 
     def _draw_menu_button(self, ctx, x1, y1, x2, y2):
 
@@ -736,17 +953,27 @@ class TopWidget(Widget):
         else:
             text = ""
 
-        # Draw buttons
-        x = x1
-        x += self._draw_sync_feedback(ctx, x, y1, x2, y2)
-        x += self._draw_button(ctx, x, y1, "fas-\uf0c9", "menu", "Show menu")
+        dx = self._draw_sync_feedback(ctx, 4, 4)
+
+        x = x1 + dx + 24
+
+        opt = {
+            "body": False,
+            "padding": 4,
+            "ref": "centermiddle",
+            "color": COLORS.header_text,
+        }
+        self._draw_button(
+            ctx, x, y1 + 18, None, 48, "fas-\uf0c9", "menu", "Show menu", opt
+        )
 
         # Draw title
-        ctx.textAlign = "center"
-        ctx.textBaseline = "top"
-        ctx.font = "12px " + FONT.condensed
-        ctx.fillStyle = COLORS.button_title
-        ctx.fillText(text, (x1 + x) / 2, y1 + 5)
+        if text:
+            ctx.textAlign = "center"
+            ctx.textBaseline = "top"
+            ctx.font = "12px " + FONT.default
+            ctx.fillStyle = COLORS.acc_clr
+            ctx.fillText(text, x, 34)
 
         return x - x1
 
@@ -760,46 +987,38 @@ class TopWidget(Widget):
     def _draw_sync_feedback_work(self, register=True):
         PSCRIPT_OVERLOAD = False  # noqa
 
-        w, h = 10, BUTTON_RADIUS * 2
-
         if window.document.hidden:
-            return w
+            return
 
         ctx = self._canvas.node.getContext("2d")
-
-        x1, y1 = self._sync_feedback_xy
-        x, y = x1, y1 + self._top_offset
+        x, y = self._sync_feedback_xy
 
         # Get factor 0..1
         factor = window.store.sync_time
         factor = max(0, (factor[1] - dt.now()) / (factor[1] - factor[0] + 0.0001))
         factor = max(0, 1 - factor)
 
-        rn = 2
+        radius = 7
+        ctx.lineWidth = 2
 
-        # Draw container
+        # Clear bg
         ctx.beginPath()
-        ctx.arc(x + rn, y + rn, rn, 1.0 * PI, 1.5 * PI)
-        ctx.arc(x + w - rn, y + rn, rn, 1.5 * PI, 2.0 * PI)
-        ctx.arc(x + w - rn, y + h - rn, rn, 0.0 * PI, 0.5 * PI)
-        ctx.arc(x + rn, y + h - rn, rn, 0.5 * PI, 1.0 * PI)
-        ctx.closePath()
+        ctx.arc(x + radius, y + radius, radius + ctx.lineWidth, 0, 2 * PI)
         ctx.fillStyle = COLORS.background3
         ctx.fill()
-        ctx.strokeStyle = COLORS.button_bg1
-        ctx.lineWidth = self._canvas.grid_round(1)
+
+        # Outline
+        ctx.beginPath()
+        ctx.arc(x + radius, y + radius, radius, 0, 2 * PI)
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.3)"
         ctx.stroke()
 
-        # Draw progress
-        yo = (h - 2 * rn) * (factor)
+        # Progress
+        ref_angle = -0.5 * PI
         ctx.beginPath()
-        ctx.arc(x + rn, y + rn, rn, 1.0 * PI, 1.5 * PI)
-        ctx.arc(x + w - rn, y + rn, rn, 1.5 * PI, 2.0 * PI)
-        ctx.arc(x + w - rn, y + yo - rn, rn, 0.0 * PI, 0.5 * PI)
-        ctx.arc(x + rn, y + yo - rn, rn, 0.5 * PI, 1.0 * PI)
-        ctx.closePath()
-        ctx.fillStyle = COLORS.button_bg2
-        ctx.fill()
+        ctx.arc(x + radius, y + radius, radius, ref_angle, ref_angle + factor * 2 * PI)
+        ctx.strokeStyle = COLORS.prim2_clr
+        ctx.stroke()
 
         # Draw indicator icon - rotating when syncing
         M = dict(
@@ -814,26 +1033,27 @@ class TopWidget(Widget):
         if text:
             ctx.save()
             try:
-                ctx.translate(x + w / 2, y + h / 2)
+                ctx.translate(x + radius, y + radius)
                 if state == "sync":
-                    ctx.rotate(((0.5 * time()) % 1) * 2 * Math.PI)
-                ctx.font = int(0.25 * h) + "px FontAwesome"
+                    ctx.rotate(((0.5 * time()) % 1) * 2 * PI)
+                ctx.font = (radius * 1.2) + "px FontAwesome"
                 ctx.textBaseline = "middle"
                 ctx.textAlign = "center"
-                ctx.fillStyle = COLORS.button_text
+                ctx.fillStyle = COLORS.prim2_clr
                 ctx.fillText(text, 0, 0)
             finally:
                 ctx.restore()
 
         # Register tiny sync button
         if register:
-            cm = 1
             ob = {"button": True, "action": "refresh", "help": ""}
-            self._picker.register(x - cm, y - cm, x + w + cm, y + h + cm, ob)
+            self._picker.register(
+                x - 1, y - 1, x + radius * 2 + 1, y + radius * 2 + 1, ob
+            )
 
-        return w
+        return 2 * radius
 
-    def _draw_tracking_buttons(self, ctx, x1, y1, x2, y2):
+    def _draw_tracking_buttons(self, ctx, x, y, h):
         PSCRIPT_OVERLOAD = False  # noqa
 
         now = self._canvas.now()
@@ -842,7 +1062,7 @@ class TopWidget(Widget):
         stop_tt = "Stop recording [x]"
 
         # Define stop summary
-        running_summary = "Record"
+        running_summary = ""
         records = window.store.records.get_running_records()
         has_running = False
         if len(records) > 0:
@@ -856,34 +1076,58 @@ class TopWidget(Widget):
                 else:
                     running_summary = "Timer running"
 
-        x = x1
-
-        # Start button
-        x += self._draw_button(ctx, x, y1, "fas-\uf04b", "record_start", start_tt)
-        x2 = x
+        x0 = x
 
         # Stop button
         if has_running:
-            x += self._draw_button(ctx, x, y1, "fas-\uf04d", "record_stopall", stop_tt)
-            x2 = x
+            dx = self._draw_button(
+                ctx,
+                x,
+                y,
+                h,
+                h,
+                "fas-\uf04d",
+                "record_stopall",
+                stop_tt,
+                {"ref": "topright", "font": FONT.condensed},
+            )
+            x -= dx + 3
+            dx = self._draw_button(
+                ctx,
+                x,
+                y,
+                h,
+                h,
+                "fas-\uf04b",
+                "record_start",
+                start_tt,
+                {"ref": "topright", "font": FONT.condensed},
+            )
+            x -= dx
         else:
-            x += x - x1
+            dx = self._draw_button(
+                ctx,
+                x,
+                y,
+                None,
+                h,
+                ["fas-\uf04b", "Record"],
+                "record_start",
+                start_tt,
+                {"ref": "topright", "font": FONT.condensed},
+            )
+            x -= dx
 
         # Draw summary text
         ctx.textBaseline = "top"
-        ctx.font = "12px " + FONT.condensed
-        ctx.fillStyle = COLORS.button_title
-        #
-        if True:
-            ctx.textAlign = "center"
-            ctx.fillText(running_summary, (x1 + x2) / 2, y1 + 5)
-        else:
-            ctx.textAlign = "center"
-            ctx.fillText("Record", (x1 + x) / 2, y1 + 5)
+        ctx.textAlign = "center"
+        ctx.font = "12px " + FONT.default
+        ctx.fillStyle = COLORS.prim2_clr
+        ctx.fillText(running_summary, (x0 + x) / 2, y + h + 5)
 
-        return x - x1
+        return x0 - x
 
-    def _draw_nav_buttons(self, ctx, x1, y1, x2, y2):
+    def _get_now_scale(self, ctx):
 
         t1, t2 = self._canvas.range.get_range()  # get_snap_range()
         nsecs = t2 - t1
@@ -902,7 +1146,7 @@ class TopWidget(Widget):
             now_scale = "1Y"
 
         # Are we currently on one of the reference scales?
-        now_clr = None
+        now_clr = COLORS.button_text
         if len(now_scale):
             t1_now = dt.floor(now, now_scale)
             if t1 == t1_now and t2 == dt.add(t1_now, now_scale):
@@ -948,200 +1192,31 @@ class TopWidget(Widget):
         self._current_scale["in"] = zoom_in_scale
         self._current_scale["out"] = zoom_out_scale
 
-        # Define buttons and display priority
-        # Alt home/day icons: uf783 uf015 uf185
-        buttons = [
-            (
-                8,
-                "Today",
-                "nav_snap_now" + now_scale,
-                "Snap to now [Home]",
-                now_clr,
-                BUTTON_RADIUS * 2.4,
-            ),
-            (7, "fas-\uf077", "nav_backward", "Step backward [↑/pageUp]"),
-            (7, "fas-\uf078", "nav_forward", "Step forward [↓/pageDown]"),
-            (
-                9,
-                "fas-\uf073 \uf0d7",
-                "nav_menu",
-                "Select time range [t]",
-                window.undefined,
-                BUTTON_RADIUS * 2.4,
-            ),
-        ]
-
-        skip = 2 * BUTTON_RADIUS
-        avail_size = x2 - x1
-
-        # Determine what buttons can be shown
-        ref_priority = 0
-        for ref_priority in range(0, 10):
-            sizes = [(skip if x[2] else x[1]) for x in buttons if x[0] >= ref_priority]
-            if sum(sizes) <= avail_size:
-                break
-        ref_priority = min(9, ref_priority)
-
-        # Draw buttons
-        x = x1
-        for i in range(len(buttons)):
-            priority, text, action, help, tcolor, w = buttons[i]
-            tcolor = tcolor or None
-            if priority >= ref_priority:
-                if action == "nav_backward":
-                    self._draw_button(
-                        ctx, x, y1, text, action, help, tcolor, w, BUTTON_RADIUS
-                    )
-                elif action == "nav_forward":
-                    x += self._draw_button(
-                        ctx,
-                        x,
-                        y1 + BUTTON_RADIUS,
-                        text,
-                        action,
-                        help,
-                        tcolor,
-                        w,
-                        BUTTON_RADIUS,
-                    )
-                else:
-                    x += self._draw_button(ctx, x, y1, text, action, help, tcolor, w)
-
-        # Draw summary text
-        ctx.textBaseline = "top"
-        ctx.font = "12px " + FONT.condensed
-        ctx.fillStyle = COLORS.button_title
-        ctx.textAlign = "center"
-        ctx.fillText("Navigate", (x1 + x) / 2, y1 + 5, x - x1)
-
-        return x - x1  # return the width
-
-    def _draw_report_button(self, ctx, x1, y1, x2, y2):
-
-        x = x1
-        x += self._draw_button(ctx, x1, y1, "fas-\uf15c", "report", "Show report [r]")
-
-        ctx.textAlign = "center"
-        ctx.textBaseline = "top"
-        ctx.font = "12px " + FONT.condensed
-        ctx.fillStyle = COLORS.button_title
-        ctx.fillText("Report", (x1 + x) / 2, y1 + 5)
-
-        return x - x1
+        return now_scale, now_clr
 
     def _draw_header_text(self, ctx, x1, y1, x2, y2):
 
         header = self._canvas.range.get_context_header() + " "  # margin
-        t1, t2 = self._canvas.range.get_range()
 
-        x3 = x1 + (x2 - x1) / 3
+        x3 = x1
         x4 = x2
-        tick_widget_in_use = self._canvas.widgets.RecordsWidget._pointer_pos  # noqa
+        x5 = (x3 + x4) / 2
 
-        if True:  # not tick_widget_in_use:
-            # Draw header
-            ctx.fillStyle = COLORS.header_text
-            ctx.textBaseline = "top"
-            ctx.textAlign = "right"
-            #
-            size = utils.fit_font_size(ctx, x4 - x3, FONT.default, header, 40)
-            if size < 30 and "  " in header:
-                # Use two lines
-                text1, text2 = header.split("  ", 1)
-                size = utils.fit_font_size(ctx, x4 - x3, FONT.default, text2, 25)
-                ctx.fillText(text1 + " ", x4, y1 + 5)
-                ctx.fillText(text2, x4, y1 + 5 + 30)
-            else:
-                # Use one
-                ctx.fillText(header, x4, y1 + 5)
-        else:
-            # Draw more precise from-to
-            ctx.fillStyle = COLORS.header_text
-            ctx.textBaseline = "top"
-            ctx.textAlign = "left"
-            #
-            s1 = dt.time2localstr(t1) + "  to"
-            s2 = dt.time2localstr(t2)
-            if x4 - x3 > 300:  # PC
-                size = utils.fit_font_size(ctx, x4 - x3, FONT.default, s1, 25)
-                ctx.fillText(s1, x3, y1 + 5)
-                ctx.fillText(s2, x3, y1 + 5 + size + 2)
-            else:  # mobile
-                size = utils.fit_font_size(ctx, x4 - x3, FONT.default, s1, 20)
-                ctx.fillText(s1, x3, y1 + 15)
-                ctx.fillText(s2, x3, y1 + 15 + size + 2)
-
-    def _draw_button(
-        self,
-        ctx,
-        x1,
-        y1,
-        text,
-        action,
-        help,
-        tcolor=None,
-        w=BUTTON_RADIUS * 2,
-        h=BUTTON_RADIUS * 2,
-    ):
-        PSCRIPT_OVERLOAD = False  # noqa
-        # Register picking for this button
-        ob = {"button": True, "action": action, "help": help}
-        cm = 2  # click margin
-        x, y = x1, y1 + self._top_offset
-        self._picker.register(x - cm, y - cm, x + w + cm, y + h + cm, ob)
-        self._canvas.register_tooltip(x, y, x + w, y + h, help, "below")
-        # Draw it
-        return self._draw_button_noreg(ctx, x1, y1, text, action, help, tcolor, w, h)
-
-    def _draw_button_noreg(
-        self,
-        ctx,
-        x1,
-        y1,
-        text,
-        action,
-        help,
-        tcolor=None,
-        w=BUTTON_RADIUS * 2,
-        h=BUTTON_RADIUS * 2,
-    ):
-        PSCRIPT_OVERLOAD = False  # noqa
-        tcolor = tcolor or COLORS.button_text
-        bgcolor1 = COLORS.button_bg1
-        bgcolor2 = COLORS.button_bg2
-        x, y = x1, y1 + self._top_offset
-        # Prepare context
-        ctx.textBaseline = "middle"
+        # Draw header
+        ctx.fillStyle = COLORS.header_text
+        ctx.textBaseline = "top"
         ctx.textAlign = "center"
-        grd = ctx.createLinearGradient(x, y, x, y + h)
-        grd.addColorStop(0.0, bgcolor2)
-        grd.addColorStop(1.0, bgcolor1)
-        ctx.fillStyle = grd
-        ctx.strokeStyle = bgcolor1
-        ctx.lineWidth = self._canvas.grid_round(1)
-        # Draw button bg
-        ctx.beginPath()
-        # ctx.rect(x, y, w, h)
-        rn = 2
-        ctx.arc(x + rn, y + rn, rn, 1.0 * PI, 1.5 * PI)
-        ctx.arc(x + w - rn, y + rn, rn, 1.5 * PI, 2.0 * PI)
-        ctx.arc(x + w - rn, y + h - rn, rn, 0.0 * PI, 0.5 * PI)
-        ctx.arc(x + rn, y + h - rn, rn, 0.5 * PI, 1.0 * PI)
-        ctx.closePath()
-        ctx.fill()
-        ctx.stroke()
-        # Draw content
-        ctx.fillStyle = tcolor
-        if text.startswith("fas-"):
-            ctx.font = "bold " + int(0.5 * h) + "px FontAwesome"
-            ctx.fillText(text[4:], x + w / 2, y + h / 2)
+        #
+        size = utils.fit_font_size(ctx, x4 - x3, FONT.default, header, 36)
+        if size < 20 and "  " in header:
+            # Use two lines
+            text1, text2 = header.split("  ", 1)
+            size = utils.fit_font_size(ctx, x4 - x3, FONT.default, text2, 20)
+            ctx.fillText(text1 + " ", x5, y1 + 3)
+            ctx.fillText(text2, x5, y1 + 5 + 18)
         else:
-            if len(text) > 1:
-                utils.fit_font_size(ctx, w * 0.80, FONT.condensed, text, 1.25 * h)
-            else:
-                ctx.font = int(h) + "px " + FONT.condensed
-            ctx.fillText(text, x + w / 2, y + h / 2)
-        return w
+            # Use one
+            ctx.fillText(header, x5, y1 + 3)
 
     def on_pointer(self, ev):
         x, y = ev.pos[0], ev.pos[1]
@@ -1316,7 +1391,7 @@ class RecordsWidget(Widget):
             ctx.fill()
             ctx.textAlign = "center"
             ctx.textBaseline = "middle"
-            ctx.fillStyle = COLORS.tick_text
+            ctx.fillStyle = COLORS.prim1_clr
             ctx.font = FONT.size + "px " + FONT.default
             for i, c in enumerate("Records"):
                 ctx.fillText(c, (x3 + x4) / 2, (y3 + y4) / 2 + (i - 3) * 18)
@@ -1332,21 +1407,31 @@ class RecordsWidget(Widget):
         ctx.fillStyle = COLORS.background2
         ctx.fillRect(x3, y1, x4 - x3, y2 - y1)
 
+        self._help_text = ""
+
         self._draw_ticks(ctx, x3, y1, x4, y2)
-        self._draw_shadow(ctx, x3, y1, x4, y2)
+        self._draw_edge(ctx, x3, y1, x4, y2)
         self._draw_record_area(ctx, x3, x4, x2, y1, y2)
-        self._draw_top_and_bottom_cover(ctx, x1, x3, x4, x2, 0, y1, 0.7)
+        ctx.clearRect(0, 0, self._canvas.w, y1 - 33)
+        self._draw_top_and_bottom_cover(ctx, x1, x3, x4, x2, y1 - 50, y1, 0.333)
         self._draw_top_and_bottom_cover(ctx, x1, x3, x4, x2, y2, self._canvas.h, -0.02)
 
-        # # Draw title text
-        # text1 = "Timeline"
-        # ctx.textAlign = "left"
-        # ctx.textBaseline = "bottom"
-        # ctx.fillStyle = COLORS.tick_stripe1
-        # ctx.font = (FONT.size * 1.4) + "px " + FONT.default
-        # ctx.fillText(text1, x4 + 25, y1 - 8)
+        # Draw title text
+        if self._canvas.w > 700:
+            text1 = "Timeline"
+            text2 = self._help_text
+            ctx.textAlign = "left"
+            ctx.textBaseline = "top"
+            #
+            ctx.font = "bold " + (FONT.size * 1.4) + "px " + FONT.mono
+            ctx.fillStyle = COLORS.prim2_clr
+            ctx.fillText(text1, 10, 60)
+            #
+            ctx.font = (FONT.size * 0.9) + "px " + FONT.default
+            ctx.fillStyle = COLORS.prim2_clr
+            ctx.fillText(text2, 10, 85)
 
-    def _draw_shadow(self, ctx, x1, y1, x2, y2):
+    def _draw_edge(self, ctx, x1, y1, x2, y2):
         def drawstrokerect(lw):
             rn = RECORD_AREA_ROUNDNESS + lw
             ctx.beginPath()
@@ -1357,38 +1442,39 @@ class RecordsWidget(Widget):
             ctx.closePath()
             ctx.stroke()
 
-        lw = 1.2
+        lw = 3
         ctx.lineWidth = lw
         ctx.strokeStyle = COLORS.background1
         drawstrokerect(1.0 * lw)
-        ctx.strokeStyle = COLORS.tick_stripe2
+        ctx.strokeStyle = COLORS.prim1_clr
         drawstrokerect(0.0 * lw)
 
     def _draw_top_and_bottom_cover(self, ctx, x1, x2, x3, x4, y1, y2, stop):
 
         grd1 = ctx.createLinearGradient(x1, y1, x1, y2)
         grd2 = ctx.createLinearGradient(x1, y1, x1, y2)
+        # grd3 = ctx.createLinearGradient(x1, y1, x1, y2)
         color1 = COLORS.background1
-        color2 = COLORS.background1.replace("1)", "0.0)")
-        color3 = COLORS.background1.replace("1)", "0.7)")
+        color2 = color1.replace("1)", "0.0)")
+        color4 = color1.replace("1)", "0.7)")
         if stop > 0:
-            grd1.addColorStop(0.0, color1)
+            grd1.addColorStop(0.0, color2)
             grd1.addColorStop(stop, color1)
             grd1.addColorStop(1.0, color2)
-            grd2.addColorStop(0.0, color1)
+            grd2.addColorStop(0.0, color2)
             grd2.addColorStop(stop, color1)
-            grd2.addColorStop(1.0, color3)
+            grd2.addColorStop(1.0, color4)
         else:
             grd1.addColorStop(0.0, color2)
             grd1.addColorStop(1 + stop, color1)
             grd1.addColorStop(1.0, color1)
-            grd2.addColorStop(0.0, color3)
+            grd2.addColorStop(0.0, color4)
             grd2.addColorStop(1 + stop, color1)
             grd2.addColorStop(1.0, color1)
         ctx.fillStyle = grd1
-        ctx.fillRect(x1, y1, x2 - x1, y2 - y1)
+        ctx.fillRect(0, y1, self._canvas.w, y2 - y1)
         ctx.fillStyle = grd2
-        ctx.fillRect(x2, y1, x4 - x2, y2 - y1)
+        ctx.fillRect(x2, y1, x3 - x2, y2 - y1 - 2)
 
     def _draw_ticks(self, ctx, x1, y1, x2, y2):
         PSCRIPT_OVERLOAD = False  # noqa
@@ -1403,7 +1489,7 @@ class RecordsWidget(Widget):
 
         # Prepare for drawing ticks
         ctx.fillStyle = COLORS.tick_text
-        ctx.font = FONT.size + "px " + FONT.condensed
+        ctx.font = (SMALLER * FONT.size) + "px " + FONT.default
         ctx.textBaseline = "middle"
         ctx.textAlign = "right"
 
@@ -1439,7 +1525,7 @@ class RecordsWidget(Widget):
                     text += " " + year
             elif granularity == "YY":
                 text = str(year)
-            ctx.fillText(text, x1 - 3, pos + y1, x1 - 3)
+            ctx.fillText(text, x1 - 4, pos + y1, x1 - 3)
 
         # Draw tick stripes
         ctx.strokeStyle = COLORS.tick_stripe2
@@ -1479,7 +1565,7 @@ class RecordsWidget(Widget):
         npixels = y2 - y1
         nsecs = t2 - t1
         pps = npixels / nsecs
-        stat_period = self._canvas.range.get_stat_period()
+        stat_period, stat_name = self._canvas.range.get_stat_period()
 
         # Draw records or stats
         if stat_period is None:
@@ -1498,6 +1584,7 @@ class RecordsWidget(Widget):
                 t3 = dt.add(t3, "1D")
             ctx.stroke()
         else:
+            self._help_text = "click on a " + stat_name + " to zoom"
             self._can_interact_with_records = False
             t3 = dt.floor(t1, stat_period)
             while t3 < t2:
@@ -1516,11 +1603,22 @@ class RecordsWidget(Widget):
                 ctx.lineTo(x3, y3)
                 ctx.stroke()
                 t3 = t4
+            # Put border around
+            rn = RECORD_AREA_ROUNDNESS
+            ctx.beginPath()
+            ctx.arc(x3 - rn, y1 + rn, rn, 1.5 * PI, 2.0 * PI)
+            ctx.arc(x3 - rn, y2 - rn, rn, 0.0 * PI, 0.5 * PI)
+            ctx.arc(x2 + rn, y2 - rn, rn, 0.5 * PI, 1.0 * PI)
+            ctx.arc(x2 + rn, y1 + rn, rn, 1.0 * PI, 1.5 * PI)
+            ctx.closePath()
+            ctx.lineWidth = 3
+            ctx.strokeStyle = COLORS.prim1_clr
+            ctx.stroke()
 
         # Draw "now" - also if drawing stats
         t = self._canvas.now()
         y = y1 + (t - t1) * pps
-        ctx.strokeStyle = COLORS.button_title
+        ctx.strokeStyle = COLORS.prim1_clr
         ctx.lineWidth = 3  # Pretty thick so it sticks over other edges like week bounds
         ctx.setLineDash([4, 4])
         ctx.lineDashOffset = t % 8
@@ -1534,7 +1632,7 @@ class RecordsWidget(Widget):
     def _draw_records(self, ctx, x1, x2, x3, y1, y2):
         PSCRIPT_OVERLOAD = False  # noqa
 
-        y0, y3 = 0, self._canvas.h
+        y0, y3 = y1 - 50, self._canvas.h
         t1, t2 = self._canvas.range.get_range()
         now = self._canvas.now()
 
@@ -1554,6 +1652,9 @@ class RecordsWidget(Widget):
 
         # Select all records in this range. Sort so that smaller records are drawn on top.
         records = window.store.records.get_records(t1, t2).values()
+
+        if len(records) > 0:
+            self._help_text = "click a record to edit it"
 
         # Sort records by size, so records cannot be completely overlapped by another
         records.sort(key=lambda r: r.t1 - (now if (r.t1 == r.t2) else r.t2))
@@ -1720,10 +1821,6 @@ class RecordsWidget(Widget):
         #     if record.key == self._selected_record[0].key:
         #         selected_in_timeline = True
 
-        ctx.font = FONT.size + "px " + FONT.condensed  # or FONT.default?
-        ctx.textBaseline = "middle"
-        faded_clr = COLORS.tick_stripe1
-
         # Get position in pixels
         ry1 = y0 + npixels * (record.t1 - t1) / nsecs
         ry2 = y0 + npixels * (t2_or_now - t1) / nsecs
@@ -1740,18 +1837,6 @@ class RecordsWidget(Widget):
         rne = min(rn, 0.5 * (ry2 - ry1))  # for in timeline
 
         timeline_only = ry2 < y1 or ry1 > y2
-
-        # # Draw shadow
-        # ctx.fillStyle = COLORS.record_bg
-        # ctx.shadowColor = COLORS.record_shadow
-        # ctx.beginPath()
-        # ctx.moveTo(x5, ty1 + rn)
-        # ctx.lineTo(x5, ty2)
-        # ctx.lineTo(x6 - rn, ty2)
-        # ctx.closePath()
-        # ctx.shadowBlur = rn
-        # ctx.fill()
-        # ctx.shadowBlur = 0
 
         # Draw record representation
         if timeline_only:
@@ -1775,7 +1860,7 @@ class RecordsWidget(Widget):
         ctx.fillStyle = COLORS.record_bg
         ctx.fill()
         ctx.strokeStyle = COLORS.record_edge
-        ctx.lineWidth = 1.5
+        ctx.lineWidth = 1.2
         ctx.stroke()
 
         # Running records have a small outset
@@ -1791,7 +1876,7 @@ class RecordsWidget(Widget):
             ctx.fill()
             ctx.stroke()
             if int(now) % 2 == 1:
-                ctx.fillStyle = COLORS.tick_text
+                ctx.fillStyle = COLORS.prim1_clr
                 ctx.beginPath()
                 ctx.arc(0.5 * (x2 + x3), ry2 + outset / 2, 4, 0, 2 * PI)
                 ctx.fill()
@@ -1814,7 +1899,7 @@ class RecordsWidget(Widget):
         # The marker that indicates whether the record has been modified
         if record.st == 0:
             ctx.textAlign = "center"
-            ctx.fillStyle = COLORS.tick_text
+            ctx.fillStyle = COLORS.record_edge
             ctx.fillText("+", 0.5 * (x2 + x3), 0.5 * (ry1 + ry2))
 
         # Make the timeline-part clickable - the pick region is increased if needed
@@ -1833,6 +1918,10 @@ class RecordsWidget(Widget):
             return
 
         text_ypos = ty1 + 0.55 * (ty2 - ty1)
+
+        ctx.font = (SMALLER * FONT.size) + "px " + FONT.default
+        ctx.textBaseline = "middle"
+        faded_clr = COLORS.prim2_clr
 
         # Draw duration text
         duration = record.t2 - record.t1
@@ -1853,16 +1942,16 @@ class RecordsWidget(Widget):
             ctx.fillText(duration_sec, x5 + 30 + 1, text_ypos)
 
         # Show desciption
+        ctx.font = (SMALLER * FONT.size) + "px " + FONT.default
         ctx.textAlign = "left"
         max_x = x6 - 4
         space_width = ctx.measureText(" ").width + 2
         x = x5 + 55
         for part in ds_parts:
+            ctx.fillStyle = COLORS.record_text if tags_selected else faded_clr
             if part.startswith("#"):
-                ctx.fillStyle = COLORS.record_text_tag if tags_selected else faded_clr
                 texts = [part]
             else:
-                ctx.fillStyle = COLORS.record_text if tags_selected else faded_clr
                 texts = part.split(" ")
             for text in texts:
                 if len(text) == 0:
@@ -1899,11 +1988,6 @@ class RecordsWidget(Widget):
         x3 = x4
         x5 = x4 + 25  # noqa
 
-        # Prepare styles
-        body_style = COLORS.record_bg
-        border_style = COLORS.record_text
-        text_style = COLORS.tick_text
-
         # Get position in pixels
         ry1 = y0 + npixels * (record.t1 - t1) / nsecs
         ry2 = y0 + npixels * (record.t2 - t1) / nsecs
@@ -1914,11 +1998,9 @@ class RecordsWidget(Widget):
 
         # Prepare for drawing
         ctx.lineWidth = 1
-        ctx.fillStyle = body_style
-        ctx.strokeStyle = border_style
         ctx.textBaseline = "middle"
         ctx.textAlign = "center"
-        ctx.font = (FONT.size - 2) + "px " + FONT.condensed
+        ctx.font = (0.85 * FONT.size) + "px " + FONT.condensed
 
         # Prepare for drawing flaps
         inset = min(28, max(1, (ry2 - ry1) ** 0.5))
@@ -1948,9 +2030,9 @@ class RecordsWidget(Widget):
             ctx.arc(x1f + rn, ry1 - outset + rn, rn, 1.0 * PI, 1.5 * PI)
             ctx.arc(x2f - rn, ry1 - outset + rn, rn, 1.5 * PI, 2.0 * PI)
             ctx.lineTo(x2f, ry1 + inset)
-            ctx.fillStyle = body_style
+            ctx.fillStyle = COLORS.record_bg
             ctx.fill()
-            ctx.strokeStyle = border_style
+            ctx.strokeStyle = COLORS.record_edge
             ctx.stroke()
             # Shadow line
             ctx.beginPath()
@@ -1961,7 +2043,7 @@ class RecordsWidget(Widget):
             ctx.stroke()
             # Text
             timetext = dt.time2localstr(record.t1)[11:16]
-            ctx.fillStyle = text_style
+            ctx.fillStyle = COLORS.record_text
             ctx.fillText(timetext, 0.5 * (x1f + x2f), ry1 + (inset - outset) / 2)
 
         # Flat below to drag t2 - only present if not running
@@ -1975,9 +2057,9 @@ class RecordsWidget(Widget):
             ctx.arc(x2f - rn, ry2 + outset - rn, rn, 0.0 * PI, 0.5 * PI)
             ctx.arc(x1f + rn, ry2 + outset - rn, rn, 0.5 * PI, 1.0 * PI)
             ctx.lineTo(x1f, ry2 - inset)
-            ctx.fillStyle = body_style
+            ctx.fillStyle = COLORS.record_bg
             ctx.fill()
-            ctx.strokeStyle = border_style
+            ctx.strokeStyle = COLORS.record_edge
             ctx.stroke()
             # Shadow line
             ctx.beginPath()
@@ -1988,7 +2070,7 @@ class RecordsWidget(Widget):
             ctx.stroke()
             # Text
             timetext = dt.time2localstr(record.t2)[11:16]
-            ctx.fillStyle = text_style
+            ctx.fillStyle = COLORS.record_text
             ctx.fillText(timetext, 0.5 * (x1f + x2f), ry2 + (outset - inset) / 2)
 
         # Draw durarion on top
@@ -2064,53 +2146,21 @@ class RecordsWidget(Widget):
         bigfontsize = max(FONT.size, bigfontsize)
         ymargin = (y2 - y1) / 20
 
-        # if False:
-        #     # Score each tag
-        #     tag_scores1 = {}
-        #     for tagz, t in stats_dict.items():
-        #         tags = tagz.split(" ")
-        #         if len(selected_tags):
-        #             if not all([tag in tags for tag in selected_tags]):
-        #                 continue
-        #         for tag in tags:
-        #             tag_scores1[tag] = tag_scores1.get(tag, 0) + t
-        #     # Sort
-        #     tags_scored = []
-        #     for tag, score in tag_scores1.items():
-        #         tags_scored.push((tag, score))
-        #     tags_scored.sort(key=lambda x: x[1])
-        #     tags_scored = [x[0] for x in tags_scored]
-        #     # Draw tags
-        #     ctx.font = FONT.size + "px " + FONT.condensed
-        #     ctx.textBaseline = "top"
-        #     ctx.textAlign = "left"
-        #     ctx.fillStyle = COLORS.tick_stripe1
-        #     x, y = x2, y1 + (ymargin - 20)
-        #     for tag in tags_scored:
-        #         w = ctx.measureText(tag).width
-        #         if x + w > x2 - 5:
-        #             x = x1 + 10
-        #             y += 20
-        #             if y > y2 - 10:
-        #                 break
-        #         ctx.fillText(tag, x, y)
-        #         x += w + 10
-
         # Draw big text in blue if it is the timerange containing today
         if t1 < self._canvas.now() < t2:
-            ctx.fillStyle = COLORS.button_title
+            ctx.fillStyle = COLORS.prim1_clr
         else:
-            ctx.fillStyle = COLORS.tick_text
+            ctx.fillStyle = COLORS.prim2_clr
 
         # Draw duration at the left
-        ctx.font = f"{bigfontsize}px {FONT.condensed}"
+        ctx.font = f"{bigfontsize}px {FONT.default}"
         ctx.textBaseline = "bottom"
         ctx.textAlign = "left"
         duration = sumcount_selected if len(selected_tags) else sumcount
         ctx.fillText(f"{dt.duration_string(duration, False)}", x1 + 10, y2 - ymargin)
 
         # Draw time-range indication at the right
-        ctx.font = f"bold {bigfontsize}px {FONT.condensed}"
+        ctx.font = f"bold {bigfontsize}px {FONT.default}"
         ctx.textBaseline = "bottom"
         ctx.textAlign = "right"
         ctx.fillText(text, x2 - 10, y2 - ymargin)
@@ -2543,7 +2593,7 @@ class AnalyticsWidget(Widget):
             ctx.fill()
             ctx.textAlign = "center"
             ctx.textBaseline = "middle"
-            ctx.fillStyle = COLORS.tick_text
+            ctx.fillStyle = COLORS.prim1_clr
             ctx.font = FONT.size + "px " + FONT.default
             for i, c in enumerate("Overview"):
                 ctx.fillText(c, (x3 + x4) / 2, (y3 + y4) / 2 + (i - 4) * 18)
@@ -2552,23 +2602,20 @@ class AnalyticsWidget(Widget):
             )
             return
 
-        # X offset
-        x1 += max(5, (x2 - x1) / 20)
-
         # Draw title text
-        text1 = "Overview"
-        text2 = "click a tag to select it"
-        ctx.textAlign = "left"
-        ctx.textBaseline = "bottom"
-        #
-        ctx.font = (FONT.size * 1.4) + "px " + FONT.default
-        ctx.fillStyle = COLORS.tick_stripe1  # COLORS.record_text
-        ctx.fillText(text1, x1, y1 - 8)
-        text1_width = ctx.measureText(text1).width
-        #
-        ctx.font = (FONT.size * 0.9) + "px " + FONT.default
-        ctx.fillStyle = COLORS.tick_stripe1
-        ctx.fillText(text2, x1 + text1_width + 10, y1 - 8)
+        if self._canvas.w > 700:
+            text1 = "Overview"
+            text2 = "click a tag to filter"
+            ctx.textAlign = "right"
+            ctx.textBaseline = "top"
+            #
+            ctx.font = "bold " + (FONT.size * 1.4) + "px " + FONT.mono
+            ctx.fillStyle = COLORS.prim2_clr
+            ctx.fillText(text1, x2 - 10, 60)
+            #
+            ctx.font = (FONT.size * 0.9) + "px " + FONT.default
+            ctx.fillStyle = COLORS.prim2_clr
+            ctx.fillText(text2, x2 - 10, 85)
 
         # Process _time_at_last_draw, and set _time_since_last_draw
         time_now = time()
@@ -2580,7 +2627,6 @@ class AnalyticsWidget(Widget):
 
         self._need_more_drawing_flag = False
 
-        # self.draw_image(ctx, x1, y1, x2, y2)
         self._draw_stats(ctx, x1, y1, x2, y2)
 
         if self._need_more_drawing_flag:
@@ -2598,26 +2644,9 @@ class AnalyticsWidget(Widget):
             t1, t2 = self._canvas.range.get_range()
             if t1 < self._canvas.now() < t2:
                 ctx.textBaseline = "top"
-                ctx.fillStyle = COLORS.tick_text
-                text = "Hit the ▶ button to start tracking!"
-                ctx.fillText(text, x1 + 5, y1 + self._npixels_each + 15)
-
-    def draw_image(self, ctx, x1, y1, x2, y2):
-        y1 += 100
-        dx = x2 - x1 - 20
-        dy = y2 - y1 - 20
-        w = min(dx, dy)
-        if w < 0:
-            return
-        ctx.drawImage(
-            window.document.getElementById("ttlogo"),
-            (x1 + x2) / 2 - w / 2,
-            (y1 + y2) / 2 - w / 2,
-            w,
-            w,
-        )
-        ctx.fillStyle = COLORS.tick_stripe2
-        ctx.fillRect(x1, y1, x2 - x1, y2 - y1)
+                ctx.fillStyle = COLORS.prim1_clr
+                text = "Click the ▶ button to start tracking!"
+                ctx.fillText(text, x1 + 5, y1 + self._npixels_each + 25)
 
     def _draw_stats(self, ctx, x1, y1, x2, y2):
         PSCRIPT_OVERLOAD = False  # noqa
@@ -2723,7 +2752,7 @@ class AnalyticsWidget(Widget):
         avail_inset = 80
         root_target_inset = -avail_inset * (Math.exp(-npixels / avail_inset) - 1)
         root_target_inset *= min(80, ((x2 - x1) / 6)) / 80  # responsive
-        npixels_each_min_max = 40, 100
+        npixels_each_min_max = 40, 60
 
         # Determine max level and derive more props
         avail_height = (y2 - y1) - (avail_inset / 4) * 2
@@ -2951,9 +2980,8 @@ class AnalyticsWidget(Widget):
         PSCRIPT_OVERLOAD = False  # noqa
 
         t1, t2 = self._canvas.range.get_range()
-        x1, x2, x3, x4 = unit.x1, unit.x2, unit.x3, unit.x4
-        y1, y2, y3, y4 = unit.y1, unit.y2, unit.y3, unit.y4
-        y23, y14 = y3 - y2, y4 - y1
+        x2, x3 = unit.x2, unit.x3
+        y2, y3 = unit.y2, unit.y3
 
         # x_ref = self.rect[0] + self._max_cum_offset + 30
         x_ref = self.rect[0] + 42
@@ -2962,58 +2990,11 @@ class AnalyticsWidget(Widget):
         target_npixels = self._npixels_each
         npixels = min(y3 - y2, target_npixels)
 
-        # Define colors
-        body_style = COLORS.overview_bg
-        top_style = COLORS.tick_stripe2
-        left_style = COLORS.tick_stripe1
-        text_style = COLORS.record_text
-
-        font_size = FONT.size * 0.9 ** (unit.level - 1)
+        if is_root:
+            y3 += 8
 
         # Roundness
         rn = min(ANALYSIS_ROUNDNESS, npixels / 2)
-
-        # Stroke style for edges
-        ctx.strokeStyle = COLORS.tick_stripe3
-        ctx.lineWidth = 1.5
-
-        # Draw a shadow at the base
-        if is_root or unit.xoffset != 0:
-            ctx.fillStyle = left_style
-            ctx.beginPath()
-            if is_root:
-                ctx.shadowBlur = max(4, unit.target_inset / 4)
-                ctx.shadowColor = COLORS.record_shadow
-                ctx.arc(x3 - rn, y3 - rn, rn, 0.25 * PI, 0.5 * PI)  # bottom right
-                ctx.arc(x2 + rn, y3 - rn, rn, 0.5 * PI, 0.625 * PI)
-                ctx.arc(x1 + rn, y4 - rn, rn, 0.625 * PI, 1.0 * PI)  # bottom left
-                ctx.arc(x1 + rn, y1 + rn, rn, 1.0 * PI, 1.25 * PI)  # top left
-            else:
-                ctx.shadowBlur = abs(unit.xoffset)
-                ctx.shadowColor = COLORS.record_shadow
-                ctx.moveTo(x1, y1 + rn)
-                ctx.lineTo(x1, y4 - rn)
-                ctx.lineTo(x1 + min(x3 - x2, y3 - y2), (y1 + y4) / 2)
-            ctx.closePath()
-            ctx.fill()
-            ctx.shadowBlur = 0
-
-        # Gradient for lef/top part
-        grd = ctx.createLinearGradient(x1, y1 + rn, x1 + rn / 4, y1)
-        grd.addColorStop(0.0, left_style)
-        grd.addColorStop(1.0, top_style)
-
-        # Draw left/top
-        ctx.beginPath()
-        ctx.arc(x2 + rn, y3 - rn, rn, 0.5 * PI, 0.625 * PI)
-        ctx.arc(x1 + rn, y4 - rn, rn, 0.625 * PI, 1.0 * PI)  # bottom left
-        ctx.arc(x1 + rn, y1 + rn, rn, 1.0 * PI, 1.5 * PI)  # top left
-        ctx.arc(x4 - rn, y1 + rn, rn, 1.5 * PI, 1.625 * PI)
-        ctx.arc(x3 - rn, y2 + rn, rn, 1.625 * PI, 2.0 * PI)  # top right
-        # ctx.arc(x3 - rn, y3 - rn, rn, 0.0 * PI, 0.5 * PI)  # bottom right
-        ctx.closePath()
-        ctx.fillStyle = grd
-        ctx.fill()
 
         # Draw front
         ctx.beginPath()
@@ -3022,18 +3003,16 @@ class AnalyticsWidget(Widget):
         ctx.arc(x2 + rn, y3 - rn, rn, 0.5 * PI, 1.0 * PI)
         ctx.arc(x2 + rn, y2 + rn, rn, 1.0 * PI, 1.5 * PI)
         ctx.closePath()
-        ctx.fillStyle = body_style
+        if is_root:
+            ctx.lineWidth = 3
+            ctx.strokeStyle = COLORS.prim1_clr
+            ctx.fillStyle = COLORS.sec1_clr
+            ctx.fill()
+        else:
+            ctx.lineWidth = 1.2
+            ctx.strokeStyle = COLORS.record_edge
+            ctx.fillStyle = COLORS.record_bg
         ctx.fill()
-        ctx.stroke()
-
-        # Subtle stripes
-        ctx.strokeStyle = COLORS.record_subtle_stripes
-        ctx.lineWidth = 1
-        ctx.beginPath()
-        for y in range(3, y23, 7):
-            ctx.moveTo(x3, y2 + y)
-            ctx.lineTo(x2, y2 + y)
-            ctx.lineTo(x1, y1 + y / y23 * y14)
         ctx.stroke()
 
         # Draw more, or are we (dis)appearing?
@@ -3041,31 +3020,31 @@ class AnalyticsWidget(Widget):
             return
 
         ymid = y2 + 0.55 * npixels
-        x_ref_color = x2 + 22  # center of dot
         x_ref_duration = x3 - 35  # right side of minute
-        x_ref_labels = x2 + 50  # start of labels
+        x_ref_labels = x2 + 30  # start of labels
 
-        # Draw coloured dot
+        # Draw coloured edge
         if unit.level > 0 and unit.level == self._maxlevel:
             ctx.beginPath()
-            ctx.arc(x_ref_color, ymid, 8, 0, 2 * PI)
+            ctx.arc(x2 + rn, y3 - rn, rn, 0.5 * PI, 1.0 * PI)
+            ctx.arc(x2 + rn, y2 + rn, rn, 1.0 * PI, 1.5 * PI)
             ctx.closePath()
             ctx.fillStyle = window.store.settings.get_color_for_tagz(unit.tagz)
             ctx.fill()
-            # That coloured edge is also a button
+            # That coloured region is also a button
             self._picker.register(
-                x_ref_color - 9,
-                ymid - 9,
-                x_ref_color + 9,
-                ymid + 9,
-                "chosecolor:" + unit.tagz,
+                x2,
+                y2,
+                x2 + rn,
+                y3,
+                {"button": True, "action": "chosecolor:" + unit.tagz},
             )
             tt_text = "Color for " + unit.tagz + "\n(Click to change color)"
             self._canvas.register_tooltip(
-                x_ref_color - 9,
-                ymid - 9,
-                x_ref_color + 9,
-                ymid + 9,
+                x2,
+                y2,
+                x2 + rn,
+                y3,
                 tt_text,
             )
 
@@ -3086,28 +3065,31 @@ class AnalyticsWidget(Widget):
 
         # Draw text labels
         tx, ty = x_ref_labels, ymid
-        dy = min(14, 0.8 * (y3 - y2))
-        ctx.font = font_size + "px " + FONT.default
-        ctx.fillStyle = text_style
+        ctx.font = FONT.size + "px " + FONT.default
+        ctx.fillStyle = COLORS.record_text
+        ctx.lineWidth = 1.2
+        ctx.strokeStyle = COLORS.acc_clr
         # Define text labels, and draw initial duration
         texts = []
         if is_root:
+            tx = x_ref
             if len(self.selected_tags):
-                tx = x_ref
                 texts.push([" ←  back to all ", "select:", "Full overview"])
             else:
                 ctx.textAlign = "right"
                 ctx.fillText(duration, x_ref_duration, ty)
                 if unit.cum_t > 0:
-                    texts.push(["total", ""])
+                    texts.push(["Total"])
                 else:
                     texts.push(["(no records)", ""])
         else:
             ctx.textAlign = "right"
             ctx.fillText(duration, x_ref_duration, ty)
+            if len(self.selected_tags) and unit.level == 1:
+                texts.push(["Total of"])
             if duration_sec:
                 ctx.textAlign = "left"
-                ctx.fillStyle = COLORS.tick_stripe1
+                ctx.fillStyle = COLORS.prim2_clr
                 ctx.fillText(duration_sec, x_ref_duration + 1, ty)
             tags = [tag for tag in unit.subtagz.split(" ")]
             for tag in tags:
@@ -3118,45 +3100,38 @@ class AnalyticsWidget(Widget):
                     tt += " in total"
                     tt += "\n(Click to filter)"
                     texts.push([tag, "select:" + tag, tt])
-            if len(self.selected_tags) and unit.level == 1:
-                texts.push(["(subtotal)", ""])
         if unit.is_selected >= 2 and unit.cum_t > 0:
             texts.push([f" ({100*unit.percent_t:0.0f}%)", ""])
         # Draw text labels
         ctx.textAlign = "left"
-        ctx.lineWidth = 0.8
+        ctx.font = FONT.size + "px " + FONT.default
         for text, action, tt in texts:
-            dx = ctx.measureText(text).width
-            if text.startswith("#"):
-                ctx.fillStyle = COLORS.record_text
+            if action and text.startswith("#"):
+                dx = self._draw_button(
+                    ctx,
+                    tx,
+                    ty,
+                    None,
+                    30,
+                    text,
+                    action,
+                    tt,
+                    {"ref": "leftmiddle", "body": False, "padding": 0},
+                )
+                ctx.beginPath()
+                ctx.moveTo(tx, ty + 10)
+                ctx.lineTo(tx + dx, ty + 10)
+                ctx.stroke()
+                tx += dx + 12
+            elif action:
+                dx = self._draw_button(
+                    ctx, tx, ty, None, 30, text, action, tt, {"ref": "leftmiddle"}
+                )
+                tx = dx + 4
             else:
-                ctx.fillStyle = text_style
-            ctx.fillText(text, tx, ty)
-            if action:
-                ctx.beginPath()
-                ctx.moveTo(tx - 3, ty - dy)
-                ctx.lineTo(tx + dx + 3, ty - dy)
-                ctx.lineTo(tx + dx + 3, ty + dy)
-                ctx.strokeStyle = COLORS.tick_stripe3
-                ctx.stroke()
-                ctx.beginPath()
-                ctx.moveTo(tx - 3, ty - dy)
-                ctx.lineTo(tx - 3, ty + dy)
-                ctx.lineTo(tx + dx + 3, ty + dy)
-                ctx.strokeStyle = COLORS.tick_stripe2
-                ctx.stroke()
-                self._picker.register(tx - 4, ty - dy, tx + dx + 4, ty + dy, action)
-                if tt:
-                    self._canvas.register_tooltip(
-                        tx - 4,
-                        ty - dy,
-                        tx + dx + 4,
-                        ty + dy,
-                        tt,
-                        "below",
-                    )
-                dx += 2
-            tx += dx + 12
+                ctx.fillStyle = COLORS.record_text
+                ctx.fillText(text, tx, ty)
+                tx += ctx.measureText(text).width + 12
 
     def on_pointer(self, ev):
 
@@ -3166,7 +3141,7 @@ class AnalyticsWidget(Widget):
             picked = self._picker.pick(x, y)
             if picked is None or picked == "":
                 pass
-            elif picked.button is True:
+            elif picked.button:
                 if picked.action == "showanalytics":
                     self._canvas._prefer_show_analytics = True
                     self._canvas.on_resize()
@@ -3174,18 +3149,18 @@ class AnalyticsWidget(Widget):
                 elif picked.action == "report":
                     t1, t2 = self._canvas.range.get_range()
                     self._canvas.report_dialog.open(t1, t2, self.selected_tags)
-            elif picked.startswith("select:"):
-                _, _, tag = picked.partition(":")
-                if tag:
-                    if tag not in self.selected_tags:
-                        self.selected_tags.push(tag)
-                else:
-                    self.selected_tags = []
-            elif picked.startswith("chosecolor:"):
-                _, _, tagz = picked.partition(":")
-                if tagz:
-                    self._canvas.color_dialog.open(tagz, self.update)
-            self.update()
+                elif picked.action.startswith("select:"):
+                    _, _, tag = picked.action.partition(":")
+                    if tag:
+                        if tag not in self.selected_tags:
+                            self.selected_tags.push(tag)
+                    else:
+                        self.selected_tags = []
+                elif picked.action.startswith("chosecolor:"):
+                    _, _, tagz = picked.action.partition(":")
+                    if tagz:
+                        self._canvas.color_dialog.open(tagz, self.update)
+                self.update()
 
 
 if __name__ == "__main__":
