@@ -13,7 +13,7 @@ body {
 /**************** Popup Menu ****************/
 
 .dialog.verticalmenu {
-    background: #fff;
+    background: #f4f4f4;
     padding: 0;
     border: none;
 }
@@ -81,8 +81,9 @@ body.darkmode .dialog.verticalmenu {
     opacity: 0;
     padding: 0.4em;
     background: #fff;
-    border: 1px solid #eee;
-    border-radius: 2px;
+    border: none;
+    font-size: 85%;
+    border-radius: 3px;
     box-shadow: 2px 4px 8px rgba(0, 0, 0, 0.25);
     transition: opacity 0.2s, left 0.2s, right 0.2s;
 }
@@ -145,7 +146,7 @@ body.darkmode .tooltipdiv {
     transition: opacity 0.1s linear;
 }
 .dialog h2, .dialog h3 {
-    color: #000;  /* override red headers */
+    color: $prim1_clr;
     font-family: $normalfont;
 }
 @media screen and (min-height: 600px) { .dialog {
@@ -201,7 +202,7 @@ body.darkmode .tooltipdiv {
     border: 1px solid #bbb;
     border-radius: 4px;
     background: #fff;
-    color: #000;
+    color: $prim1_clr;
     padding: 0.3em 0.4em;
 }
 .dialog input:focus {
@@ -234,7 +235,7 @@ body.darkmode .tooltipdiv {
     padding: 3px 0.5em 5px 0.5em;  /* Note: match with h1 padding-bottom */
     background: rgba(255, 255, 255, 0.1);
     border-radius: 2px;
-    border: 1px solid #eee;
+    border: 1px solid $sec2_clr;
     border-bottom: 0;
     border-left: 0;
     float: right;
@@ -267,7 +268,7 @@ body.darkmode .dialog h1 {
     background: #fff;
     border: none;
     box-shadow: 0px 2px 2px rgba(0, 0, 0, 0.4);
-    transition: box-shadow 0.1s;    
+    transition: box-shadow 0.1s;
 }
 .dialog button.actionbutton:hover { box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.4); }
 .dialog button.actionbutton.submit { background: $acc_clr; min-width: 8em; }

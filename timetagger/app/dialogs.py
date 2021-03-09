@@ -37,7 +37,7 @@ def show_background_div(show, keep_transparent=False):
         )
 
     if show:
-        alpha = 0.0 if keep_transparent else 0.1
+        alpha = 0.0 if keep_transparent else 0.2
         window.dialogbackdiv.style.background = f"rgba(0, 0, 0, {alpha})"
         window.dialogbackdiv.style.pointerEvents = "auto"
         window.dialogbackdiv.style.display = "block"

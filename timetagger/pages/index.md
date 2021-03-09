@@ -10,7 +10,6 @@ main a.ctabutton {
     border: none;
     border-radius: 4px;
     background: #fff;
-    color: #0F2C3E;
     padding: 1em;
     box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.4);
     transition: box-shadow 0.1s;
