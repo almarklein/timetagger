@@ -3,7 +3,6 @@ $prim2_clr: #A4B0B8;
 $sec1_clr: #E6E7E5;
 $sec2_clr: #F4F4F4;
 $acc_clr: #DEAA22;
-$link_clr: #0B99DD;
 
 $bg1: #E6E7E5 url("paper1.jpg");
 $bg2: #F4F4F4 url("paper2.jpg");
@@ -135,15 +134,21 @@ p {
 /**************** Links ****************/
 
 a:link, a:visited, a:active {
-    color: $link_clr;
+    color: inherit;
     text-decoration: none;
+    border-bottom: 1px solid $acc_clr;
 }
 p a:link, p a:visited, p a:active, li a:link, li a:visited, li a:active {
     text-decoration: none;
 }
 a:hover, p a:hover {
-    color: #0B99DD;
-    text-decoration: underline;
+    color: inherit;
+    text-decoration: none;
+    border-bottom: 2px solid $acc_clr;
+}
+
+header a, footer a, a.link-icon {
+    border: none !important;  /* disable for specific cases */
 }
 
 /**************** Headers ****************/
