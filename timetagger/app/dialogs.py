@@ -1899,7 +1899,7 @@ class ReportDialog(BaseDialog):
         # Draw preamble
         doc.setFontSize(24)
         doc.text("Time record report", margin, margin, {"baseline": "top"})
-        img = document.getElementById("ttlogo")
+        img = document.getElementById("ttlogo_bd")
         doc.addImage(img, "PNG", width - margin - 30, margin, 30, 30)
         # doc.setFontSize(12)
         # doc.text(

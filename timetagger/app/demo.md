@@ -15,9 +15,9 @@ window.addEventListener("load", function() {
     var dialog = new dialogs.DemoInfoDialog(window.canvas);
     setTimeout(dialog.open, 200);
 
-    // Enable auto-update on localhost for easy dev
-    if (location.hostname == "localhost" && location.hostname == "127.0.0.1") {
-        enable_auto_update();
+    // In the demo, enter dev-mode when serving on localhost
+    if (location.hostname == "localhost" || location.hostname == "127.0.0.1") {
+        enable_check_update_on_dbl_click();
     }
 });
 
@@ -26,7 +26,9 @@ window.addEventListener("load", function() {
 // dt.now = function() { return new Date().getTime() / 1000 - demodeltatime};
 
 
-function enable_auto_update() {
+function enable_check_update_on_dbl_click() {
+    // More of a dev-mode so we can make a change, restart server,
+    // and then double-click in app to auto-refresh when new version is detected.
 
     // SW supported?
     if (!('serviceWorker' in navigator)) { return; }
@@ -34,7 +36,9 @@ function enable_auto_update() {
     // Structure for the PWA workflow
     window.pwa = {
         sw_reg: null, // set when sw is registered
+
         update: function () {
+            console.log("Checking for update ...")
             if (window.pwa.sw_reg) { window.pwa.sw_reg.update(); }
         },
     };
@@ -47,16 +51,19 @@ function enable_auto_update() {
     var page_start_time = performance.now();
     navigator.serviceWorker.addEventListener('controllerchange', function () {
         console.log("New service worker detected.")
-        if (page_start_time === null) {
-            return;  // prevent continuous refresh when dev tool SW refresh is on
-        } else {
-            window.location.reload();
+        // Prevent continuous refresh when dev tool SW refresh is on
+        if (page_start_time === null) { return; }
+        if (performance.now() - page_start_time < 3000) {
+            page_start_time = null;
+            window.location.reload();  // User just arrived/refreshed, auto-refresh is ok
         }
-        page_start_time = null;
     });
 
-    // Do an update after switching to page visible
-    window.document.addEventListener("visibilitychange", function () { pwa.update(); });
+    // Double-click invokes an update that will auto-refresh when a new version is found
+    document.body.ondblclick = function ()  {
+        page_start_time = performance.now();
+        window.pwa.update();
+    };
 }
 </script>
 
