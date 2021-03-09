@@ -40,7 +40,7 @@ function register_service_worker() {
         show_refresh_button: function () {
             let style, html, el;
             style = 'background:#fff; color:#444; padding:0.3em; border: 1px solid #777; border-radius:4px; ';
-            style += 'position:absolute; top: 64px; left:4px; font-size:80%; '
+            style += 'position:absolute; top: 34px; left:4px; font-size:80%; '
             html = "<div style='" + style + "'>";
             html += "New version available, ";
             html += "<a href='#' onclick='location.reload();'>refresh</a>";
@@ -66,18 +66,15 @@ function register_service_worker() {
     var page_start_time = performance.now();
     navigator.serviceWorker.addEventListener('controllerchange', function () {
         console.log("New service worker detected.")
-        if (page_start_time === null) {
-            return;  // prevent continuous refresh when dev tool SW refresh is on
-        } else if (performance.now() - page_start_time < 3000) {
+        // Prevent continuous refresh when dev tool SW refresh is on
+        if (page_start_time === null) { return; }
+        if (performance.now() - page_start_time < 3000) {
+            page_start_time = null;
             window.location.reload();  // User just arrived/refreshed, auto-refresh is ok
         } else {
            window.pwa.show_refresh_button();  // Prompt the user to refresh instead
         }
-        page_start_time = null;
     });
-
-    // Show a message to prompt the user to refresh the page
-
 
     // Auto-update each several hours
     var nhours = 4

@@ -61,8 +61,6 @@ def set_colors():
 
     # Unaffected by dark mode
     COLORS.background3 = COLORS.prim1_clr
-    COLORS.header_text = COLORS.sec1_clr
-
     COLORS.button_bg = "#fff"
     COLORS.button_shadow = "rgba(0, 0, 0, 0.4)"
     COLORS.button_text = COLORS.prim1_clr
@@ -174,14 +172,16 @@ class TimeTaggerCanvas(BaseCanvas):
         """Perform layout; set sizes of widgets. We can go all responsive here."""
 
         margin = 5
-        margin2 = 40  # self.w / 40  --> handle margin inside analytics widget
-        space_to_divide = self.w - margin - margin2 - margin
+        space_to_divide = self.w - margin - margin
         if space_to_divide >= 785:
-            records_width = space_to_divide / 2
-        elif self._prefer_show_analytics:
-            records_width = 30
+            margin2 = 40
+            records_width = (space_to_divide - margin2) / 2
         else:
-            records_width = space_to_divide - 30
+            margin2 = 5
+            if self._prefer_show_analytics:
+                records_width = 30
+            else:
+                records_width = (space_to_divide - margin2) - 30
 
         # Determine splitter positions
         #
@@ -234,14 +234,25 @@ class TimeTaggerCanvas(BaseCanvas):
         # ctx.fillStyle = COLORS.background1
         # ctx.fillRect(0, 0, self.w, self.h)
 
+        # Draw icon in bottom right
+        iconw = 192 if self.w >= 400 else 96
+        iconh = iconw / 6
+        ctx.drawImage(
+            window.document.getElementById("ttlogo_tg"),
+            self.w - iconw - 5,
+            self.h - iconh - 5,
+            iconw,
+            iconh,
+        )
+
         if window.store.get_auth and not window.store.get_auth():
             # We need to be logged in, but we are not
             ctx.textAlign = "center"
             ctx.textBaseline = "middle"
             ctx.fillStyle = COLORS.prim1_clr
-            text = "You need to login to use the TimeTagger app."
+            text = "You are loged out."
             utils.fit_font_size(ctx, self.w - 100, FONT.default, text, 30)
-            ctx.fillText(text, self.w / 2, self.h / 2)
+            ctx.fillText(text, self.w / 2, self.h / 3)
             # Draw menu and login button
             ctx.save()
             try:
@@ -587,7 +598,7 @@ class TimeRange:
 
         if day1 == day2:
             # Within a single day - finest granularity for the header
-            header = f"{weekday1}  {monthday1} {monthname1} {year1}"
+            header = f"{weekday1} {monthday1}  {monthname1} {year1}"
         elif day1[:7] == day2[:7]:
             # Within a single month
             if nsecs <= 86400 * 3:
@@ -596,12 +607,12 @@ class TimeRange:
             elif is_week_range and dt.is_first_day_of_week(t1):
                 # Exactly a calender week
                 wn = dt.get_weeknumber(t1)
-                header = f"Week {wn}  {monthday1}-{monthday2} {monthname1} {year1}"
+                header = f"Week {wn}  {monthday1}-{monthday2}  {monthname1} {year1}"
             elif nsecs <= 86400 * 14:
                 # Less than half a month
-                header = f"{monthday1} - {monthday2} {monthname1} {year1}"
+                header = f"{monthday1} - {monthday2}  {monthname1} {year1}"
             else:
-                header = f"{monthname1} {year1}"
+                header = f"{monthname1}  {year1}"
         elif day1[:4] == day2[:4]:
             # Within a single year
             if is_week_range and dt.is_first_day_of_week(t1):
@@ -610,22 +621,22 @@ class TimeRange:
                 header = f"Week {wn}  {monthname1} / {monthname2} {year1}"
             elif nsecs < 30 * 86400:
                 # Less than one month
-                header = f"{monthname1} / {monthname2} {year1}"
+                header = f"{monthname1} / {monthname2}  {year1}"
             else:
                 # Multi month
                 header = f"{year1}"
                 if day1[5:] == "01-01" and day2[5:] == "12-31":
                     pass
                 elif day1[5:] == "01-01" and day2[5:] == "03-31":
-                    header += " Q1"
+                    header = f"Q1  {year1}"
                 elif day1[5:] == "04-01" and day2[5:] == "06-30":
-                    header += " Q2"
+                    header = f"Q2  {year1}"
                 elif day1[5:] == "07-01" and day2[5:] == "09-30":
-                    header += " Q3"
+                    header = f"Q3  {year1}"
                 elif day1[5:] == "10-01" and day2[5:] == "12-31":
-                    header += " Q4"
+                    header = f"Q4  {year1}"
                 else:
-                    header = f"{monthname1} - {monthname2} {year1}"
+                    header = f"{monthname1} - {monthname2}  {year1}"
         else:
             # Multi-year
             if is_week_range and dt.is_first_day_of_week(t1):
@@ -799,9 +810,11 @@ class TopWidget(Widget):
 
         h = 36
 
-        # Dark background with accent at the bottom
+        # Dark background wave (a cosine with the belly in the middle)
         ctx.beginPath()
-        n = 200
+        n = 20
+        amplitude = 3
+        period = 1.2 * 2 * PI
         ctx.moveTo(x2 + 50, y2)
         ctx.lineTo(x2 + 50, y1 - 50)
         ctx.lineTo(x2, y1 - 50)
@@ -810,28 +823,19 @@ class TopWidget(Widget):
         ctx.lineTo(x1 - 50, y2)
         for i in range(n + 1):
             x = x1 + i * (x2 - x1) / n
-            y = y2 + 4 * Math.cos(PI * 2 * i / n + 0.0)
+            y = y2 - amplitude * Math.cos(period * (i / n - 0.5))
             ctx.lineTo(x, y)
         ctx.closePath()
 
         ctx.fillStyle = COLORS.background3
-        ctx.strokeStyle = COLORS.acc_clr
-        ctx.lineWidth = 5
         ctx.fill()
-        ctx.stroke()
-
-        # ctx.fillRect(x1, y1, x2 - x1, y2 - y1)
-        # ctx.fillStyle = COLORS.button_text
-        # ctx.fillRect(x1, y2 - 8, x2 - x1, 4)
-        # ctx.fillStyle = COLORS.acc_clr
-        # ctx.fillRect(x1, y2 - 4, x2 - x1, 4)
 
         self._margin = margin = self._canvas.grid_round(max(2, (x2 - x1) / 30))
         x = x1 + 4
 
-        # Draw icon
+        # Draw icon in top-right
         iconsize = (x2 - x1) / 22
-        iconsize = 45  # max(16, min(45, iconsize))
+        iconsize = 48
         if iconsize:
             ctx.drawImage(
                 window.document.getElementById("ttlogo_sl"),
@@ -961,11 +965,9 @@ class TopWidget(Widget):
             "body": False,
             "padding": 4,
             "ref": "centermiddle",
-            "color": COLORS.header_text,
+            "color": COLORS.sec2_clr,
         }
-        self._draw_button(
-            ctx, x, y1 + 18, None, 48, "fas-\uf0c9", "menu", "Show menu", opt
-        )
+        self._draw_button(ctx, x, y1 + 18, None, 48, "fas-\uf0c9", "menu", "", opt)
 
         # Draw title
         if text:
@@ -1198,25 +1200,37 @@ class TopWidget(Widget):
 
         header = self._canvas.range.get_context_header() + " "  # margin
 
-        x3 = x1
-        x4 = x2
-        x5 = (x3 + x4) / 2
+        x3 = (x1 + x2) / 2
+        y3 = y1 + 3
 
         # Draw header
-        ctx.fillStyle = COLORS.header_text
         ctx.textBaseline = "top"
         ctx.textAlign = "center"
         #
-        size = utils.fit_font_size(ctx, x4 - x3, FONT.default, header, 36)
-        if size < 20 and "  " in header:
-            # Use two lines
-            text1, text2 = header.split("  ", 1)
-            size = utils.fit_font_size(ctx, x4 - x3, FONT.default, text2, 20)
-            ctx.fillText(text1 + " ", x5, y1 + 3)
-            ctx.fillText(text2, x5, y1 + 5 + 18)
+        size = utils.fit_font_size(ctx, x2 - x1, FONT.default, header, 36)
+        text1, _, text2 = header.partition("  ")
+        if len(text2) == 0:
+            # One part
+            ctx.fillStyle = COLORS.sec2_clr
+            ctx.fillText(header, x3, y3)
+        elif size < 20:
+            # Two parts below each-other
+            size = utils.fit_font_size(ctx, x2 - x1, FONT.default, text2, 20)
+            ctx.fillStyle = COLORS.acc_clr
+            ctx.fillText(text1 + " ", x3, y3)
+            ctx.fillStyle = COLORS.sec2_clr
+            ctx.fillText(text2, x3, y1 + 5 + 18)
         else:
-            # Use one
-            ctx.fillText(header, x5, y1 + 3)
+            # Two parts next to each-other
+            text1 += "  "
+            w1 = ctx.measureText(text1).width
+            w2 = ctx.measureText(text2).width
+            w = w1 + w2
+            ctx.textAlign = "left"
+            ctx.fillStyle = COLORS.acc_clr
+            ctx.fillText(text1, x3 - w / 2, y3)
+            ctx.fillStyle = COLORS.sec2_clr
+            ctx.fillText(text2, x3 - w / 2 + w1, y3)
 
     def on_pointer(self, ev):
         x, y = ev.pos[0], ev.pos[1]
@@ -1425,11 +1439,11 @@ class RecordsWidget(Widget):
             #
             ctx.font = "bold " + (FONT.size * 1.4) + "px " + FONT.mono
             ctx.fillStyle = COLORS.prim2_clr
-            ctx.fillText(text1, 10, 60)
+            ctx.fillText(text1, 10, 65)
             #
             ctx.font = (FONT.size * 0.9) + "px " + FONT.default
             ctx.fillStyle = COLORS.prim2_clr
-            ctx.fillText(text2, 10, 85)
+            ctx.fillText(text2, 10, 90)
 
     def _draw_edge(self, ctx, x1, y1, x2, y2):
         def drawstrokerect(lw):
@@ -2602,20 +2616,7 @@ class AnalyticsWidget(Widget):
             )
             return
 
-        # Draw title text
-        if self._canvas.w > 700:
-            text1 = "Overview"
-            text2 = "click a tag to filter"
-            ctx.textAlign = "right"
-            ctx.textBaseline = "top"
-            #
-            ctx.font = "bold " + (FONT.size * 1.4) + "px " + FONT.mono
-            ctx.fillStyle = COLORS.prim2_clr
-            ctx.fillText(text1, x2 - 10, 60)
-            #
-            ctx.font = (FONT.size * 0.9) + "px " + FONT.default
-            ctx.fillStyle = COLORS.prim2_clr
-            ctx.fillText(text2, x2 - 10, 85)
+        self._help_text = ""
 
         # Process _time_at_last_draw, and set _time_since_last_draw
         time_now = time()
@@ -2634,6 +2635,21 @@ class AnalyticsWidget(Widget):
             self.update()
         else:
             self._time_since_last_draw = 0
+
+        # Draw title text
+        if self._canvas.w > 700:
+            text1 = "Overview"
+            text2 = self._help_text
+            ctx.textAlign = "right"
+            ctx.textBaseline = "top"
+            #
+            ctx.font = "bold " + (FONT.size * 1.4) + "px " + FONT.mono
+            ctx.fillStyle = COLORS.prim2_clr
+            ctx.fillText(text1, x2 - 10, 65)
+            #
+            ctx.font = (FONT.size * 0.9) + "px " + FONT.default
+            ctx.fillStyle = COLORS.prim2_clr
+            ctx.fillText(text2, x2 - 10, 90)
 
         # Show some help if no records are shown
         if len(self._level_counts) == 1:
@@ -2796,6 +2812,13 @@ class AnalyticsWidget(Widget):
         for bar in bars:
             if bar.height > 0:
                 self._draw_one_stat_unit(ctx, bar, root.cum_t)
+
+        # Determine help text
+        if self._maxlevel > 0:
+            if len(self.selected_tags) == 0:
+                self._help_text = "click a tag to filter"
+            else:
+                self._help_text = "click more tags to filter more"
 
     def _invalidate_element(self, d, parent=None):
         d.invalid = True
@@ -3081,7 +3104,7 @@ class AnalyticsWidget(Widget):
                 if unit.cum_t > 0:
                     texts.push(["Total"])
                 else:
-                    texts.push(["(no records)", ""])
+                    texts.push(["Total"])
         else:
             ctx.textAlign = "right"
             ctx.fillText(duration, x_ref_duration, ty)
