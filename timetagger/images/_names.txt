@@ -4,8 +4,10 @@
     * "s" for small, square
     * "w" for word, wide
     * "b" for below, big
+    * "t" for text-only
   * coloring:
     * "d" for dark (to be used on a light bg)
     * "l" for light (to be used on a dark bg)
+    * "g" for gray
     * "f" for filled (dark on a light circle)
     * "m" for maskable (dark on a white square)
