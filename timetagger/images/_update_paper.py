@@ -1,8 +1,12 @@
+"""
+Script to generate a pattern from an image.
+"""
+
 import numpy as np
 import imageio
 
 # Parameters
-offset = 10, 10
+ori = 10, 10
 size1 = 1200
 padding = 50
 size2 = size1 + 1 * padding
@@ -11,9 +15,7 @@ clim = 220, 255
 # Take a square sample
 im = imageio.imread("paper0.jpg")
 rgba = np.zeros((size2, size2, 4)).astype(np.float32)
-rgba[:, :, :3] = im[offset[0] : offset[0] + size2, offset[1] : offset[1] + size2][
-    :, :, :3
-]
+rgba[:, :, :3] = im[ori[0] : ori[0] + size2, ori[1] : ori[1] + size2][:, :, :3]
 assert rgba.shape == (size2, size2, 4)
 
 # apply clim

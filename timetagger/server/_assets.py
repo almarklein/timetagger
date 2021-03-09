@@ -35,14 +35,9 @@ default_template = (
 
 
 def _get_base_style():
-    text = (
-        open(
-            pkg_resources.resource_filename("timetagger.common", "_style_embed.scss"),
-            "rb",
-        )
-        .read()
-        .decode()
-    )
+    fname = pkg_resources.resource_filename("timetagger.common", "_style_embed.scss")
+    with open(fname, "rb") as f:
+        text = f.read().decode()
     style_embed = scss.compiler.compile_string(text)
     # Find lines that define scss variables
     var_lines = []
