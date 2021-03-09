@@ -52,26 +52,6 @@ window.addEventListener("load", init_module)
 # Also see e.g. https://www.canva.com/colors/color-wheel/
 def set_colors():
 
-    # Theme palette
-    COLORS.prim1_clr = "#0F2C3E"
-    COLORS.prim2_clr = "#A4B0B8"
-    COLORS.sec1_clr = "#E6E7E5"
-    COLORS.sec2_clr = "#F4F4F4"
-    COLORS.acc_clr = "#DEAA22"
-
-    # Unaffected by dark mode
-    COLORS.background3 = COLORS.prim1_clr
-    COLORS.button_bg = "#fff"
-    COLORS.button_shadow = "rgba(0, 0, 0, 0.4)"
-    COLORS.button_text = COLORS.prim1_clr
-    COLORS.button_text_disabled = COLORS.prim2_clr
-
-    # Grays chosen to work in both light and dark mode
-    COLORS.tick_text = "rgba(130, 130, 130, 1)"
-    COLORS.tick_stripe1 = "rgba(130, 130, 130, 0.6)"  # day
-    COLORS.tick_stripe2 = "rgba(130, 130, 130, 0.3)"  # major
-    COLORS.tick_stripe3 = "rgba(130, 130, 130, 0.08)"  # minor
-
     # Dark vs light mode
     mode = 0
     if window.store and window.store.settings:
@@ -79,37 +59,65 @@ def set_colors():
         if ob is not None:
             mode = ob.value
     if mode == 1:
-        dark = False
+        light_mode = True
     elif mode == 2:
-        dark = True
+        light_mode = False
     else:
-        dark = False
+        light_mode = True
         if window.matchMedia:
             if window.matchMedia("(prefers-color-scheme: dark)").matches:
-                dark = True
+                light_mode = False
 
-    if dark:
-        # App background (use rgba so the color can be re-used with different alpha)
-        COLORS.background1 = "rgba(13, 17, 23, 1)"
-        COLORS.background2 = "rgba(3, 7, 13, 1)"
+    # Theme palette
+    COLORS.prim1_clr = "#0F2C3E"
+    COLORS.prim2_clr = "#A4B0B8"
+    COLORS.sec1_clr = "#E6E7E5"
+    COLORS.sec2_clr = "#F4F4F4"
+    COLORS.acc_clr = "#DEAA22"
 
-        COLORS.record_bg = "rgb(50, 55, 62)"
-        COLORS.record_text = "rgb(170, 170, 170)"
-        COLORS.record_edge = "rgb(75, 75, 75)"
+    # Grays chosen to work in both light and dark mode
+    COLORS.tick_text = "rgba(130, 130, 130, 1)"
+    COLORS.tick_stripe1 = "rgba(130, 130, 130, 0.6)"  # day
+    COLORS.tick_stripe2 = "rgba(130, 130, 130, 0.3)"  # major
+    COLORS.tick_stripe3 = "rgba(130, 130, 130, 0.08)"  # minor
 
-        window.document.body.classList.add("darkmode")
-        window.document.body.style.background = "rgb(0, 0, 0)"
+    if light_mode:
+        COLORS.background1 = "rgba(244, 244, 244, 1)"  # == #f4f4f4  - must end in "1)"
+        COLORS.top_bg = COLORS.prim1_clr
 
-    else:
-        # App background (use rgba so the color can be re-used with different alpha)
-        COLORS.background1 = "rgba(244, 244, 244, 1)"  # == #f4f4f4
-        COLORS.background2 = COLORS.sec1_clr
+        COLORS.panel_bg = COLORS.sec1_clr
+        COLORS.panel_edge = COLORS.prim1_clr
+
+        COLORS.button_bg = "#fff"
+        COLORS.button_shadow = "rgba(0, 0, 0, 0.4)"
+        COLORS.button_text = COLORS.prim1_clr
+        COLORS.button_text_disabled = COLORS.prim2_clr
 
         COLORS.record_bg = "#fafafa"
         COLORS.record_text = COLORS.prim1_clr
         COLORS.record_edge = COLORS.prim2_clr
 
         window.document.body.classList.remove("darkmode")
+
+    else:
+        # App background (use rgba so the color can be re-used with different alpha)
+        COLORS.background1 = "rgba(23, 30, 40, 1)"  # must end in "1)"
+        COLORS.top_bg = COLORS.prim1_clr
+
+        COLORS.panel_bg = COLORS.prim1_clr
+        COLORS.panel_edge = "#000"
+
+        COLORS.button_bg = "#bbb"  # COLORS.prim2_clr
+        COLORS.button_shadow = "rgba(0, 0, 0, 0.4)"
+        COLORS.button_text = COLORS.prim1_clr
+        COLORS.button_text_disabled = "#888"
+
+        COLORS.record_bg = "rgb(50, 55, 62)"
+        COLORS.record_text = "rgb(170, 170, 170)"
+        COLORS.record_edge = "rgb(75, 75, 75)"
+
+        window.document.body.classList.add("darkmode")
+        # window.document.body.style.background = "rgb(0, 0, 0)"
 
 
 class TimeTaggerCanvas(BaseCanvas):
@@ -827,7 +835,7 @@ class TopWidget(Widget):
             ctx.lineTo(x, y)
         ctx.closePath()
 
-        ctx.fillStyle = COLORS.background3
+        ctx.fillStyle = COLORS.top_bg
         ctx.fill()
 
         self._margin = margin = self._canvas.grid_round(max(2, (x2 - x1) / 30))
@@ -1006,7 +1014,7 @@ class TopWidget(Widget):
         # Clear bg
         ctx.beginPath()
         ctx.arc(x + radius, y + radius, radius + ctx.lineWidth, 0, 2 * PI)
-        ctx.fillStyle = COLORS.background3
+        ctx.fillStyle = COLORS.top_bg
         ctx.fill()
 
         # Outline
@@ -1418,7 +1426,7 @@ class RecordsWidget(Widget):
         x4 = self._canvas.grid_round(x3 + 50)
 
         # Draw background of "active region"
-        ctx.fillStyle = COLORS.background2
+        ctx.fillStyle = COLORS.panel_bg
         ctx.fillRect(x3, y1, x4 - x3, y2 - y1)
 
         self._help_text = ""
@@ -1460,7 +1468,7 @@ class RecordsWidget(Widget):
         ctx.lineWidth = lw
         ctx.strokeStyle = COLORS.background1
         drawstrokerect(1.0 * lw)
-        ctx.strokeStyle = COLORS.prim1_clr
+        ctx.strokeStyle = COLORS.panel_edge
         drawstrokerect(0.0 * lw)
 
     def _draw_top_and_bottom_cover(self, ctx, x1, x2, x3, x4, y1, y2, stop):
@@ -1488,7 +1496,7 @@ class RecordsWidget(Widget):
         ctx.fillStyle = grd1
         ctx.fillRect(0, y1, self._canvas.w, y2 - y1)
         ctx.fillStyle = grd2
-        ctx.fillRect(x2, y1, x3 - x2, y2 - y1 - 2)
+        ctx.fillRect(x2, y1, x3 - x2 + 50, y2 - y1 - 2)
 
     def _draw_ticks(self, ctx, x1, y1, x2, y2):
         PSCRIPT_OVERLOAD = False  # noqa
@@ -3028,9 +3036,8 @@ class AnalyticsWidget(Widget):
         ctx.closePath()
         if is_root:
             ctx.lineWidth = 3
-            ctx.strokeStyle = COLORS.prim1_clr
-            ctx.fillStyle = COLORS.sec1_clr
-            ctx.fill()
+            ctx.strokeStyle = COLORS.panel_edge
+            ctx.fillStyle = COLORS.panel_bg
         else:
             ctx.lineWidth = 1.2
             ctx.strokeStyle = COLORS.record_edge
@@ -3130,26 +3137,21 @@ class AnalyticsWidget(Widget):
         ctx.font = FONT.size + "px " + FONT.default
         for text, action, tt in texts:
             if action and text.startswith("#"):
-                dx = self._draw_button(
-                    ctx,
-                    tx,
-                    ty,
-                    None,
-                    30,
-                    text,
-                    action,
-                    tt,
-                    {"ref": "leftmiddle", "body": False, "padding": 0},
-                )
+                opt = {
+                    "ref": "leftmiddle",
+                    "body": False,
+                    "padding": 0,
+                    "color": COLORS.record_text,
+                }
+                dx = self._draw_button(ctx, tx, ty, None, 30, text, action, tt, opt)
                 ctx.beginPath()
                 ctx.moveTo(tx, ty + 10)
                 ctx.lineTo(tx + dx, ty + 10)
                 ctx.stroke()
                 tx += dx + 12
             elif action:
-                dx = self._draw_button(
-                    ctx, tx, ty, None, 30, text, action, tt, {"ref": "leftmiddle"}
-                )
+                opt = {"ref": "leftmiddle"}
+                dx = self._draw_button(ctx, tx, ty, None, 30, text, action, tt, opt)
                 tx = dx + 4
             else:
                 ctx.fillStyle = COLORS.record_text

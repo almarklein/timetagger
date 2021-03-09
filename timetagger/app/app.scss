@@ -1,6 +1,6 @@
-body {
-    background: $bg1;
-}
+body { background: $bg1; }
+body.darkmode { background: $bg3; }
+
 #canvas {
     position: absolute;
     top: 0; bottom: 0; left: 0; right: 0; height: 100%; width: 100%;
@@ -9,6 +9,7 @@ body {
     border-radius: 2px;
     background: $sec2_clr;
 }
+body.darkmode #canvas { background: #171E28; }
 
 /**************** Popup Menu ****************/
 
@@ -273,6 +274,8 @@ body.darkmode .dialog h1 {
 .dialog button.actionbutton:hover { box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.4); }
 .dialog button.actionbutton.submit { background: $acc_clr; min-width: 8em; }
 .dialog button.actionbutton.submit:disabled { color: #aaa; }
+body.darkmode .dialog button.actionbutton { background: #eee; }
+body.darkmode .dialog button.actionbutton.submit { background: $acc_clr; }
 
 /* --- dialog table --- */
 
