@@ -2653,36 +2653,3 @@ class AboutDialog(BaseDialog):
             self._token_reset.innerHTML = "Create"
             self._token_reset.disabled = False
             self._token_copy.disabled = True
-
-
-class InstallInstructionsDialog(BaseDialog):
-    """Dialog to show install instructions."""
-
-    def __init__(self, canvas):
-        super().__init__(canvas)
-
-    def open(self, callback=None):
-        html = f"""
-            <h1><i class='fas'>\uf3fa</i>&nbsp;&nbsp;How to install
-                <button type='button'><i class='fas'>\uf00d</i></button>
-            </h1>
-            <p>
-            The TimeTagger app is a Progressive Web App (PWA), which means that
-            it can be installed as a native app on most devices without using
-            the official appstore/playstore.
-            </p><p>
-            On mobile devices, the browser may prompt you with the option to
-            "Add to homescreen". Otherwise, look for this option in the browser's
-            menu.
-            </p><p>
-            On desktop, open the app in the Chrome browser and select
-            "Install TimeTagger App" from the menu.
-            </p>
-            """
-
-        self.maindiv.innerHTML = html
-
-        self._cancel_but = self.maindiv.children[0].children[-1]
-        self._cancel_but.onclick = self.close
-
-        super().open(callback)

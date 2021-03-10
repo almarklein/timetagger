@@ -146,7 +146,6 @@ class TimeTaggerCanvas(BaseCanvas):
         self.tag_manage_dialog = dialogs.TagManageDialog(self)
         self.export_dialog = dialogs.ExportDialog(self)
         self.import_dialog = dialogs.ImportDialog(self)
-        self.install_dialog = dialogs.InstallInstructionsDialog(self)
         self.about_dialog = dialogs.AboutDialog(self)
 
         self.widgets = {
