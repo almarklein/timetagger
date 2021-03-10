@@ -21,9 +21,12 @@ window.addEventListener("load", function() {
     }
 });
 
-// Uncomment to run demo at a specific moment in time, nice for making screenshots
-// var demodeltatime = dt.now() - new Date("2021-01-12T16:15:00").getTime() / 1000;
-// dt.now = function() { return new Date().getTime() / 1000 - demodeltatime};
+
+function set_demotime() {
+    // Call to run demo at a specific moment in time, nice for making screenshots
+    var demodeltatime = dt.now() - new Date("2021-03-11T16:15:00").getTime() / 1000;
+    dt.now = function() { return new Date().getTime() / 1000 - demodeltatime};
+}
 
 
 function enable_check_update_on_dbl_click() {

@@ -627,17 +627,17 @@ class StartStopEdit:
         </div>
         <div>
         <span><i class='fas' style='color:#999; vertical-align:middle;'>\uf144</i></span>
-            <input type='date' step='1'  style='font-size: 80%' />
+            <input type='date' step='1'  style='font-size: 80%;' />
             <span style='display: flex;'>
-                <input type='text' style='flex:1; min-width: 50px' />
+                <input type='text' style='flex:1; min-width: 50px; font-size: 80%;' />
                 <button type='button' style='width:2em; margin-left:-1px;'>+</button>
                 <button type='button' style='width:2em; margin-left:-1px;'>-</button>
                 </span>
             <span></span>
         <span><i class='fas' style='color:#999; vertical-align:middle;'>\uf28d</i></span>
-            <input type='date' step='1' style='font-size: 80%' />
+            <input type='date' step='1' style='font-size: 80%;' />
             <span style='display: flex;'>
-                <input type='text' style='flex:1; min-width: 50px' />
+                <input type='text' style='flex:1; min-width: 50px; font-size: 80%;' />
                 <button type='button' style='width:2em; margin-left:-1px;'>+</button>
                 <button type='button' style='width:2em; margin-left:-1px;'>-</button>
                 </span>
