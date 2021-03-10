@@ -96,25 +96,6 @@ body.darkmode .tooltipdiv {
 
 /**************** Dialogs ****************/
 
-/* To do layout of input elements based on a 12-grid (dode as in dodecahedron) */
-.dode1, .dode2, .dode3, .dode4, .dode5, .dode6, .dode7, .dode8, .dode9, .dode10, .dode11 {
-    display: inline-block;
-    margin-left: 8px !important;
-    margin-right: 0 !important;
-}
-.dode1 { width: calc(8% - 8px); }
-.dode2 { width: calc(16% - 8px); }
-.dode3 { width: calc(24% - 8px); }
-.dode4 { width: calc(32% - 8px); }
-.dode5 { width: calc(40% - 8px); }
-.dode6 { width: calc(48% - 8px); }
-.dode7 { width: calc(56% - 8px); }
-.dode8 { width: calc(64% - 8px); }
-.dode9 { width: calc(72% - 8px); }
-.dode10 { width: calc(80% - 8px); }
-.dode11 { width: calc(88% - 8px); }
-.dode12 { width: 96%; }
-
 .dialog-cover {
     position: fixed;
     top: 0; bottom: 0; left: 0; right: 0;
@@ -263,8 +244,8 @@ body.darkmode .dialog h1 {
 }
 
 .dialog button.actionbutton {
-    margin-left: 1em;
-    font-size: 100%;
+    margin-left: 0.3em;
+    font-size: 80%;
     padding: 0.5em 0.6em;
     background: #fff;
     border: none;
@@ -272,10 +253,14 @@ body.darkmode .dialog h1 {
     transition: box-shadow 0.1s;
 }
 .dialog button.actionbutton:hover { box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.4); }
-.dialog button.actionbutton.submit { background: $acc_clr; min-width: 8em; }
+.dialog button.actionbutton.submit { background: $acc_clr; }
 .dialog button.actionbutton.submit:disabled { color: #aaa; }
 body.darkmode .dialog button.actionbutton { background: #eee; }
 body.darkmode .dialog button.actionbutton.submit { background: $acc_clr; }
+@media screen and (min-width: 600px) {
+    .dialog button.actionbutton { margin-left: 1em; font-size: 100%; }
+    .dialog button.actionbutton.submit { min-width: 7em; }
+}
 
 /* --- dialog table --- */
 
