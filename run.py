@@ -17,20 +17,27 @@ logger = logging.getLogger("asgineer")
 
 # Create dict with assets. You could add/replace assets here.
 common_assets = create_assets_from_dir(resource_filename("timetagger.common", "."))
-app_assets = create_assets_from_dir(resource_filename("timetagger.app", "."))
+apponly_assets = create_assets_from_dir(resource_filename("timetagger.app", "."))
 image_assets = create_assets_from_dir(resource_filename("timetagger.images", "."))
 page_assets = create_assets_from_dir(resource_filename("timetagger.pages", "."))
 
-root_assets = common_assets | image_assets | page_assets
-client_assets = common_assets | image_assets | app_assets
+root_assets = {}
+root_assets.update(common_assets)
+root_assets.update(image_assets)
+root_assets.update(page_assets)
+
+app_assets = {}
+app_assets.update(common_assets)
+app_assets.update(image_assets)
+app_assets.update(apponly_assets)
 
 # Enable the service worker so the app can be used offline and is installable
-enable_service_worker(client_assets)
+enable_service_worker(app_assets)
 
 # Turn asset dicts into a handlers. This feature of Asgineer provides
 # lightning fast handlers that support compression and HTTP caching.
 root_asset_handler = asgineer.utils.make_asset_handler(root_assets, max_age=0)
-client_asset_handler = asgineer.utils.make_asset_handler(client_assets, max_age=0)
+app_asset_handler = asgineer.utils.make_asset_handler(app_assets, max_age=0)
 
 
 @asgineer.to_asgi
@@ -59,7 +66,7 @@ async def main_handler(request):
             return await api_handler(request, apipath, user)
         elif request.path.startswith("/timetagger/app/"):
             path = request.path[16:]
-            status, headers, body = await client_asset_handler(request, path)
+            status, headers, body = await app_asset_handler(request, path)
             headers["X-Frame-Options"] = "sameorigin"  # Prevent clickjacking
             return status, headers, body
         else:
