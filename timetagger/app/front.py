@@ -1264,7 +1264,9 @@ class TopWidget(Widget):
                     self._handle_button_press(picked.action)
 
     def _on_key(self, e):
-        if e.key.lower() == "arrowup" or e.key.lower() == "pageup":
+        if e.ctrlKey or e.metaKey or e.altKey:
+            return  # don't fight with the browser
+        elif e.key.lower() == "arrowup" or e.key.lower() == "pageup":
             self._handle_button_press("nav_backward")
         elif e.key.lower() == "arrowdown" or e.key.lower() == "pagedown":
             self._handle_button_press("nav_forward")
