@@ -595,6 +595,8 @@ class TimeSelectionDialog(BaseDialog):
 
         t1 = str_date_to_time_int(t1_date)
         t2 = str_date_to_time_int(t2_date)
+        if t1 > t2:
+            t1, t2 = t2, t1
         t2 = dt.add(t2, "1D")  # look until the end of the day
 
         window.canvas.range.animate_range(t1, t2, None, False)  # without snap
@@ -2336,7 +2338,10 @@ class ImportDialog(BaseDialog):
                         date = raw.date.replace(".", "-")
                         if "-" in date and len(date.split("-")[-1]) == 4:
                             date = "-".join(reversed(date.split("-")))
-                        record.t1 = Date(date + " " + raw.t1).getTime() / 1000
+                        tme = raw.t1
+                        # Note: on IOS, Date needs to be "yyyy-mm-ddThh:mm:ss"
+                        # but people are unlikely to import on an ios device ... I hope.
+                        record.t1 = Date(date + " " + tme).getTime() / 1000
                     record.t1 = Math.floor(record.t1)
                 if True:  # raw.t2 or duration exists -
                     record.t2 = float(raw.t2)
