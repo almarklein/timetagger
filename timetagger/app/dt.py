@@ -113,7 +113,7 @@ def time2str(t, utc_offset=None):
     t = to_time_int(t)
     if this_is_js():  # pragma: no cover
         if utc_offset is None:
-            utc_offset = -Date(t * 1000).getTimezoneOffset() // 60
+            utc_offset = -(Date(t * 1000).getTimezoneOffset() // 60)
         t += utc_offset * 3600
         s = Date(t * 1000).toISOString()
         s = s.split(".")[0]

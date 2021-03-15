@@ -530,14 +530,21 @@ class TimeRange:
             iter += 1
             pix_pos = (t - t1) * npixels / nsecs
             ticks.push((pix_pos, t))
-            # Determine delta - re-round so we are sure that each tick is rounded
-            t_new = dt.round(dt.add(t, delta) - 1, delta)
+            # Determine delta. The +1s and then floor is to take care
+            # of the transition from wintertime to summertime.
+            # Even then, t_new may still not advance for ios somehow (see #73).
+            t_new = dt.floor(dt.add(t + 1, delta), delta)
+            if t_new <= t:
+                t_new = dt.add(t, delta)
             # Minor ticks
             t_minor = dt.add(t, minor_delta)
             while (t_new - t_minor) > 0:
                 pix_pos = (t_minor - t1) * npixels / nsecs
                 minor_ticks.push((pix_pos, t_minor))
-                t_minor = dt.add(t_minor, minor_delta)
+                t_minor_new = dt.add(t_minor, minor_delta)
+                if t_minor_new <= t_minor:
+                    break  # failsafe
+                t_minor = t_minor_new
             # Summertime transition?
             if check_summertime_transition and (t_new - t) > interval * 1.1:
                 tc = dt.floor(t_new, "1D")
@@ -546,9 +553,9 @@ class TimeRange:
                     tc = dt.add(tc, "1h")
                     if tc != tb:
                         # Add ticks at sumertime transition
-                        tt = [tb] if t_new == tc else [tb, tc]
-                        for t in tt:
-                            pix_pos = (t - t1) * npixels / nsecs
+                        tick_times = [tb] if t_new == tc else [tb, tc]
+                        for tick_time in tick_times:
+                            pix_pos = (tick_time - t1) * npixels / nsecs
                             ticks.push((pix_pos, tc))
                         # Add minor ticks at duplicate hour
                         d_minor = dt.add(t_new, minor_delta) - t_new
