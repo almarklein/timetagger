@@ -1,18 +1,37 @@
-# Dockerfile to run the example timetagger script.
+# Dockerfile to run TimeTagger in a container.
 #
-# Example props for MyPaas (https://github.com/almarklein/mypaas):
-# mypaas.service = timetaggertest
-# mypaas.url = https://example.com
-# mypaas.scale = 0
-# mypaas.maxmem = 1024m
+# Note that the default authentication handler only works on localhost,
+# so when deploying remotely, only the demo and sandbox work. This file
+# serves two purposes:
+#
+# * It's an example to help users run TimeTagger in a Docker container.
+# * I may use this to quickly deploy temporary builds during testing.
+#
+# Below are the MyPaas paramaters that I use for deploying test builds.
+# You can ignore/remove these if you do not use MyPaas.
+#
+# mypaas.service = timetagger.test1
+# mypaas.url = https://test1.timetagger.app
+# mypaas.maxmem = 256m
+
 
 FROM python:3.8-slim-buster
 
-# Install timetagger and dependencies. You may want to tag to a specific
-# version here (instead of main), or make sure that this line always
-# executes (is not cached by Docker).
-RUN pip --no-cache-dir install pip --upgrade && \
-    pip --no-cache-dir install -U https://github.com/almarklein/timetagger/archive/main.zip
+# Install dependencies (including optional ones that make uvicorn faster)
+RUN pip --no-cache-dir install pip --upgrade && pip --no-cache-dir install \
+    uvicorn uvloop httptools \
+    fastuaparser itemdb asgineer requests \
+    jinja2 markdown pyscss pscript \
+    pyjwt cryptography
+
+# This causes the cache to skip, so that we get the latest TimeTagger version.
+# If this occasionally does not work (e.g. ramdom.org is out), simply comment.
+ADD "https://www.random.org/cgi-bin/randbyte?nbytes=10&format=h" skipcache
+
+# If you extend TimeTagger in your own app that uses TimeTagger as a library,
+# uncomment either of these to install the latest TimeTagger.
+# RUN pip install -U timetagger
+# RUN pip install -U https://github.com/almarklein/timetagger/archive/main.zip
 
 WORKDIR /root
 COPY . .
