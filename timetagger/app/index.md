@@ -1,7 +1,7 @@
 % TimeTagger - App
 % The TimeTagger application.
 
-<script src='auth.js'></script>
+<script src='tools.js'></script>
 
 <script>
 
