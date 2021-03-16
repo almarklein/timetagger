@@ -253,14 +253,22 @@ class TimeTaggerCanvas(BaseCanvas):
             iconh,
         )
 
-        if window.store.get_auth and not window.store.get_auth():
-            # We need to be logged in, but we are not
+        # Determine if we are logged in and all is right (e.g. token not expired)
+        cantuse = None
+        if window.store.get_auth:
+            auth = window.store.get_auth()
+            if not auth:
+                cantuse = "You are loged out."
+            elif auth.cantuse:
+                cantuse = auth.cantuse
+
+        if cantuse:
+            # Meh
             ctx.textAlign = "center"
             ctx.textBaseline = "middle"
             ctx.fillStyle = COLORS.prim1_clr
-            text = "You are loged out."
-            utils.fit_font_size(ctx, self.w - 100, FONT.default, text, 30)
-            ctx.fillText(text, self.w / 2, self.h / 3)
+            utils.fit_font_size(ctx, self.w - 100, FONT.default, cantuse, 30)
+            ctx.fillText(cantuse, self.w / 2, self.h / 3)
             # Draw menu and login button
             ctx.save()
             try:
@@ -964,7 +972,6 @@ class TopWidget(Widget):
 
     def _draw_menu_button(self, ctx, x1, y1, x2, y2):
 
-        # Get user initials, demo, or user
         if window.store.__name__.startswith("Demo"):
             text = "Demo"
         elif window.store.__name__.startswith("Sandbox"):
@@ -1303,7 +1310,7 @@ class TopWidget(Widget):
             self._canvas.menu_dialog.open()
 
         elif action == "login":
-            window.auth.login()
+            window.location.href = "../login"
 
         elif action == "refresh":
             window.store.sync_soon(0.2)

@@ -23,10 +23,11 @@ When do ranges overlap?
 """
 
 from pscript import this_is_js
-from pscript.stubs import Math, Date, JSON, window, location, console, RawJS
+from pscript.stubs import Math, Date, JSON, window, console, RawJS
 
 
 if this_is_js():  # pragma: no cover
+    tools = window.tools
     utils = window.utils
     dt = window.dt  # noqa
     random = Math.random
@@ -171,17 +172,6 @@ def is_hidden(item):
 def make_hidden(item):
     """Mark the given item as hidden."""
     item.ds = "HIDDEN " + item.get("ds", "").split("HIDDEN")[-1].strip()
-
-
-def sleepms(ms):
-    global RawJS
-    return RawJS("new Promise(resolve => setTimeout(resolve, ms))")
-
-
-def build_api_url(suffix):
-    url = location.protocol + "//" + location.hostname + ":" + location.port
-    url = url.rstrip(":") + location.pathname.split("/app/")[0] + "/api/v1/"
-    return url + suffix
 
 
 # %% Sub stores
@@ -744,7 +734,8 @@ class ConnectedDataStore(BaseDataStore):
         self._server_time = 0
         self._last_auth_get = 0
         self._pull_statuses = [0, 0, 0, 0, 0]
-        self._auth = window.auth.get_auth_info()
+        self._auth = window.tools.get_auth_info()
+        self._auth_cantuse = None
 
     def get_auth(self):
         """Get an auth info object that is guaranteed to match the email
@@ -754,13 +745,18 @@ class ConnectedDataStore(BaseDataStore):
         """
         if dt.now() - self._last_auth_get > 1.0:
             self._last_auth_get = dt.now()
-            auth = window.auth.get_auth_info()
+            auth = window.tools.get_auth_info()
             if self._auth is None and auth:
                 window.location.reload()  # Reload when we login after having been logged out
             elif auth and auth.email and auth.email == self._auth.email:
                 self._auth = auth
             else:
                 self._auth = None
+            # Check expiration
+            if self._auth:
+                if self._auth_cantuse:
+                    self._auth.cantuse = self._auth_cantuse
+
         return self._auth
 
     def _log_load(self, where, ob):
@@ -769,13 +765,13 @@ class ConnectedDataStore(BaseDataStore):
             console.log("Loading from " + where + ": " + [n1, n2, n3])
 
     async def _clear_cache(self):
-        storage = window.utils.AsyncStorage()
+        storage = window.tools.AsyncStorage()
         await storage.clear()
 
     async def _load_from_cache(self):
         if self._auth and self._auth.email:
             try:
-                storage = window.utils.AsyncStorage()
+                storage = window.tools.AsyncStorage()
                 ob = await storage.getItem(self._auth.email)
                 if ob and ob.server_time:
                     self._log_load("cache", ob)
@@ -800,7 +796,7 @@ class ConnectedDataStore(BaseDataStore):
                     "settings": self.settings.get_dump(),
                     "records": self.records.get_dump(),
                 }
-                storage = window.utils.AsyncStorage()
+                storage = window.tools.AsyncStorage()
                 await storage.setItem(dump)
             except Exception as err:
                 console.warn(err)
@@ -808,7 +804,7 @@ class ConnectedDataStore(BaseDataStore):
     async def _sync(self):
         # Ignore sync if there is no auth info
         auth = self.get_auth()
-        if not auth:
+        if not auth or auth.cantuse:
             return
         # Get from local cache?
         if self._server_time == 0:
@@ -822,7 +818,7 @@ class ConnectedDataStore(BaseDataStore):
 
     async def _force_reset(self):
         # Set the reset flag at the server. Intended for testing.
-        url = build_api_url("forcereset")
+        url = tools.build_api_url("forcereset")
         authtoken = self.get_auth().token
         init = dict(method="PUT", headers={"authtoken": authtoken})
         await window.fetch(url, init)
@@ -836,7 +832,7 @@ class ConnectedDataStore(BaseDataStore):
         self._to_push[kind] = {}
 
         # Fetch and wait for response
-        url = build_api_url(kind)
+        url = tools.build_api_url(kind)
         init = dict(
             method="PUT",
             body=JSON.stringify(items.values()),
@@ -876,7 +872,7 @@ class ConnectedDataStore(BaseDataStore):
     async def _pull(self, authtoken):
 
         # Fetch and wait for response
-        url = build_api_url("updates?since=" + self._server_time)
+        url = tools.build_api_url("updates?since=" + self._server_time)
         init = dict(method="GET", headers={"authtoken": authtoken})
         try:
             res = await window.fetch(url, init)
@@ -887,13 +883,17 @@ class ConnectedDataStore(BaseDataStore):
 
         # Process response
         if res.status != 200:
-            console.warn(res.status + " (" + res.statusText + ") " + await res.text())
+            text = await res.text()
+            console.warn(res.status + " (" + res.statusText + ") " + text)
             self._set_state("error")  # E.g. Wifi or server down, or 500
             if res.status == 403:
-                if self._pull_statuses[-2] != 403 and self._pull_statuses[-3] != 403:
-                    # We do have internet, but token is invalid: renew and sync sooner
-                    await window.auth.renew_maybe()
-                    self.sync_soon(4)
+                # Our token is probably expired. Don't logout, because user
+                # will probably just login again.
+                # It's tempting to log the user out, especially considering
+                # cases when this is a forgotten or lost device. However, if it's
+                # not  ...
+                # todo: can we detect that the seed has changed, and then logout?
+                self._auth_cantuse = text
         else:
             ob = JSON.parse(await res.text())
             if ob.server_time:
@@ -935,7 +935,7 @@ class SandboxDataStore(BaseDataStore):
             items = self._to_push[kind].values()
             self._to_push[kind] = {}
             if len(items) > 0:
-                await sleepms(200)
+                await tools.sleepms(200)
                 for item in items:
                     item.st = dt.now()
                 self[kind]._put_received(*items)
@@ -962,7 +962,7 @@ class DemoDataStore(BaseDataStore):
             items = self._to_push[kind].values()
             self._to_push[kind] = {}
             if len(items) > 0:
-                await sleepms(200)
+                await tools.sleepms(200)
                 for item in items:
                     item.st = dt.now()
                 self[kind]._put_received(*items)
@@ -971,7 +971,7 @@ class DemoDataStore(BaseDataStore):
         while len(self._years) > 0:
             self._create_one_year_of_data(self._years.pop(-1))
         else:
-            await sleepms(200)
+            await tools.sleepms(200)
 
     def _create_tags(self):
 

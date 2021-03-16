@@ -9,7 +9,12 @@ import logging
 from pkg_resources import resource_filename
 
 import asgineer
-from timetagger.server import api_handler, api_handler_v2, create_assets_from_dir, enable_service_worker
+from timetagger.server import (
+    default_api_handler,
+    create_assets_from_dir,
+    enable_service_worker,
+    get_webtoken_unsafe,
+)
 
 
 logger = logging.getLogger("asgineer")
@@ -51,32 +56,47 @@ async def main_handler(request):
     """
 
     if request.path == "/":
-        # Redirect
-        return 307, {"Location": "/timetagger/"}, b""
+        return 307, {"Location": "/timetagger/"}, b""  # Redirect
 
     elif request.path.startswith("/timetagger/"):
-        if request.path.startswith("/timetagger/api/"):
-            # Get apipath
-            prefix = "/timetagger/api/v1/"
-            apipath = request.path[len(prefix) :].strip("/")
-            if request.path.startswith("/api/v1/"):
-                # This is where you'd handle authentication ...
-                user = "default"
-                return await api_handler(request, apipath, user)
-            elif request.path.startswith("/api/v2/"):
-                return await api_handler_v2(request, apipath)
+        if request.path.startswith("/timetagger/api/v2/"):
+            path = request.path[19:].strip("/")
+            if path == "webtoken_for_localhost":
+                return await webtoken_for_localhost(request)
             else:
-                return 404, {}, "invalid API path"
+                return await default_api_handler(request, path)
         elif request.path.startswith("/timetagger/app/"):
-            path = request.path[16:]
+            path = request.path[16:].strip("/")
             status, headers, body = await app_asset_handler(request, path)
             headers["X-Frame-Options"] = "sameorigin"  # Prevent clickjacking
             return status, headers, body
         else:
-            path = request.path[12:]
+            path = request.path[12:].strip("/")
             return await root_asset_handler(request, path)
     else:
         return 404, {}, "only serving at /timetagger/"
+
+
+async def webtoken_for_localhost(request):
+    """An authentication handler that provides a webtoken when the hostname is
+    localhost. If you run TimeTagger on the web, you must implement
+    your own authentication workflow that ends with providing the client
+    with a TimeTagger webtoken.
+
+    Examples could be:
+      * Implement username/password authentication.
+      * Using an OAuth workflow via a trusted provider like Google or Github.
+      * Using Auth0 to authenticate and exchanging its JWT with a webtoken.
+      * Using Did to authenticate via email and exchanging its JWT for a webtoken.
+    """
+
+    # Establish that we can trust the client
+    if request.host not in ("localhost", "127.0.0.1"):
+        return 403, {}, "Not on localhost"
+
+    # Define the username (i.e. email) and return the corersponding webtoken
+    auth_info = dict(email="defaultuser")
+    return get_webtoken_unsafe(auth_info)
 
 
 if __name__ == "__main__":

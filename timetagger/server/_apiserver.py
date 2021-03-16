@@ -7,11 +7,10 @@ import json
 import time
 import logging
 import secrets
-from base64 import urlsafe_b64encode as b64encode, urlsafe_b64decode as b64decode
 
 from itemdb import ItemDB
 
-from ._utils import asyncthis, user2filename
+from ._utils import asyncthis, user2filename, create_jwt, decode_jwt
 
 
 logger = logging.getLogger("asgineer")
@@ -72,202 +71,288 @@ INDICES = {
 }
 
 
-async def api_handler(request, apipath, user):
-    """The main API request handler."""
-
-    # Take care that our PUT (and DELETE) are idempotent (multiple
-    # identical requests should have the same effect as a single request)
-    #
-    # Upon an error, we just respond with an appropriate status code, and a
-    # message in text/plain; we don't try to wrap the error in a dict.
-
-    if not apipath:
-        # Respond with "index" if this is the API root
-        baseurl = f"{request.scheme}://{request.host}:{request.port}/api/v1/"
-        return {
-            "version": 1,
-            "GET updates since the given time": baseurl + "updates?since=xx",
-            # "GET records.": baseurl + "records",
-            "GET settings": baseurl + "settings",
-            "PUT (add/update) records": baseurl + "records",
-            "PUT (push/update) user settings": baseurl + "settings",
-        }
-
-    elif apipath == "updates":
-        if request.method == "GET":
-            return await get_updates_handler(request, user)
-        else:
-            return 405, {}, "/api/v1/updates can only be used with GET"
-
-    elif apipath == "records":
-        if request.method == "PUT":
-            return await put_items_handler(request, user, "records")
-        else:
-            return 405, {}, "/api/v1/records can only be used with PUT"
-
-    elif apipath == "settings":
-        if request.method == "PUT":
-            return await put_items_handler(request, user, "settings")
-        elif request.method == "GET":
-            return await get_items_handler(request, user, "settings")
-        else:
-            return 405, {}, "/api/v1/settings can only be used with PUT or GET"
-
-    elif apipath == "forcereset":
-        if request.method == "PUT":
-            return await force_reset_handler(request, user)
-        else:
-            return 405, {}, "/api/v1/forcereset can only be used with PUT"
-
-    elif apipath == "apitoken":
-        if request.method in ("GET", "PUT", "DELETE"):
-            return await apitoken_handler(request, user)
-        else:
-            return 405, {}, "/api/v1/apitoken can only be used with GET, PUT, DELETE"
-
-    else:
-        return 404, {}, "invalid API call"
+class AuthException(Exception):
+    pass
 
 
-async def api_handler_v2(request, apipath):
-    # todo: I think it kinda makes sense to let apipath start with /
-    # todo: rate limiting
+# %% Main handler
+
+# todo: rate limiting
+
+
+async def default_api_handler(request, apipath):
+    """Async API handler. This is relatively short, so it can easily be
+    replaced with a custom handler. Applications that add more API endpoints
+    can use this implementation as a starting point.
+    """
 
     if not apipath and request.method == "GET":
         return 200, {}, "See https://timetagger.readthedocs.io"
 
-    # Auth
-    user = "default"
+    try:
+        auth_info = authenticate(request)
+        return await api_handler_triage(request, apipath, auth_info)
+    except AuthException as err:
+        return 403, {}, f"Auth failed: {err}"
 
-    if apipath == "records":
 
+async def api_handler_triage(request, apipath, auth_info):
+    """The API handler that triages over the API options.
+
+    On authenication: the 3d argument is the JWT payload which should
+    have been validated. This function will check the seed of the
+    payload against the seed in the user db. An AuthException is raised
+    if this check fails.
+    """
+
+    if apipath == "updates":
         if request.method == "GET":
-            # Parse since option
-            since = None
-            since_str = request.querydict.get("since", "").strip()
-            if since_str:
-                try:
-                    since = float(since_str)
-                except ValueError:
-                    return 400, {}, "/api/v1/records since needs a number (timestamp)"
-            # Parse timerange option
-            timerange = None
-            timerange_str = request.querydict.get("timerange", "").strip()
-            if timerange_str:
-                timerange = timerange_str.split("-")
-                try:
-                    timerange = [float(x) for x in timerange]
-                    if len(timerange) != 2:
-                        raise ValueError()
-                except ValueError:
-                    return (
-                        400,
-                        {},
-                        "/api/v1/records timerange needs 2 numbers (timestamps)",
-                    )
-            # Parse pollmethod option
-            pollmethod = request.querydict.get("pollmethod", "").strip() or "short"
-            if pollmethod not in ("short", "long"):
-                return 400, {}, "/api/v1/records pollmethod must be 'short' or 'long'"
-            # Check
-            if since and range:
-                # todo: allowed or not?
-                raise RuntimeError("not ok")
-            # Go!
-            return await asyncthis(_get_records, user, since, timerange, pollmethod)
+            return await get_updates(request, auth_info)
+        else:
+            return 405, {}, "api/v2/updates can only be used with GET and PUT"
 
+    elif apipath == "records":
+        if request.method == "GET":
+            return await get_records(request, auth_info)
         elif request.method == "PUT":
-            return await put_items_handler(request, user, "records")
-
+            return await put_records(request, auth_info)
         else:
             return 405, {}, "api/v2/records can only be used with GET and PUT"
+
+    elif apipath == "settings":
+        if request.method == "GET":
+            return await get_settings(request, auth_info)
+        elif request.method == "PUT":
+            return await put_settings(request, auth_info)
+        else:
+            return 405, {}, "api/v2/records can only be used with GET and PUT"
+
+    elif apipath == "forcereset":
+        if request.method == "PUT":
+            return await put_forcereset(request, auth_info)
+        else:
+            return 405, {}, "/api/v2/forcereset can only be used with PUT"
+
+    elif apipath == "webtoken":
+        if request.method in ("GET"):
+            return await get_webtoken(request, auth_info)
+        else:
+            return 405, {}, "/api/v2/webtoken can only be used with GET"
+
+    elif apipath == "apitoken":
+        if request.method in ("GET"):
+            return await get_apitoken(request, auth_info)
+        else:
+            return 405, {}, "/api/v2/apitoken can only be used with GET"
 
     else:
         return 404, {}, f"/api/v2/{apipath} is not a valid API path"
 
 
-def get_user_db(user):
-    """Open the user db and return the db and its mtime (which is -1 if the db did not yet exist)."""
+def get_user_db(auth_info):
+    """Open the user db and return the db and its mtime
+    (which is -1 if the db did not yet exist).
+    This will also validate the token seed, and raise AuthException when
+    it does not match.
+    """
+
     # Get database name and its mtime
-    dbname = user2filename(user)
+    dbname = user2filename(auth_info["email"])
     if os.path.isfile(dbname):
         mtime = os.path.getmtime(dbname)
     else:
         mtime = -1
+
     # Open the database, this creates it if it does not yet exist
     db = ItemDB(dbname)
+
+    # Ensure tables
+    db.ensure_table("userinfo", *INDICES["userinfo"])
+    db.ensure_table("records", *INDICES["records"])
+    db.ensure_table("settings", *INDICES["settings"])
+
+    # todo: try-catch around every call to this function
+
+    # Second part of auth
+    _validate_token_seed(db, auth_info)
+
     return db, mtime
 
 
-async def force_reset_handler(request, user):
-    """Set the reset_time to force a reset for each first next update."""
-    return await asyncthis(_force_reset, user)
+# %% Auth
 
 
-def _force_reset(user):
-
-    db, mtime = get_user_db(user)
-    st = time.time()
-    db.ensure_table("userinfo", *INDICES["userinfo"])
-
-    with db:
-        db.put_one("userinfo", key="reset_time", st=st, mt=st, value=st)
-
-    return 200, {}, {"status": "ok"}
+WEBTOKEN_DAYS = 2 * 7
+WEBTOKEN_LIFETIME = WEBTOKEN_DAYS * 24 * 60 * 60
+API_TOKEN_EXP = 32503748400  # the year 3000
 
 
-async def apitoken_handler(request, user):
-    """Get/revoke/reset API key."""
-    return await asyncthis(_apitoken, user, request.method)
+def _get_tokenkind(auth_info):
+    if auth_info["exp"] > time.time() + WEBTOKEN_LIFETIME:
+        return "apitoken"
+    else:
+        return "webtoken"
 
 
-def _apitoken(user, method):
+def authenticate(request):
+    """Authenticate the request by validating the token in the HTTP header.
+    Raises an AuthException if the authentication fails.
 
-    db, mtime = get_user_db(user)
-    st = time.time()
-    db.ensure_table("userinfo", *INDICES["userinfo"])
-
-    if method == "GET":
-        ob = db.select_one("userinfo", "key = 'apitoken'") or {}
-        token = ob.get("value", "")
-    elif method == "DELETE":
-        token = ""
-        with db:
-            db.put_one("userinfo", key="apitoken", st=st, mt=st, value=token)
-    elif method == "PUT":
-        token_b = user.encode() + b" " + secrets.token_bytes(32)
-        token = b64encode(token_b).decode()
-        with db:
-            db.put_one("userinfo", key="apitoken", st=st, mt=st, value=token)
-
-    return 200, {}, {"token": token}
-
-
-async def get_updates_handler(request, user):
-    """Coroutine to handle a GET updates request."""
-    # todo: it may be possible to keep track of db access in-process
-    # so that we can make this handler very fast when nothing has changed, but
-    # this fails (or becomes complex) when multiple processes are involved
-    # (e.g. live vs staging).
+    Returns the JWT payload. This validate the expiration and that this is
+    a token that we issues. It does not verify the token seed yet, this
+    must happen when the database is opened.
+    """
+    token = request.headers.get("authtoken", "")
+    if not token:
+        raise AuthException("Missing jwt 'authtoken' in header.")
     try:
-        since = float(request.querydict.get("since", ""))
+        return decode_jwt(token)
+    except Exception as err:
+        text = str(err)
+        if "expired" in text:
+            text = f"The token has expired (after {WEBTOKEN_DAYS} days)"
+        raise AuthException(text)
+
+
+def _validate_token_seed(db, auth_info):
+    """Raises an AuthException if the seed in the auth_info does not match with
+    the seed in the db.
+    """
+    tokenkind = _get_tokenkind(auth_info)
+    query = f"key = '{tokenkind}_seed'"
+    ob = db.select_one("userinfo", query) or {}
+    seed = ob.get("value", "")
+    if not seed:
+        raise AuthException(f"No {tokenkind} seed in db")
+    if seed != auth_info["seed"]:
+        raise AuthException(f"The {tokenkind} seed does not match")
+
+
+async def get_webtoken(request, auth_info):
+
+    # Get reset option
+    reset = request.querydict.get("reset", "")
+    reset = reset.lower() not in ("", "false", "no", "0")
+
+    # Auth
+    if auth_info["exp"] > time.time() + WEBTOKEN_LIFETIME:
+        return 403, {}, "Not allowed with a non-expiring token"
+
+    # Get and return result
+    result = await asyncthis(_get_any_token, auth_info, "webtoken", reset)
+    return 200, {}, result
+
+
+async def get_apitoken(request, auth_info):
+
+    # Get reset option
+    reset = request.querydict.get("reset", "")
+    reset = reset.lower() not in ("", "false", "no", "0")
+
+    # Auth
+    if auth_info["exp"] > time.time() + WEBTOKEN_LIFETIME:
+        return 403, {}, "Not allowed with a non-expiring token"
+
+    # Get and return result
+    result = await asyncthis(_get_any_token, auth_info, "apitoken", reset)
+    return 200, {}, result
+
+
+def _get_any_token(auth_info, tokenkind, reset):
+
+    assert tokenkind in ("webtoken", "apitoken")
+
+    db, mtime = get_user_db(auth_info)
+
+    # Create token
+    exp = int(time.time()) + WEBTOKEN_LIFETIME
+    if tokenkind == "apitoken":
+        exp = API_TOKEN_EXP
+    seed = _get_token_seed_from_db(db, tokenkind, reset)
+    payload = dict(
+        email=auth_info["email"],
+        exp=exp,
+        seed=seed,
+    )
+    token = create_jwt(payload)
+
+    return dict(status="ok", token=token)
+
+
+def _get_token_seed_from_db(db, tokenkind, reset):
+    st = time.time()
+    query = f"key = '{tokenkind}_seed'"
+    ob = db.select_one("userinfo", query) or {}
+    seed = ob.get("value", "")
+    if reset or not seed:
+        seed = secrets.token_urlsafe(8)
+        with db:
+            db.put_one("userinfo", key=f"{tokenkind}_seed", st=st, mt=st, value=seed)
+    return seed
+
+
+def get_webtoken_unsafe(auth_info):
+    """This function provides a webtoken that can be used to
+    authenticate future requests.
+
+    The caller of this function is responsible that the request is secure, e.g. by:
+    * Checking that we're serving on localhost.
+    * Validating a JWT from another trusted source.
+    * Going through an OAuth workflow with a trusted auth provider.
+
+    The provided webtoken expires in two weeks. It is recommended to
+    use GET /api/v2/webtoken to get a fresh token once a day.
+    """
+    # Open db
+    dbname = user2filename(auth_info["email"])
+    db = ItemDB(dbname)
+    db.ensure_table("userinfo", *INDICES["userinfo"])
+    # Produce payload
+    payload = dict(
+        email=auth_info["email"],
+        exp=int(time.time()) + WEBTOKEN_LIFETIME,
+        seed=_get_token_seed_from_db(db, "webtoken", False),
+    )
+    # Return token
+    token = create_jwt(payload)
+    return token
+
+
+# %% The implementation
+
+
+async def get_updates(request, auth_info):
+
+    # Parse since
+    since_str = request.querydict.get("since", "").strip()
+    if not since_str:
+        return 400, {}, "/api/v2/updates needs since"
+    try:
+        since = float(since_str)
     except ValueError:
-        return 400, {}, "/api/v1/updates needs float ?since argument"
+        return 400, {}, "/api/v2/updates since needs a number (timestamp)"
 
-    return await asyncthis(_get_updates, user, since)
+    # # Parse pollmethod option
+    # pollmethod = request.querydict.get("pollmethod", "").strip() or "short"
+    # if pollmethod not in ("short", "long"):
+    #     return 400, {}, "/api/v2/records pollmethod must be 'short' or 'long'"
+
+    # Get and return result
+    result = await asyncthis(_get_updates, auth_info, since)
+    return 200, {}, result
 
 
-def _get_updates(user, since):
+def _get_updates(auth_info, since):
 
-    db, mtime = get_user_db(user)
     server_time = time.time()
-    for what in ("records", "settings", "userinfo"):
-        db.ensure_table(what, *INDICES[what])
+
+    db, mtime = get_user_db(auth_info)
 
     # Early exit - this is what will happen most of the time. Use a margin to
     # account for limited resolution of getmtime.
     if mtime + 0.2 < since:
         return dict(
+            status="ok",
             server_time=server_time,
             reset=0,  # Not False; is used in the tests to know that we exited early
             records=[],
@@ -281,6 +366,7 @@ def _get_updates(user, since):
     reset_time = float((ob or {}).get("value", -1))
     reset = since <= reset_time
 
+    # Get data
     if reset:
         records = db.select_all("records")
         settings = db.select_all("settings")
@@ -298,41 +384,79 @@ def _get_updates(user, since):
     )
 
 
-async def get_items_handler(request, user, what):
-    """Coroutine to handle a GET settings request."""
-    return await asyncthis(_get_items, user, what)
+async def get_records(request, auth_info):
+
+    # Parse timerange option
+    timerange_str = request.querydict.get("timerange", "").strip()
+    if not timerange_str:
+        return 400, {}, "/api/v2/records needs timerange (2 timestamps)"
+    timerange = timerange_str.split("-")
+    try:
+        timerange = [float(x) for x in timerange]
+        if len(timerange) != 2:
+            raise ValueError()
+    except ValueError:
+        return 400, {}, "/api/v2/records timerange needs 2 numbers (timestamps)"
+
+    # Get and return result
+    result = await asyncthis(_get_records, auth_info, timerange)
+    return 200, {}, result
 
 
-def _get_items(user, what):
-
-    db, mtime = get_user_db(user)
-    server_time = time.time()
-
-    if mtime <= 0:
-        return 200, {}, {"server_time": server_time, what: []}
-
-    db.ensure_table(what, *INDICES[what])
-    items = db.select_all(what)
-    return 200, {}, {"status": "ok", "server_time": server_time, what: items}
+def _get_records(auth_info, timerange):
+    db, mtime = get_user_db(auth_info)
+    query = f"t2 >= {timerange[0]} AND t1 <= {timerange[1]}"
+    records = db.select("records", query)
+    return dict(
+        status="ok",
+        records=records,
+    )
 
 
-async def put_items_handler(request, user, what):
-    """Coroutine to handle a PUT records/settings request."""
-    # Download items
+async def put_records(request, auth_info):
+
+    # Download records
     items = await request.get_json(10 * 2 ** 20)  # 10 MiB limit
     if not isinstance(items, list):
-        raise TypeError(f"List of {what}'s' must be a list")
+        raise TypeError(f"List of records must be a list")
 
-    # Apply
-    return await asyncthis(_push_items, user, what, items)
+    # Return result
+    result = await asyncthis(_push_items, auth_info, "records", items)
+    return 200, {}, result
 
 
-def _push_items(user, what, items):
+async def get_settings(request, auth_info):
 
-    db, mtime = get_user_db(user)
+    # Get and return result
+    result = await asyncthis(_get_settings, auth_info)
+    return 200, {}, result
+
+
+def _get_settings(auth_info):
+    db, mtime = get_user_db(auth_info)
+    settings = db.select_all()
+    return dict(
+        status="ok",
+        settings=settings,
+    )
+
+
+async def put_settings(request, auth_info):
+
+    # Download settings
+    items = await request.get_json(10 * 2 ** 20)  # 10 MiB limit
+    if not isinstance(items, list):
+        raise TypeError(f"List of settings must be a list")
+
+    # Return result
+    result = await asyncthis(_push_items, auth_info, "settings", items)
+    return 200, {}, result
+
+
+def _push_items(auth_info, what, items):
+
     server_time = time.time()
-    db.ensure_table(what, *INDICES[what])
-    db.ensure_table("userinfo", *INDICES["userinfo"])
+    db, mtime = get_user_db(auth_info)
 
     req = REQS[what]
     spec = SPECS[what]
@@ -395,11 +519,25 @@ def _push_items(user, what, items):
             # Store it!
             db.put(what, item)
 
-    # Done
-    body = {
-        "status": ("fail" if fail else "ok"),
-        "accepted": accepted,
-        "fail": fail,
-        "errors": errors + errors2,
-    }
-    return 200, {}, body
+    return dict(
+        status=("fail" if fail else "ok"),
+        accepted=accepted,
+        fail=fail,
+        errors=errors + errors2,
+    )
+
+
+async def put_forcereset(request, auth_info):
+    result = await asyncthis(_put_forcereset, auth_info)
+    return 200, {}, result
+
+
+def _put_forcereset(auth_info):
+
+    st = time.time()
+    db, mtime = get_user_db(auth_info)
+
+    with db:
+        db.put_one("userinfo", key="reset_time", st=st, mt=st, value=st)
+
+    return dict(status="ok")

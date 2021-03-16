@@ -3,10 +3,11 @@ Implementation of HTML-based dialogs.
 """
 
 from pscript import this_is_js
-from pscript.stubs import window, console, location, Math, isFinite, Date, isNaN
+from pscript.stubs import window, document, console, Math, isFinite, Date, isNaN
 
 
 if this_is_js():
+    tools = window.tools
     dt = window.dt
     utils = window.utils
 
@@ -21,7 +22,7 @@ def to_str(x):
 def show_background_div(show, keep_transparent=False):
     # Create element?
     if not window.dialogbackdiv:
-        window.dialogbackdiv = window.document.createElement("div")
+        window.dialogbackdiv = document.createElement("div")
         window.dialogbackdiv.className = "dialog-cover"
         document.getElementById("canvas").parentNode.appendChild(window.dialogbackdiv)
         # Make it block events
@@ -80,9 +81,7 @@ def _browser_history_popstate():
     if h.state and h.state.tt_state:
         if h.state.tt_state == 1:
             if len(stack) > 0:
-                h.pushState(
-                    {"tt_state": 2}, window.document.title, window.location.pathname
-                )
+                h.pushState({"tt_state": 2}, document.title, window.location.pathname)
                 stack[-1].close()
             else:
                 h.back()
@@ -100,50 +99,16 @@ def _browser_history_init():
     h = window.history
     if h.state and h.state.tt_state:
         if h.state.tt_state == 1:
-            h.pushState(
-                {"tt_state": 2}, window.document.title, window.location.pathname
-            )
+            h.pushState({"tt_state": 2}, document.title, window.location.pathname)
     else:
-        h.replaceState({"tt_state": 1}, window.document.title, window.location.pathname)
-        h.pushState({"tt_state": 2}, window.document.title, window.location.pathname)
+        h.replaceState({"tt_state": 1}, document.title, window.location.pathname)
+        h.pushState({"tt_state": 2}, document.title, window.location.pathname)
 
     # Now its safe to listen to history changes
     window.addEventListener("popstate", _browser_history_popstate, 0)
 
 
 _browser_history_init()
-
-
-def copy_dom_node(node):
-    global document
-
-    # Select the node (https://stackoverflow.com/questions/400212)
-    sel = None
-    if document.createRange and window.getSelection:  # FF, Chrome, Edge, ...
-        range = document.createRange()
-        sel = window.getSelection()
-        sel.removeAllRanges()
-        try:
-            range.selectNodeContents(node)
-            sel.addRange(range)
-        except Exception:
-            range.selectNode(node)
-            sel.addRange(range)
-    elif document.body.createTextRange:  # IE?
-        range = document.body.createTextRange()
-        range.moveToElementText(node)
-        range.select()
-
-    # Make a copy
-    try:
-        successful = window.document.execCommand("copy")
-    except Exception:
-        successful = False
-
-    if not successful:
-        return  # Don't unselect, user can now copy
-    if sel is not None:
-        sel.removeAllRanges()
 
 
 def csvsplit(s, sep, i=0):
@@ -230,7 +195,7 @@ class BaseDialog:
         self._callback = None
 
     def _create_main_div(self):
-        self.maindiv = window.document.createElement("form")
+        self.maindiv = document.createElement("form")
         self.maindiv.addEventListener("keydown", self._on_key, 0)
         self._canvas.node.parentNode.appendChild(self.maindiv)
         self.maindiv.className = "dialog"
@@ -400,7 +365,6 @@ class MenuDialog(BaseDialog):
         else:
             store_valid = True
             logged_in = False
-            # logged_in = bool(window.auth.get_auth_info())
         logged_in  # noqaM
 
         is_installable = window.pwa and window.pwa.deferred_prompt
@@ -443,16 +407,15 @@ class MenuDialog(BaseDialog):
                 "<span class='acc_color'>Install this app</span>",
                 self._do_install,
             ),
-
         ]:
             if not isvalid:
                 continue
             elif title is None:
-                el = window.document.createElement("div")
+                el = document.createElement("div")
                 el.setAttribute("class", "divider")
                 container.appendChild(el)
             else:
-                el = window.document.createElement("a")
+                el = document.createElement("a")
                 el.innerHTML = f"<i class='fas'>{icon}</i>&nbsp;&nbsp;{title}"
                 el.onclick = func
                 container.appendChild(el)
@@ -1082,7 +1045,7 @@ class RecordDialog(BaseDialog):
         # Enable for some more info (e.g. during dev)
         if False:
             for x in [f"ID: {record.key}", f"Modified: {dt.time2localstr(record.mt)}"]:
-                el = window.document.createElement("div")
+                el = document.createElement("div")
                 el.innerText = x
                 self.maindiv.appendChild(el)
 
@@ -1822,7 +1785,7 @@ class ReportDialog(BaseDialog):
         self._canvas.record_dialog.open("Edit", record, self._update_table)
 
     def _copy_clipboard(self):
-        copy_dom_node(self._table_element)
+        tools.copy_dom_node(self._table_element)
         self._copy_but.innerHTML = (
             f"<i class='fas'>\uf46c</i>&nbsp;&nbsp;{self._copybuttext}"
         )
@@ -2067,7 +2030,7 @@ class ExportDialog(BaseDialog):
     async def fill_records(self):
         self._working += 1
         working = self._working
-        await window.stores.sleepms(100)
+        await window.tools.sleepms(100)
 
         # Prepare
         self._copy_but.disabled = True
@@ -2101,7 +2064,7 @@ class ExportDialog(BaseDialog):
             if len(lines) % 256 == 0:
                 self._copy_but.innerHTML = "Found " + len(lines) + " records"
                 # self._table_element.innerHTML = lines.join("\n")
-                await window.stores.sleepms(1)
+                await window.tools.sleepms(1)
             if working != self._working:
                 return
 
@@ -2112,7 +2075,7 @@ class ExportDialog(BaseDialog):
 
     def _copy_clipboard(self):
         table = self.maindiv.children[-1]
-        copy_dom_node(table)
+        tools.copy_dom_node(table)
         self._copy_but.innerHTML = "Copy export-table <i class='fas'>\uf46c</i>"
         window.setTimeout(self._reset_copy_but_text, 800)
 
@@ -2431,7 +2394,7 @@ class ImportDialog(BaseDialog):
                 # Keep giving feedback / dont freeze
                 if row % 100 == 0:
                     self._import_but.innerHTML = f"Found {len(records)} records"
-                    await window.stores.sleepms(1)
+                    await window.tools.sleepms(1)
             except Exception as err:
                 log(f"Error at row {row}: {err}")
                 return
@@ -2617,7 +2580,7 @@ class AboutDialog(BaseDialog):
             self._get_token("PUT")
 
     def _on_token_copy(self):
-        copy_dom_node(self._token_text)
+        tools.copy_dom_node(self._token_text)
         self._token_copy.innerHTML = "<i class='fas'>\uf46c</i>"
         window.setTimeout(self._reset_copy_but_text, 800)
 
@@ -2625,8 +2588,7 @@ class AboutDialog(BaseDialog):
         self._token_copy.innerHTML = "<i class='fas'>\uf0ea</i>"
 
     async def _get_token(self, method="GET"):
-        url = location.protocol + "//" + location.hostname + ":" + location.port
-        url = url.rstrip(":") + "/api/v1/apitoken"
+        url = tools.build_api_url("apitoken")
         authtoken = window.store.get_auth().token
         init = dict(method=method, headers={"authtoken": authtoken})
         try:
