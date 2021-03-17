@@ -113,14 +113,15 @@ window.addEventListener("load", refresh);
 <button class='whitebutton' onclick='nav_to("./logout#page=./account");'>Log out</button>
 <button class='whitebutton' id='logoutallbutton' disbaled onclick='reset_webtoken_seed();'>Revoke access for all other devices</button>
 
-<p  style='font-size: 80%;'>
-<i class='fas' style='font-size: 100%;'></i>
-Authentication occurs using a web-token that is obtained when logging in.
-The token is valid for 14 days, and is refreshed when you use the application.
-It is recommended to log out on devices that you do not own. In case you forget,
-or when a device is stolen, you can also revoke all current tokens.
-</p>
-
+<details style='font-size: 80%; padding:0.5em; border: 1px solid #ddd; border-radius:4px;'>
+    <summary style='user-select:none;'>web-token details</summary>
+    <p>
+    Authentication occurs using a web-token that is obtained when logging in.
+    The token is valid for 14 days, and is refreshed when you use the application.
+    It is recommended to log out on devices that you do not own. In case you forget,
+    or when a device is stolen, you can also revoke all current tokens.
+    </p>
+</details>
 <br />
 
 ## API token
@@ -130,11 +131,13 @@ or when a device is stolen, you can also revoke all current tokens.
 <button type='button' class='whitebutton' id='resetapikey' onclick='reset_api_key();'>Reset API token</button>
 <button type='button' class='whitebutton' id='copyapikey' onclick='copy_api_key();'><i class='fas'></i></button>
 
-<p  style='font-size: 80%;'>
-<i class='fas' style='font-size: 100%;'></i>
-The API token enables access to the server for 3d party applications (e.g. the CLI tool). API tokens do not expire.
-Reset the token to revoke access for all applications using the current API token.
-</p>
+<details style='font-size: 80%; padding:0.5em; border: 1px solid #ddd; border-radius:4px;'>
+    <summary style='user-select:none;'>api-token details</summary>
+    <p>
+    The API token enables access to the server for 3d party applications (e.g. the CLI tool). API tokens do not expire.
+    Reset the token to revoke access for all applications using the current API token.
+    </p>
+</details>
 <br />
 
 <!--account_end-->

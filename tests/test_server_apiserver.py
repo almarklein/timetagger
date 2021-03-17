@@ -6,6 +6,8 @@ import asyncio
 from asgineer.testutils import MockTestServer
 
 from _common import run_tests
+from timetagger.server._utils import decode_jwt_nocheck
+from timetagger.server import _apiserver
 from timetagger.server import (
     authenticate,
     AuthException,
@@ -74,7 +76,7 @@ def test_auth():
         # No headers, no access
         r = p.get("/api/v2/updates?since=0")
         assert r.status == 403
-        # Access with hader
+        # Access with header
         r = p.get("/api/v2/updates?since=0", headers=headers)
         assert r.status == 200
         # Get new auth token, old one should still work
@@ -90,6 +92,15 @@ def test_auth():
         # And the new token works
         r = p.get("/api/v2/updates?since=0", headers=HEADERS)
         assert r.status == 200
+
+        # Emulate token expiration
+        ori_exp = _apiserver.WEBTOKEN_LIFETIME
+        _apiserver.WEBTOKEN_LIFETIME = -10
+        headers["authtoken"] = get_webtoken_unsafe_sync(USER)
+        r = p.get("/api/v2/updates?since=0", headers=headers)
+        assert r.status == 403
+        assert "expired " in r.body.decode().lower()
+        _apiserver.WEBTOKEN_LIFETIME = ori_exp
 
 
 def test_fails():
@@ -123,6 +134,11 @@ def test_fails():
         assert r.status == 405
         # ...
         r = p.post("http://localhost/api/v2/forcereset", headers=HEADERS)
+        assert r.status == 405
+        # Can only GET token stuff
+        r = p.put("http://localhost/api/v2/webtoken", headers=HEADERS)
+        assert r.status == 405
+        r = p.post("http://localhost/api/v2/apitoken", headers=HEADERS)
         assert r.status == 405
 
 
@@ -414,6 +430,84 @@ def test_records():
         assert len(d["records"]) == 6
 
 
+def test_records_get():
+    # This endpoint was added later
+
+    clear_test_db()
+
+    with MockTestServer(our_api_handler) as p:
+
+        # Get current records
+        r = p.get("http://localhost/api/v2/records?timerange=0-999", headers=HEADERS)
+        assert r.status == 200
+        d = dejsonize(r)
+        assert set(d.keys()) == {"status", "records"}
+        assert d["records"] == []
+
+        # Add records
+        records = [
+            dict(key="r11", mt=110, t1=100, t2=150, ds="#p1"),
+            dict(key="r12", mt=110, t1=310, t2=350, ds="#p1"),
+            dict(key="r13", mt=110, t1=700, t2=700, ds="#p1"),
+        ]
+        r = p.put(
+            "http://localhost/api/v2/records",
+            json.dumps(records).encode(),
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        assert dejsonize(r)["status"] == "ok"
+
+        # Get current records
+        r = p.get("http://localhost/api/v2/records?timerange=0-999", headers=HEADERS)
+        assert r.status == 200
+        d = dejsonize(r)
+        assert set(d.keys()) == {"status", "records"}
+        assert set(r["key"] for r in d["records"]) == {"r11", "r12", "r13"}
+
+        # Get section containing only first
+        for tr in ["0-200", "0-101", "99-101", "110-111", "149-151", "149-200"]:
+            r = p.get(
+                f"http://localhost/api/v2/records?timerange={tr}", headers=HEADERS
+            )
+            assert r.status == 200
+            d = dejsonize(r)
+            assert set(d.keys()) == {"status", "records"}
+            assert set(r["key"] for r in d["records"]) == {"r11"}
+
+        # Get section containing only second
+        for tr in ["300-500", "300-311", "309-311", "320-321", "349-351", "349-500"]:
+            r = p.get(
+                f"http://localhost/api/v2/records?timerange={tr}", headers=HEADERS
+            )
+            assert r.status == 200
+            d = dejsonize(r)
+            assert set(d.keys()) == {"status", "records"}
+            assert set(r["key"] for r in d["records"]) == {"r12"}
+
+        # Get section containing only third (running record)
+        for tr in ["600-800", "699-701"]:
+            r = p.get(
+                f"http://localhost/api/v2/records?timerange={tr}", headers=HEADERS
+            )
+            assert r.status == 200
+            d = dejsonize(r)
+            assert set(d.keys()) == {"status", "records"}
+            assert set(r["key"] for r in d["records"]) == {"r13"}
+
+        # Fails
+        r = p.get(f"http://localhost/api/v2/records", headers=HEADERS)
+        assert r.status == 400  # no timerange
+        r = p.get(f"http://localhost/api/v2/records?timerange=foo-bar", headers=HEADERS)
+        assert r.status == 400  # timerange not numeric
+        r = p.get(f"http://localhost/api/v2/records?timerange=100", headers=HEADERS)
+        assert r.status == 400  # timerange not two nums
+        r = p.get(
+            f"http://localhost/api/v2/records?timerange=100-200-300", headers=HEADERS
+        )
+        assert r.status == 400  # timerange not two nums
+
+
 def test_updates():
     clear_test_db()
 
@@ -531,6 +625,108 @@ def test_updates():
         r = p.get("http://localhost/api/v2/updates?since=foo", headers=HEADERS)
         assert r.status == 400
         assert "since needs a number" in r.body.decode() and "since" in r.body.decode()
+
+
+def test_webtoken():
+    clear_test_db()
+    time.sleep(1.1)
+
+    headers = HEADERS.copy()
+
+    with MockTestServer(our_api_handler) as p:
+
+        # Get fresh webtoken
+        r = p.get("http://localhost/api/v2/webtoken", headers=headers)
+        assert r.status == 200
+        d = dejsonize(r)
+        assert set(d.keys()) == {"status", "token"}
+        assert isinstance(d["token"], str) and d["token"].count(".") == 2
+        assert decode_jwt_nocheck(d["token"])["email"] == USER
+        assert decode_jwt_nocheck(d["token"])["exp"] < time.time() + 1209601
+
+        # We can use it to get another
+        assert d["token"] != headers["authtoken"]
+        headers["authtoken"] = d["token"]
+
+        # See ...
+        r = p.get("http://localhost/api/v2/webtoken", headers=headers)
+        assert r.status == 200
+        d = dejsonize(r)
+        assert isinstance(d["token"], str) and d["token"].count(".") == 2
+
+        # Old tokens still work
+        r = p.get("http://localhost/api/v2/webtoken", headers=HEADERS)
+        assert r.status == 200
+        d = dejsonize(r)
+        assert isinstance(d["token"], str) and d["token"].count(".") == 2
+
+        # We can also reset the seed ...
+        r = p.get("http://localhost/api/v2/webtoken?reset=1", headers=headers)
+        assert r.status == 200
+        d = dejsonize(r)
+        assert isinstance(d["token"], str) and d["token"].count(".") == 2
+        assert decode_jwt_nocheck(d["token"])["email"] == USER
+        assert decode_jwt_nocheck(d["token"])["exp"] < time.time() + 1209601
+
+        # Now the old token is invalid (i.e. revoked)
+        r = p.get("http://localhost/api/v2/webtoken", headers=HEADERS)
+        assert r.status == 403
+
+        # Let's not break the other tests
+        HEADERS["authtoken"] = headers["authtoken"]
+
+
+def test_apitoken():
+    clear_test_db()
+
+    headers = HEADERS.copy()
+
+    with MockTestServer(our_api_handler) as p:
+
+        # Get fresh apitoken
+        r = p.get("http://localhost/api/v2/apitoken", headers=HEADERS)
+        assert r.status == 200
+        d = dejsonize(r)
+        assert set(d.keys()) == {"status", "token"}
+        assert isinstance(d["token"], str) and d["token"].count(".") == 2
+        assert decode_jwt_nocheck(d["token"])["email"] == USER
+        assert decode_jwt_nocheck(d["token"])["exp"] > 30000000000
+
+        # We can use it to do stuff ...
+        assert d["token"] != headers["authtoken"]
+        headers["authtoken"] = d["token"]
+
+        # See ...
+        r = p.get("http://localhost/api/v2/updates?since=0", headers=headers)
+        assert r.status == 200
+
+        # ... but we cannot use it to get new tokens of any kind
+        r = p.get("http://localhost/api/v2/webtoken", headers=headers)
+        assert r.status == 403
+        r = p.get("http://localhost/api/v2/apitoken", headers=headers)
+        assert r.status == 403
+
+        # We can also reset the seed (using the webtoken, not apitoken)
+        r = p.get("http://localhost/api/v2/apitoken?reset=1", headers=HEADERS)
+        assert r.status == 200
+        d = dejsonize(r)
+        assert isinstance(d["token"], str) and d["token"].count(".") == 2
+        assert decode_jwt_nocheck(d["token"])["email"] == USER
+        assert decode_jwt_nocheck(d["token"])["exp"] > 30000000000
+
+        # It's different now
+        assert d["token"] != headers["authtoken"]
+
+        time.sleep(0.1)
+
+        # Now the old token is invalid
+        r = p.get("http://localhost/api/v2/updates?since=0", headers=headers)
+        assert r.status == 403
+
+        # And the new token works
+        headers["authtoken"] = d["token"]
+        r = p.get("http://localhost/api/v2/updates?since=0", headers=headers)
+        assert r.status == 200
 
 
 if __name__ == "__main__":
