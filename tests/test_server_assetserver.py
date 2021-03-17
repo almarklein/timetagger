@@ -9,7 +9,7 @@ from asgineer.testutils import MockTestServer
 from _common import run_tests
 
 
-# Create asset server
+# Create asset handler
 assets = {}
 assets.update(create_assets_from_dir(resource_filename("timetagger.app", ".")))
 assets.update(create_assets_from_dir(resource_filename("timetagger.common", ".")))
