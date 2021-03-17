@@ -141,22 +141,17 @@ async def authenticate(request):
     This will also validate the token seed, and raise AuthException when
     it does not match.
     """
-
     # First path of auth
     auth_info = await _validate_token_and_get_info(request)
-
     # Open the database, this creates it if it does not yet exist
     dbname = user2filename(auth_info["email"])
     db = await itemdb.AsyncItemDB(dbname)
-
     # Ensure tables
     await db.ensure_table("userinfo", *INDICES["userinfo"])
     await db.ensure_table("records", *INDICES["records"])
     await db.ensure_table("settings", *INDICES["settings"])
-
     # Second part of auth
     await _validate_token_seed(db, auth_info)
-
     return auth_info, db
 
 
@@ -176,9 +171,11 @@ async def _validate_token_and_get_info(request):
     a token that we issues. It does not verify the token seed yet, this
     must happen when the database is opened.
     """
+    # Get token from header
     token = request.headers.get("authtoken", "")
     if not token:
         raise AuthException("Missing jwt 'authtoken' in header.")
+    # Decode the jwt (also validates and checks exp)
     try:
         return decode_jwt(token)
     except Exception as err:
@@ -197,25 +194,18 @@ async def _validate_token_seed(db, auth_info):
         tokenkind = "apitoken"
     else:
         tokenkind = "webtoken"
-
-    # Get seed value from db
-    query = f"key = '{tokenkind}_seed'"
-    ob = await db.select_one("userinfo", query) or {}
-    seed = ob.get("value", "")
-
-    # Compare
-    if not seed:
-        raise AuthException(f"No {tokenkind} seed in db")
-    if seed != auth_info["seed"]:
+    # Get reference seed
+    ref_seed = await _get_token_seed_from_db(db, tokenkind, False)
+    # Compare - make sure that seeds match and are nonzero
+    given_seed = auth_info.get("seed", "")
+    if not given_seed or given_seed != ref_seed:
         raise AuthException(f"The {tokenkind} seed does not match")
 
 
 async def get_webtoken(request, auth_info, db):
-
     # Get reset option
     reset = request.querydict.get("reset", "")
     reset = reset.lower() not in ("", "false", "no", "0")
-
     # Auth
     if auth_info["exp"] > time.time() + WEBTOKEN_LIFETIME:
         return 403, {}, "Not allowed with a non-expiring token"
@@ -224,11 +214,9 @@ async def get_webtoken(request, auth_info, db):
 
 
 async def get_apitoken(request, auth_info, db):
-
     # Get reset option
     reset = request.querydict.get("reset", "")
     reset = reset.lower() not in ("", "false", "no", "0")
-
     # Auth
     if auth_info["exp"] > time.time() + WEBTOKEN_LIFETIME:
         return 403, {}, "Not allowed with a non-expiring token"
@@ -237,19 +225,18 @@ async def get_apitoken(request, auth_info, db):
 
 
 async def _get_any_token(auth_info, db, tokenkind, reset):
-
     assert tokenkind in ("webtoken", "apitoken")
-
     # Get expiration time
-    exp = int(time.time()) + WEBTOKEN_LIFETIME
     if tokenkind == "apitoken":
         exp = API_TOKEN_EXP
-
+    else:
+        exp = int(time.time()) + WEBTOKEN_LIFETIME
     # Create token
+    seed = await _get_token_seed_from_db(db, tokenkind, reset)
     payload = dict(
         email=auth_info["email"],
         exp=exp,
-        seed=await _get_token_seed_from_db(db, tokenkind, reset),
+        seed=seed,
     )
     token = create_jwt(payload)
 
@@ -258,12 +245,14 @@ async def _get_any_token(auth_info, db, tokenkind, reset):
 
 
 async def _get_token_seed_from_db(db, tokenkind, reset):
-    st = time.time()
+    # Get seed
     query = f"key = '{tokenkind}_seed'"
     ob = await db.select_one("userinfo", query) or {}
     seed = ob.get("value", "")
+    # Create new seed if needed
     if reset or not seed:
-        seed = secrets.token_urlsafe(8)
+        seed = secrets.token_urlsafe(8)  # new random seed
+        st = time.time()
         async with db:
             await db.put_one(
                 "userinfo", key=f"{tokenkind}_seed", st=st, mt=st, value=seed
@@ -288,10 +277,11 @@ async def get_webtoken_unsafe(email, reset=False):
     db = await itemdb.AsyncItemDB(dbname)
     await db.ensure_table("userinfo", *INDICES["userinfo"])
     # Produce payload
+    seed = await _get_token_seed_from_db(db, "webtoken", reset)
     payload = dict(
         email=email,
         exp=int(time.time()) + WEBTOKEN_LIFETIME,
-        seed=await _get_token_seed_from_db(db, "webtoken", reset),
+        seed=seed,
     )
     # Return token
     token = create_jwt(payload)

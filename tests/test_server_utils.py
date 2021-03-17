@@ -1,7 +1,10 @@
 import os
+import time
 
 from _common import run_tests
 from timetagger.server import _utils as utils
+
+from pytest import raises
 
 
 def test_user2filename_and_filename2user():
@@ -31,6 +34,39 @@ def test_user2filename_and_filename2user():
         assert fname != filename
         assert utils.filename2user(fname) == email
         assert utils.filename2user(filename) == email
+
+
+def test_jwt_stuff():
+
+    # The secret key must be a long enough string
+    k = utils._load_jwt_key()
+    assert isinstance(k, str) and len(k) > 10
+
+    # Payload needs exp
+    payload = {"name": "fooooo"}
+    with raises(ValueError):
+        token = utils.create_jwt(payload)
+
+    # Get a JWT
+    payload = {"name": "foo", "exp": time.time() + 100}
+    token = utils.create_jwt(payload)
+    assert isinstance(token, str) and token.count(".") == 2
+
+    # Decode it
+    assert utils.decode_jwt(token) == payload
+
+    # Cannot decode an expired token - the many o's are to triffer b64 padding
+    payload = {"name": "fooooo", "exp": time.time() - 1}
+    token = utils.create_jwt(payload)
+    with raises(Exception):
+        utils.decode_jwt(token)
+
+    # But we can always decode the unsafe way
+    assert utils.decode_jwt_nocheck(token) == payload
+
+    # Cannot decode bullshit
+    with raises(Exception):
+        utils.decode_jwt("not.a.token")
 
 
 if __name__ == "__main__":
