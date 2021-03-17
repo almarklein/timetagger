@@ -1,8 +1,6 @@
 % TimeTagger - Sandbox
 % An empty app, not connected to the server, to try things out.
 
-
-
 <script>
 
 window.addEventListener("load", function() {
