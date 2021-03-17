@@ -105,9 +105,8 @@ async def webtoken_for_localhost(request):
     if request.host not in ("localhost", "127.0.0.1"):
         return 403, {}, "Not on localhost"
 
-    # Define the username (i.e. email) and return the corersponding webtoken
-    auth_info = dict(email="defaultuser")
-    return await get_webtoken_unsafe(auth_info)
+    # Return the webtoken for the default user
+    return await get_webtoken_unsafe("defaultuser")
 
 
 if __name__ == "__main__":

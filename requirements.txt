@@ -1,7 +1,7 @@
+uvicorn
+asgineer
+itemdb>=1.1.0
 jinja2
 markdown
 pyScss
-asgineer
-itemdb
 pscript
-uvicorn

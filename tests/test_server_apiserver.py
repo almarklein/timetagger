@@ -21,8 +21,8 @@ USER = "test"
 HEADERS = {}
 
 
-def get_webtoken_unsafe_sync(auth_info, reset=False):
-    co = get_webtoken_unsafe(auth_info, reset)
+def get_webtoken_unsafe_sync(email, reset=False):
+    co = get_webtoken_unsafe(email, reset)
     return asyncio.get_event_loop().run_until_complete(co)
 
 
@@ -31,8 +31,7 @@ def clear_test_db():
     if os.path.isfile(filename):
         os.remove(filename)
 
-    auth_info = {"email": USER}
-    HEADERS["authtoken"] = get_webtoken_unsafe_sync(auth_info)
+    HEADERS["authtoken"] = get_webtoken_unsafe_sync(USER)
 
 
 def get_from_db(what):
@@ -79,13 +78,13 @@ def test_auth():
         r = p.get("/api/v2/updates?since=0", headers=headers)
         assert r.status == 200
         # Get new auth token, old one should still work
-        HEADERS["authtoken"] = get_webtoken_unsafe_sync({"email": USER})
+        HEADERS["authtoken"] = get_webtoken_unsafe_sync(USER)
         assert HEADERS["authtoken"] != headers["authtoken"]
         r = p.get("/api/v2/updates?since=0", headers=headers)
         assert r.status == 200
         # Get new auth token, but reset seed, old one should fail
         # This confirms the revoking of tokens
-        HEADERS["authtoken"] = get_webtoken_unsafe_sync({"email": USER}, reset=True)
+        HEADERS["authtoken"] = get_webtoken_unsafe_sync(USER, reset=True)
         r = p.get("/api/v2/updates?since=0", headers=headers)
         assert r.status == 403
         # And the new token works
