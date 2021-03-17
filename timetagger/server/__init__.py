@@ -1,6 +1,6 @@
 # flake8: noqa
 
-from ._utils import asyncthis, asyncify, user2filename, filename2user
+from ._utils import user2filename, filename2user
 from ._apiserver import (
     authenticate,
     AuthException,

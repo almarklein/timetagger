@@ -1,11 +1,11 @@
 import os
 import json
 import time
+import asyncio
 
 from asgineer.testutils import MockTestServer
 
 from _common import run_tests
-from timetagger.server._utils import swait
 from timetagger.server import (
     authenticate,
     AuthException,
@@ -22,7 +22,8 @@ HEADERS = {}
 
 
 def get_webtoken_unsafe_sync(auth_info, reset=False):
-    return swait(get_webtoken_unsafe(auth_info, reset))
+    co = get_webtoken_unsafe(auth_info, reset)
+    return asyncio.get_event_loop().run_until_complete(co)
 
 
 def clear_test_db():
