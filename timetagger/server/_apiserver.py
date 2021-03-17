@@ -271,7 +271,7 @@ async def _get_token_seed_from_db(db, tokenkind, reset):
     return seed
 
 
-async def get_webtoken_unsafe(auth_info, reset=False):
+async def get_webtoken_unsafe(email, reset=False):
     """This function provides a webtoken that can be used to
     authenticate future requests.
 
@@ -284,12 +284,12 @@ async def get_webtoken_unsafe(auth_info, reset=False):
     use GET /api/v2/webtoken to get a fresh token once a day.
     """
     # Open db
-    dbname = user2filename(auth_info["email"])
+    dbname = user2filename(email)
     db = await itemdb.AsyncItemDB(dbname)
     await db.ensure_table("userinfo", *INDICES["userinfo"])
     # Produce payload
     payload = dict(
-        email=auth_info["email"],
+        email=email,
         exp=int(time.time()) + WEBTOKEN_LIFETIME,
         seed=await _get_token_seed_from_db(db, "webtoken", reset),
     )
