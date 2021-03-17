@@ -1,8 +1,6 @@
 % TimeTagger - Demo
 % A live demo using simulated data.
 
-
-
 <script>
 
 window.addEventListener("load", function() {

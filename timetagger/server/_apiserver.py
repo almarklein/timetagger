@@ -2,15 +2,14 @@
 This implements the API side of the server.
 """
 
-import os
 import json
 import time
 import logging
 import secrets
 
-from itemdb import ItemDB
+import itemdb
 
-from ._utils import asyncthis, user2filename, create_jwt, decode_jwt
+from ._utils import user2filename, create_jwt, decode_jwt
 
 
 logger = logging.getLogger("asgineer")
@@ -72,6 +71,10 @@ INDICES = {
 
 
 class AuthException(Exception):
+    """Exception raised when authentication fails.
+    You should catch this error and respond with 403.
+    """
+
     pass
 
 
@@ -80,103 +83,81 @@ class AuthException(Exception):
 # todo: rate limiting
 
 
-async def default_api_handler(request, apipath):
-    """Async API handler. This is relatively short, so it can easily be
-    replaced with a custom handler. Applications that add more API endpoints
-    can use this implementation as a starting point.
-    """
-
-    if not apipath and request.method == "GET":
-        return 200, {}, "See https://timetagger.readthedocs.io"
-
-    try:
-        auth_info = authenticate(request)
-        return await api_handler_triage(request, apipath, auth_info)
-    except AuthException as err:
-        return 403, {}, f"Auth failed: {err}"
-
-
-async def api_handler_triage(request, apipath, auth_info):
+async def api_handler_triage(request, path, auth_info, db):
     """The API handler that triages over the API options.
 
-    On authenication: the 3d argument is the JWT payload which should
-    have been validated. This function will check the seed of the
-    payload against the seed in the user db. An AuthException is raised
-    if this check fails.
+    On authenication: the 3d argument is the JWT payload obtained with
+    `authenticate()` (auth step 1). The current function will check the
+    seed of the payload against the seed in the user db (auth step 2).
+    An AuthException is raised if this check fails.
     """
 
-    if apipath == "updates":
+    if path == "updates":
         if request.method == "GET":
-            return await get_updates(request, auth_info)
+            return await get_updates(request, auth_info, db)
         else:
             return 405, {}, "api/v2/updates can only be used with GET and PUT"
 
-    elif apipath == "records":
+    elif path == "records":
         if request.method == "GET":
-            return await get_records(request, auth_info)
+            return await get_records(request, auth_info, db)
         elif request.method == "PUT":
-            return await put_records(request, auth_info)
+            return await put_records(request, auth_info, db)
         else:
             return 405, {}, "api/v2/records can only be used with GET and PUT"
 
-    elif apipath == "settings":
+    elif path == "settings":
         if request.method == "GET":
-            return await get_settings(request, auth_info)
+            return await get_settings(request, auth_info, db)
         elif request.method == "PUT":
-            return await put_settings(request, auth_info)
+            return await put_settings(request, auth_info, db)
         else:
             return 405, {}, "api/v2/records can only be used with GET and PUT"
 
-    elif apipath == "forcereset":
+    elif path == "forcereset":
         if request.method == "PUT":
-            return await put_forcereset(request, auth_info)
+            return await put_forcereset(request, auth_info, db)
         else:
             return 405, {}, "/api/v2/forcereset can only be used with PUT"
 
-    elif apipath == "webtoken":
+    elif path == "webtoken":
         if request.method in ("GET"):
-            return await get_webtoken(request, auth_info)
+            return await get_webtoken(request, auth_info, db)
         else:
             return 405, {}, "/api/v2/webtoken can only be used with GET"
 
-    elif apipath == "apitoken":
+    elif path == "apitoken":
         if request.method in ("GET"):
-            return await get_apitoken(request, auth_info)
+            return await get_apitoken(request, auth_info, db)
         else:
             return 405, {}, "/api/v2/apitoken can only be used with GET"
 
     else:
-        return 404, {}, f"/api/v2/{apipath} is not a valid API path"
+        return 404, {}, f"/api/v2/{path} is not a valid API path"
 
 
-def get_user_db(auth_info):
-    """Open the user db and return the db and its mtime
-    (which is -1 if the db did not yet exist).
+async def authenticate(request):
+    """Open the user db and return the auth_info and database.
     This will also validate the token seed, and raise AuthException when
     it does not match.
     """
 
-    # Get database name and its mtime
-    dbname = user2filename(auth_info["email"])
-    if os.path.isfile(dbname):
-        mtime = os.path.getmtime(dbname)
-    else:
-        mtime = -1
+    # First path of auth
+    auth_info = await _validate_token_and_get_info(request)
 
     # Open the database, this creates it if it does not yet exist
-    db = ItemDB(dbname)
+    dbname = user2filename(auth_info["email"])
+    db = await itemdb.AsyncItemDB(dbname)
 
     # Ensure tables
-    db.ensure_table("userinfo", *INDICES["userinfo"])
-    db.ensure_table("records", *INDICES["records"])
-    db.ensure_table("settings", *INDICES["settings"])
-
-    # todo: try-catch around every call to this function
+    await db.ensure_table("userinfo", *INDICES["userinfo"])
+    await db.ensure_table("records", *INDICES["records"])
+    await db.ensure_table("settings", *INDICES["settings"])
 
     # Second part of auth
-    _validate_token_seed(db, auth_info)
+    await _validate_token_seed(db, auth_info)
 
-    return db, mtime
+    return auth_info, db
 
 
 # %% Auth
@@ -187,14 +168,7 @@ WEBTOKEN_LIFETIME = WEBTOKEN_DAYS * 24 * 60 * 60
 API_TOKEN_EXP = 32503748400  # the year 3000
 
 
-def _get_tokenkind(auth_info):
-    if auth_info["exp"] > time.time() + WEBTOKEN_LIFETIME:
-        return "apitoken"
-    else:
-        return "webtoken"
-
-
-def authenticate(request):
+async def _validate_token_and_get_info(request):
     """Authenticate the request by validating the token in the HTTP header.
     Raises an AuthException if the authentication fails.
 
@@ -214,21 +188,29 @@ def authenticate(request):
         raise AuthException(text)
 
 
-def _validate_token_seed(db, auth_info):
+async def _validate_token_seed(db, auth_info):
     """Raises an AuthException if the seed in the auth_info does not match with
     the seed in the db.
     """
-    tokenkind = _get_tokenkind(auth_info)
+    # Get tokenkind
+    if auth_info["exp"] > time.time() + WEBTOKEN_LIFETIME:
+        tokenkind = "apitoken"
+    else:
+        tokenkind = "webtoken"
+
+    # Get seed value from db
     query = f"key = '{tokenkind}_seed'"
-    ob = db.select_one("userinfo", query) or {}
+    ob = await db.select_one("userinfo", query) or {}
     seed = ob.get("value", "")
+
+    # Compare
     if not seed:
         raise AuthException(f"No {tokenkind} seed in db")
     if seed != auth_info["seed"]:
         raise AuthException(f"The {tokenkind} seed does not match")
 
 
-async def get_webtoken(request, auth_info):
+async def get_webtoken(request, auth_info, db):
 
     # Get reset option
     reset = request.querydict.get("reset", "")
@@ -238,12 +220,10 @@ async def get_webtoken(request, auth_info):
     if auth_info["exp"] > time.time() + WEBTOKEN_LIFETIME:
         return 403, {}, "Not allowed with a non-expiring token"
 
-    # Get and return result
-    result = await asyncthis(_get_any_token, auth_info, "webtoken", reset)
-    return 200, {}, result
+    return await _get_any_token(auth_info, db, "webtoken", reset)
 
 
-async def get_apitoken(request, auth_info):
+async def get_apitoken(request, auth_info, db):
 
     # Get reset option
     reset = request.querydict.get("reset", "")
@@ -253,49 +233,49 @@ async def get_apitoken(request, auth_info):
     if auth_info["exp"] > time.time() + WEBTOKEN_LIFETIME:
         return 403, {}, "Not allowed with a non-expiring token"
 
-    # Get and return result
-    result = await asyncthis(_get_any_token, auth_info, "apitoken", reset)
-    return 200, {}, result
+    return await _get_any_token(auth_info, db, "apitoken", reset)
 
 
-def _get_any_token(auth_info, tokenkind, reset):
+async def _get_any_token(auth_info, db, tokenkind, reset):
 
     assert tokenkind in ("webtoken", "apitoken")
 
-    db, mtime = get_user_db(auth_info)
-
-    # Create token
+    # Get expiration time
     exp = int(time.time()) + WEBTOKEN_LIFETIME
     if tokenkind == "apitoken":
         exp = API_TOKEN_EXP
-    seed = _get_token_seed_from_db(db, tokenkind, reset)
+
+    # Create token
     payload = dict(
         email=auth_info["email"],
         exp=exp,
-        seed=seed,
+        seed=await _get_token_seed_from_db(db, tokenkind, reset),
     )
     token = create_jwt(payload)
 
-    return dict(status="ok", token=token)
+    result = dict(status="ok", token=token)
+    return 200, {}, result
 
 
-def _get_token_seed_from_db(db, tokenkind, reset):
+async def _get_token_seed_from_db(db, tokenkind, reset):
     st = time.time()
     query = f"key = '{tokenkind}_seed'"
-    ob = db.select_one("userinfo", query) or {}
+    ob = await db.select_one("userinfo", query) or {}
     seed = ob.get("value", "")
     if reset or not seed:
         seed = secrets.token_urlsafe(8)
-        with db:
-            db.put_one("userinfo", key=f"{tokenkind}_seed", st=st, mt=st, value=seed)
+        async with db:
+            await db.put_one(
+                "userinfo", key=f"{tokenkind}_seed", st=st, mt=st, value=seed
+            )
     return seed
 
 
-def get_webtoken_unsafe(auth_info):
+async def get_webtoken_unsafe(auth_info, reset=False):
     """This function provides a webtoken that can be used to
     authenticate future requests.
 
-    The caller of this function is responsible that the request is secure, e.g. by:
+    The caller of this function is responsible for the request being secure, e.g. by:
     * Checking that we're serving on localhost.
     * Validating a JWT from another trusted source.
     * Going through an OAuth workflow with a trusted auth provider.
@@ -305,13 +285,13 @@ def get_webtoken_unsafe(auth_info):
     """
     # Open db
     dbname = user2filename(auth_info["email"])
-    db = ItemDB(dbname)
-    db.ensure_table("userinfo", *INDICES["userinfo"])
+    db = await itemdb.AsyncItemDB(dbname)
+    await db.ensure_table("userinfo", *INDICES["userinfo"])
     # Produce payload
     payload = dict(
         email=auth_info["email"],
         exp=int(time.time()) + WEBTOKEN_LIFETIME,
-        seed=_get_token_seed_from_db(db, "webtoken", False),
+        seed=await _get_token_seed_from_db(db, "webtoken", reset),
     )
     # Return token
     token = create_jwt(payload)
@@ -321,7 +301,7 @@ def get_webtoken_unsafe(auth_info):
 # %% The implementation
 
 
-async def get_updates(request, auth_info):
+async def get_updates(request, auth_info, db):
 
     # Parse since
     since_str = request.querydict.get("since", "").strip()
@@ -337,20 +317,11 @@ async def get_updates(request, auth_info):
     # if pollmethod not in ("short", "long"):
     #     return 400, {}, "/api/v2/records pollmethod must be 'short' or 'long'"
 
-    # Get and return result
-    result = await asyncthis(_get_updates, auth_info, since)
-    return 200, {}, result
-
-
-def _get_updates(auth_info, since):
-
     server_time = time.time()
-
-    db, mtime = get_user_db(auth_info)
 
     # Early exit - this is what will happen most of the time. Use a margin to
     # account for limited resolution of getmtime.
-    if mtime + 0.2 < since:
+    if db.mtime + 0.2 < since:
         return dict(
             status="ok",
             server_time=server_time,
@@ -362,29 +333,31 @@ def _get_updates(auth_info, since):
     # Get reset time from userinfo. We set userinfo.reset_time when the
     # database is reset (or when we want to force a refresh). We make
     # the client reset if since < reset_time.
-    ob = db.select_one("userinfo", "key == 'reset_time'")
+    ob = await db.select_one("userinfo", "key == 'reset_time'")
     reset_time = float((ob or {}).get("value", -1))
     reset = since <= reset_time
 
     # Get data
     if reset:
-        records = db.select_all("records")
-        settings = db.select_all("settings")
+        records = await db.select_all("records")
+        settings = await db.select_all("settings")
     else:
         query = f"st >= {float(since)}"
-        records = db.select("records", query)
-        settings = db.select("settings", query)
+        records = await db.select("records", query)
+        settings = await db.select("settings", query)
 
-    return dict(
+    # Return result
+    result = dict(
         status="ok",
         server_time=server_time,
         reset=reset,
         records=records,
         settings=settings,
     )
+    return 200, {}, result
 
 
-async def get_records(request, auth_info):
+async def get_records(request, auth_info, db):
 
     # Parse timerange option
     timerange_str = request.querydict.get("timerange", "").strip()
@@ -398,65 +371,47 @@ async def get_records(request, auth_info):
     except ValueError:
         return 400, {}, "/api/v2/records timerange needs 2 numbers (timestamps)"
 
-    # Get and return result
-    result = await asyncthis(_get_records, auth_info, timerange)
-    return 200, {}, result
-
-
-def _get_records(auth_info, timerange):
-    db, mtime = get_user_db(auth_info)
+    # Collect records
     query = f"t2 >= {timerange[0]} AND t1 <= {timerange[1]}"
-    records = db.select("records", query)
-    return dict(
+    records = await db.select("records", query)
+
+    # Return result
+    result = dict(
         status="ok",
         records=records,
     )
+    return 200, {}, result
 
 
-async def put_records(request, auth_info):
+async def put_records(request, auth_info, db):
+    return await _push_items(request, auth_info, db, "records")
 
-    # Download records
-    items = await request.get_json(10 * 2 ** 20)  # 10 MiB limit
-    if not isinstance(items, list):
-        raise TypeError(f"List of records must be a list")
+
+async def get_settings(request, auth_info, db):
+
+    # Collect settings
+    settings = await db.select_all("settings")
 
     # Return result
-    result = await asyncthis(_push_items, auth_info, "records", items)
-    return 200, {}, result
-
-
-async def get_settings(request, auth_info):
-
-    # Get and return result
-    result = await asyncthis(_get_settings, auth_info)
-    return 200, {}, result
-
-
-def _get_settings(auth_info):
-    db, mtime = get_user_db(auth_info)
-    settings = db.select_all()
-    return dict(
+    result = dict(
         status="ok",
         settings=settings,
     )
-
-
-async def put_settings(request, auth_info):
-
-    # Download settings
-    items = await request.get_json(10 * 2 ** 20)  # 10 MiB limit
-    if not isinstance(items, list):
-        raise TypeError(f"List of settings must be a list")
-
-    # Return result
-    result = await asyncthis(_push_items, auth_info, "settings", items)
     return 200, {}, result
 
 
-def _push_items(auth_info, what, items):
+async def put_settings(request, auth_info, db):
+    return await _push_items(request, auth_info, db, "settings")
+
+
+async def _push_items(request, auth_info, db, what):
+
+    # Download items
+    items = await request.get_json(10 * 2 ** 20)  # 10 MiB limit
+    if not isinstance(items, list):
+        raise TypeError(f"List of {what} must be a list")
 
     server_time = time.time()
-    db, mtime = get_user_db(auth_info)
 
     req = REQS[what]
     spec = SPECS[what]
@@ -466,8 +421,8 @@ def _push_items(auth_info, what, items):
     errors = []  # error messages, matching up with fail
     errors2 = []  # error messages for items that did not even have a key
 
-    with db:
-        ob = db.select_one("userinfo", "key == 'reset_time'")
+    async with db:
+        ob = await db.select_one("userinfo", "key == 'reset_time'")
         reset_time = float((ob or {}).get("value", -1))
 
         for item in items:
@@ -479,7 +434,7 @@ def _push_items(auth_info, what, items):
             # Get current item (or None). We will ALWAYS update the item's st
             # (except when cur_item is None and incoming is corrupt).
             # This helps guarantee consistency between server and client.
-            cur_item = db.select_one(what, "key == ?", item["key"])
+            cur_item = await db.select_one(what, "key == ?", item["key"])
 
             # Validate and copy the item (only copy fields that we know)
             try:
@@ -517,27 +472,23 @@ def _push_items(auth_info, what, items):
                 item["st"] = server_time
 
             # Store it!
-            db.put(what, item)
+            await db.put(what, item)
 
-    return dict(
+    # Return result
+    result = dict(
         status=("fail" if fail else "ok"),
         accepted=accepted,
         fail=fail,
         errors=errors + errors2,
     )
-
-
-async def put_forcereset(request, auth_info):
-    result = await asyncthis(_put_forcereset, auth_info)
     return 200, {}, result
 
 
-def _put_forcereset(auth_info):
-
+async def put_forcereset(request, auth_info, db):
     st = time.time()
-    db, mtime = get_user_db(auth_info)
 
-    with db:
-        db.put_one("userinfo", key="reset_time", st=st, mt=st, value=st)
+    async with db:
+        await db.put_one("userinfo", key="reset_time", st=st, mt=st, value=st)
 
-    return dict(status="ok")
+    result = dict(status="ok")
+    return 200, {}, result

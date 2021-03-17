@@ -1,8 +1,6 @@
 % TimeTagger - App
 % The TimeTagger application.
 
-<script src='tools.js'></script>
-
 <script>
 
 window.addEventListener("load", function() {

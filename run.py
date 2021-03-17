@@ -10,36 +10,31 @@ from pkg_resources import resource_filename
 
 import asgineer
 from timetagger.server import (
-    default_api_handler,
+    authenticate,
+    AuthException,
+    api_handler_triage,
+    get_webtoken_unsafe,
     create_assets_from_dir,
     enable_service_worker,
-    get_webtoken_unsafe,
 )
 
 
 logger = logging.getLogger("asgineer")
 
-
-# Create dict with assets. You could add/replace assets here.
+# Get sets of assets provided by TimeTagger
 common_assets = create_assets_from_dir(resource_filename("timetagger.common", "."))
 apponly_assets = create_assets_from_dir(resource_filename("timetagger.app", "."))
 image_assets = create_assets_from_dir(resource_filename("timetagger.images", "."))
 page_assets = create_assets_from_dir(resource_filename("timetagger.pages", "."))
 
-root_assets = {}
-root_assets.update(common_assets)
-root_assets.update(image_assets)
-root_assets.update(page_assets)
-
-app_assets = {}
-app_assets.update(common_assets)
-app_assets.update(image_assets)
-app_assets.update(apponly_assets)
+# Combine into two groups. You could add/replace assets here.
+root_assets = dict(**common_assets, **image_assets, **page_assets)
+app_assets = dict(**common_assets, **image_assets, **apponly_assets)
 
 # Enable the service worker so the app can be used offline and is installable
 enable_service_worker(app_assets)
 
-# Turn asset dicts into a handlers. This feature of Asgineer provides
+# Turn asset dicts into handlers. This feature of Asgineer provides
 # lightning fast handlers that support compression and HTTP caching.
 root_asset_handler = asgineer.utils.make_asset_handler(root_assets, max_age=0)
 app_asset_handler = asgineer.utils.make_asset_handler(app_assets, max_age=0)
@@ -48,11 +43,10 @@ app_asset_handler = asgineer.utils.make_asset_handler(app_assets, max_age=0)
 @asgineer.to_asgi
 async def main_handler(request):
     """
-    The main handler where we delegate to the API handler or the
-    asset handlers created above.
+    The main handler where we delegate to the API or asset handler.
 
     We serve at /timetagger for a few reasons, one being that the service
-    worker won't interfere with other stuff you might server at localhost.
+    worker won't interfere with other stuff you might serve on localhost.
     """
 
     if request.path == "/":
@@ -61,20 +55,37 @@ async def main_handler(request):
     elif request.path.startswith("/timetagger/"):
         if request.path.startswith("/timetagger/api/v2/"):
             path = request.path[19:].strip("/")
-            if path == "webtoken_for_localhost":
-                return await webtoken_for_localhost(request)
-            else:
-                return await default_api_handler(request, path)
+            return await api_handler(request, path)
         elif request.path.startswith("/timetagger/app/"):
             path = request.path[16:].strip("/")
-            status, headers, body = await app_asset_handler(request, path)
-            headers["X-Frame-Options"] = "sameorigin"  # Prevent clickjacking
-            return status, headers, body
+            return await app_asset_handler(request, path)
         else:
             path = request.path[12:].strip("/")
             return await root_asset_handler(request, path)
     else:
         return 404, {}, "only serving at /timetagger/"
+
+
+async def api_handler(request, path):
+    """The default API handler. Designed to be short, so that
+    applications that implement alternative authentication and/or have
+    more API endpoints can use this as a starting point.
+    """
+
+    # Some endpoints do not require authentication
+    if not path and request.method == "GET":
+        return 200, {}, "See https://timetagger.readthedocs.io"
+    elif path == "webtoken_for_localhost":
+        return await webtoken_for_localhost(request)
+
+    # Authenticate (also opens user db)
+    try:
+        auth_info, db = await authenticate(request)
+    except AuthException as err:
+        return 403, {}, f"Auth failed: {err}"
+
+    # Handle endpoints that require authentication
+    return await api_handler_triage(request, path, auth_info, db)
 
 
 async def webtoken_for_localhost(request):
@@ -96,7 +107,7 @@ async def webtoken_for_localhost(request):
 
     # Define the username (i.e. email) and return the corersponding webtoken
     auth_info = dict(email="defaultuser")
-    return get_webtoken_unsafe(auth_info)
+    return await get_webtoken_unsafe(auth_info)
 
 
 if __name__ == "__main__":
