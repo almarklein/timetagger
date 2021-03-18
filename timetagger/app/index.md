@@ -76,7 +76,7 @@ function register_service_worker() {
 
     // Auto-update each several hours
     var nhours = 4
-    window.setInterval(() => {window.pwa.update()}, nhours * 60 * 60 * 1000);
+    tools.register_long_timer_in_secs("check_pwa_update", nhours * 3600, () => {window.pwa.update()});
 }
 
 </script>
