@@ -18,24 +18,22 @@ body.darkmode #canvas { background: #171E28; }
     padding: 0;
     border: none;
 }
-.verticalmenu a, .dialog.verticalmenu .loggedinas {
+.verticalmenu a, .dialog.verticalmenu .loggedinas, .dialog.verticalmenu .divider {
     user-select: none;
     -moz-user-select: none;
     color: $prim1_clr;
     display: block;
     box-sizing: border-box;
-    border-bottom: 1px solid #bbb;
-    border-right: 1px solid #bbb;
+    border: none;
+    outline: none;
     margin: 0;
     padding: 0.5em;
 }
-.dialog.verticalmenu .divider {
-    user-select: none;
-    -moz-user-select: none;
-    border-bottom: 1px solid #bbb;
-    box-sizing: border-box;
-    margin: 0;
-    height: 2px;
+.dialog.verticalmenu .divider {   
+    border-top: 1px solid #bbb;    
+    text-align: center;
+    padding: 0;
+    font-size: 80%;
 }
 body.darkmode .dialog.verticalmenu {
     background: #D3D8DA;

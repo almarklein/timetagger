@@ -149,7 +149,7 @@ def set_auth_info_from_token(token):
 async def logout():
     """Log the user out by discarting auth info. Await this call!"""
     # Forget the JWT and associated info.
-    localStorage.removeItem("timetagger_auth_info")
+    localStorage.setItem("timetagger_auth_info", "")
 
     # Forget our cache. Note that this is async.
     await AsyncStorage().clear()
@@ -165,17 +165,21 @@ async def renew_webtoken(verbose=True, reset=False):
     tokens to become invalid. In other words: all sessions on other
     devices will be logged out.
     """
+    # Get current auth info
     auth = get_auth_info()
     if not auth:
         if verbose:
             console.warn("Could not renew token - not logged in")
         return
 
+    # Make request and wait for response
     url = build_api_url("webtoken")
     if reset:
         url += "?reset=1"
     init = dict(method="GET", headers={"authtoken": auth.token})
     res = await fetch(url, init)
+
+    # Handle
     if res.status != 200:
         text = await res.text()
         console.warn("Could not renew token: " + text)
@@ -188,6 +192,12 @@ async def renew_webtoken(verbose=True, reset=False):
                 location.href = "./logout"
         return
 
+    # Are we still logged in. User may have logged out in the mean time.
+    auth = get_auth_info()
+    if not auth:
+        return
+
+    # Apply
     d = JSON.parse(await res.text())
     set_auth_info_from_token(d.token)
     if verbose:
@@ -195,7 +205,7 @@ async def renew_webtoken(verbose=True, reset=False):
 
 
 # Renew token now, and set up to renew each hour
-renew_webtoken()
+window.addEventListener("load", lambda: renew_webtoken())
 register_long_timer_in_secs("renew_webtoken", 3600, lambda: renew_webtoken(False))
 
 
