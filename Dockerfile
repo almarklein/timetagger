@@ -20,7 +20,7 @@ FROM python:3.8-slim-buster
 # Install dependencies (including optional ones that make uvicorn faster)
 RUN pip --no-cache-dir install pip --upgrade && pip --no-cache-dir install \
     uvicorn uvloop httptools \
-    fastuaparser itemdb asgineer requests \
+    fastuaparser itemdb>=1.1.1 asgineer requests \
     jinja2 markdown pscript \
     pyjwt cryptography
 
