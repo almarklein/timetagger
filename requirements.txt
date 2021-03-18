@@ -1,6 +1,7 @@
 uvicorn
 asgineer
 itemdb>=1.1.0
+pyjwt
 jinja2
 markdown
 pyScss
