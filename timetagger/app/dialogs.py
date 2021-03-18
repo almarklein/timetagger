@@ -2490,7 +2490,7 @@ class SettingsDialog(BaseDialog):
         # Darkmode
         self._darkmode_select.onchange = self._on_darkmode_change
         ob = window.store.settings.get_by_key("darkmode")
-        self._darkmode_select.value = 0 if ob is None else ob.value
+        self._darkmode_select.value = 1 if ob is None else ob.value
 
         # Stopwatch
         self._stopwatch_check = self._stopwatch_label.children[0]

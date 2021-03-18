@@ -53,7 +53,7 @@ window.addEventListener("load", init_module)
 def set_colors():
 
     # Dark vs light mode
-    mode = 0
+    mode = 1
     if window.store and window.store.settings:
         ob = window.store.settings.get_by_key("darkmode")
         if ob is not None:
