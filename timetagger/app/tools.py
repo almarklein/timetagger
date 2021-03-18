@@ -73,6 +73,40 @@ def url2dict(url):
     return d
 
 
+# %% A service for long-running timers
+
+# This allows registering functions to be called on a (long) interval.
+# The setInterval timer behaves inpredictable when the computer is e.g.
+# asleep. Instead we have a check-function that will fire timers when
+# its their time. We can run this check function much more often, and
+# e.g. on a visibility change.
+
+_long_timers = {}
+
+
+def register_long_timer_in_secs(name, interval, func):
+    """Register a function to be called each interval seconds. Precision is ~ 10s."""
+    now_secs = window.Date().getTime() / 1000
+    _long_timers[name] = dict(
+        interval=interval, func=func, next_time=now_secs + interval
+    )
+
+
+def _check_long_timers():
+    now_secs = window.Date().getTime() / 1000
+    for name, ob in _long_timers.items():
+        if ob.next_time < now_secs:
+            try:
+                ob.func()
+            except Exception as err:
+                console.warn(err)
+            ob.next_time = now_secs + ob.interval
+
+
+window.setInterval(_check_long_timers, 10 * 1000)  # 10 s
+document.addEventListener("visibilitychange", _check_long_timers, False)
+
+
 # %% Connecting with server
 
 
@@ -162,7 +196,7 @@ async def renew_webtoken(verbose=True, reset=False):
 
 # Renew token now, and set up to renew each hour
 renew_webtoken()
-window.setInterval(lambda: renew_webtoken(False), 60 * 60 * 1000)
+register_long_timer_in_secs("renew_webtoken", 3600, lambda: renew_webtoken(False))
 
 
 # %% Storage
