@@ -346,14 +346,10 @@ class MenuDialog(BaseDialog):
         # Put the menu right next to the menu button
         self.maindiv.style.top = "5px"
         self.maindiv.style.left = "50px"
+        self.maindiv.style.maxWidth = "500px"
 
         self.maindiv.innerHTML = f"""
             <div class='loggedinas'></div>
-            <div class='divider'></div>
-            <a href="/"><img style='width:20px; height:20px;vertical-align:middle;' src='timetagger_sd.svg' />&nbsp;&nbsp;Homepage</a>
-            <a href="https://timetagger.app/support"><i class='fas'>\uf059</i>&nbsp;&nbsp;Get tips and help</a>
-            <a href="../account"><i class='fas'>\uf2bd</i>&nbsp;&nbsp;Account</a>
-            <div class='divider'></div>
         """.rstrip()
 
         # Unpack
@@ -365,19 +361,8 @@ class MenuDialog(BaseDialog):
         else:
             store_valid = True
             logged_in = False
-        logged_in  # noqaM
 
         is_installable = window.pwa and window.pwa.deferred_prompt
-
-        # <a href="login"><i class='fas'>\uf2f6</i>&nbsp;&nbsp;Login</a>
-        # <a href="logout"><i class='fas'>\uf2f5</i>&nbsp;&nbsp;Logout</a>
-        # # Hide login or logout button, or both
-        # loginbut = self.maindiv.children[3]
-        # logoutbut = self.maindiv.children[4]
-        # if logged_in:
-        #     loginbut.style.display = "none"
-        # else:
-        #     logoutbut.style.display = "none"
 
         # Display sensible text in "header"
         if window.store.__name__.startswith("Demo"):
@@ -390,34 +375,51 @@ class MenuDialog(BaseDialog):
                 text = "Signed in as " + auth.username
             else:
                 text = "Not signed in"
-        if window.timetaggerversion:
-            text += " - TimeTagger " + window.timetaggerversion
         loggedinas.innerText = text
 
+        whatsnew = "What's new"
+        whatsnew_url = "https://github.com/almarklein/timetagger/releases"
+        if window.timetaggerversion:
+            whatsnew += " in version " + window.timetaggerversion.lstrip("v")
+
         container = self.maindiv
-        for icon, isvalid, title, func in [
-            ("\uf013", store_valid, "Settings", self._show_settings),
+        for icon, show, title, func in [
+            (None, True, "External pages", None),
+            ("\uf015", True, "Homepage", "/"),
+            ("\uf059", True, "Get tips and help", "https://timetagger.app/support"),
+            ("\uf0a1", True, whatsnew, whatsnew_url),
+            (None, store_valid, "Manage", None),
             ("\uf02c", store_valid, "Search & manage tags", self._manage_tags),
             ("\uf56f", store_valid, "Import records", self._import),
             ("\uf56e", store_valid, "Export all records", self._export),
-            ("\uf56e", store_valid, "About", self._about),
-            (
-                "\uf3fa",
-                is_installable,
-                "<span class='acc_color'>Install this app</span>",
-                self._do_install,
-            ),
+            (None, True, "User", None),
+            ("\uf013", store_valid, "Settings", self._show_settings),
+            ("\uf2bd", True, "Account", "../account"),
+            ("\uf2f6", not logged_in, "Login", "../login"),
+            ("\uf2f5", logged_in, "Logout", "../logout"),
+            (None, is_installable, None, None),
+            ("\uf3fa", is_installable, "<b>Install this app</b>", self._do_install),
         ]:
-            if not isvalid:
+            if not show:
                 continue
-            elif title is None:
+            elif not func:
+                # Divider
                 el = document.createElement("div")
                 el.setAttribute("class", "divider")
+                if title is not None:
+                    el.innerHTML = title
                 container.appendChild(el)
             else:
                 el = document.createElement("a")
-                el.innerHTML = f"<i class='fas'>{icon}</i>&nbsp;&nbsp;{title}"
-                el.onclick = func
+                html = ""
+                if icon:
+                    html += f"<i class='fas'>{icon}</i>&nbsp;&nbsp;"
+                html += title
+                el.innerHTML = html
+                if isinstance(func, str):
+                    el.href = func
+                else:
+                    el.onclick = func
                 container.appendChild(el)
 
         # more: Settings, User account, inport / export
@@ -457,10 +459,6 @@ class MenuDialog(BaseDialog):
     def _import(self):
         self.close()
         self._canvas.import_dialog.open()
-
-    def _about(self):
-        self.close()
-        self._canvas.about_dialog.open()
 
 
 class TimeSelectionDialog(BaseDialog):
@@ -2513,105 +2511,3 @@ class SettingsDialog(BaseDialog):
         stopwatch = bool(self._stopwatch_check.checked)
         ob = window.store.settings.create("stopwatch", stopwatch)
         window.store.settings.put(ob)
-
-
-class AboutDialog(BaseDialog):
-    """Dialog to show about dialog."""
-
-    def __init__(self, canvas):
-        super().__init__(canvas)
-
-    def open(self, callback=None):
-        self.maindiv.innerHTML = f"""
-            <h1><i class='fas'>\uf3fa</i>&nbsp;&nbsp;About TimeTagger
-                <button type='button'><i class='fas'>\uf00d</i></button>
-            </h1>
-            <h2>API token</h2>
-            <div>
-                <p>
-                An API token enables direct access to the server for
-                3d party applications. Revoke the token to deny access for all
-                applications using the current token.
-                </p>
-                <button type='button'>Reset</button>
-                <button type='button'><i class='fas'>\uf0ea</i></button>
-                <span class='monospace' style='margin-left: 5px; font-size:80%;'>Obtaining token ...</span>
-            </div>
-            <h2>Foo</h2>
-            <p>Bar</p>
-            """
-
-        (
-            _,  # Dialog title
-            _,  # API token header
-            self._tokendiv,
-            _,  # Foo header
-            self._bar,
-        ) = self.maindiv.children
-
-        (
-            _,
-            self._token_reset,
-            self._token_copy,
-            self._token_text,
-        ) = self._tokendiv.children
-
-        # Connect
-        self._token_reset.onclick = self._on_token_reset
-        self._token_copy.onclick = self._on_token_copy
-        self._cancel_but = self.maindiv.children[0].children[-1]
-        self._cancel_but.onclick = self.close
-
-        self._token = ""
-        self._token_reset.disabled = True
-        self._token_copy.disabled = True
-        if window.store.get_auth:
-            self._get_token()
-        else:
-            self._tokendiv.innerHTML = "The API token is only visible in the app."
-
-        super().open(callback)
-
-    def _on_token_reset(self):
-        self._token_reset.disabled = True
-        if self._token:
-            self._get_token("DELETE")
-        else:
-            self._get_token("PUT")
-
-    def _on_token_copy(self):
-        tools.copy_dom_node(self._token_text)
-        self._token_copy.innerHTML = "<i class='fas'>\uf46c</i>"
-        window.setTimeout(self._reset_copy_but_text, 800)
-
-    def _reset_copy_but_text(self):
-        self._token_copy.innerHTML = "<i class='fas'>\uf0ea</i>"
-
-    async def _get_token(self, method="GET"):
-        url = tools.build_api_url("apitoken")
-        authtoken = window.store.get_auth().token
-        init = dict(method=method, headers={"authtoken": authtoken})
-        try:
-            response = await window.fetch(url, init)
-            if response.status != 200:
-                raise ValueError(response.statusText)
-            data = await response.json()
-        except Exception as err:
-            console.error(err)
-            self._token_text.innerText = "Error getting token, see console for details."
-            return
-
-        # Set token
-        if data.token:
-            print(data)
-            self._token = data.token
-            self._token_text.innerText = data.token
-            self._token_reset.innerHTML = "Revoke"
-            self._token_reset.disabled = False
-            self._token_copy.disabled = False
-        else:
-            self._token = ""
-            self._token_text.innerText = "No token set."
-            self._token_reset.innerHTML = "Create"
-            self._token_reset.disabled = False
-            self._token_copy.disabled = True
