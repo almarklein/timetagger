@@ -738,7 +738,7 @@ class ConnectedDataStore(BaseDataStore):
         self._auth_cantuse = None
 
     def get_auth(self):
-        """Get an auth info object that is guaranteed to match the email
+        """Get an auth info object that is guaranteed to match the username
         that the store had from the beginning. It gets automatically refreshed
         to include the latest authtoken. Can return None, in which case the store is
         not usable.
@@ -747,12 +747,12 @@ class ConnectedDataStore(BaseDataStore):
             self._last_auth_get = dt.now()
             auth = window.tools.get_auth_info()
             if self._auth is None and auth:
-                window.location.reload()  # Reload when we login after having been logged out
-            elif auth and auth.email and auth.email == self._auth.email:
+                pass  # This can't really happen. If it does, let user reload
+            elif auth and auth.username and auth.username == self._auth.username:
                 self._auth = auth
             else:
                 self._auth = None
-            # Check expiration
+            # Check if we've found the auth is not usable (e.g. expiration)
             if self._auth:
                 if self._auth_cantuse:
                     self._auth.cantuse = self._auth_cantuse
@@ -769,10 +769,10 @@ class ConnectedDataStore(BaseDataStore):
         await storage.clear()
 
     async def _load_from_cache(self):
-        if self._auth and self._auth.email:
+        if self._auth and self._auth.username:
             try:
                 storage = window.tools.AsyncStorage()
-                ob = await storage.getItem(self._auth.email)
+                ob = await storage.getItem(self._auth.username)
                 if ob and ob.server_time:
                     self._log_load("cache", ob)
                     self._server_time = ob.server_time
@@ -788,10 +788,10 @@ class ConnectedDataStore(BaseDataStore):
                 console.warn(err)
 
     async def _save_to_cache(self):
-        if self._auth and self._auth.email:
+        if self._auth and self._auth.username:
             try:
                 dump = {
-                    "key": self._auth.email,
+                    "key": self._auth.username,
                     "server_time": self._server_time,
                     "settings": self.settings.get_dump(),
                     "records": self.records.get_dump(),
@@ -805,6 +805,7 @@ class ConnectedDataStore(BaseDataStore):
         # Ignore sync if there is no auth info
         auth = self.get_auth()
         if not auth or auth.cantuse:
+            self._set_state("error")
             return
         # Get from local cache?
         if self._server_time == 0:
@@ -887,13 +888,15 @@ class ConnectedDataStore(BaseDataStore):
             console.warn(res.status + " (" + res.statusText + ") " + text)
             self._set_state("error")  # E.g. Wifi or server down, or 500
             if res.status == 403:
-                # Our token is probably expired. Don't logout, because user
-                # will probably just login again.
-                # It's tempting to log the user out, especially considering
-                # cases when this is a forgotten or lost device. However, if it's
-                # not  ...
-                # todo: can we detect that the seed has changed, and then logout?
+                # Our token is probably expired. There may be local
+                # changes that have not yet been pushed, which would
+                # be lost if we logout. On the other hand, this may be
+                # a lost/stolen device and the user revoked the token.
+                # We can distinguish between these cases by determining
+                # that the 403 is due to a token seed mismatch (revoked).
                 self._auth_cantuse = text
+                if "revoked" in text:
+                    window.location.href = "../logout"
         else:
             ob = JSON.parse(await res.text())
             if ob.server_time:

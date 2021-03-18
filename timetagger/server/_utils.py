@@ -21,22 +21,22 @@ if not os.path.isdir(ROOT_USER_DIR):
 ok_chars = frozenset("-_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
 
 
-def user2filename(user):
-    """Convert a user id (e.g. email address) to the corresponding absolute filename."""
+def user2filename(username):
+    """Convert a username (e.g. email address) to the corresponding absolute filename."""
     # The rules for characters in email addresses are quite complex,
     # but can at least contain !#$%&'*+-/=?^_`{|}~. Therefore we
     # agressively create a clean representation (for recognizability)
     # and a base64 encoded string (so that we can reverse this process).
 
-    clean = "".join((c if c in ok_chars else "-") for c in user)
-    encoded = urlsafe_b64encode(user.encode()).decode()
+    clean = "".join((c if c in ok_chars else "-") for c in username)
+    encoded = urlsafe_b64encode(username.encode()).decode()
     fname = clean + "~" + encoded + ".db"
 
     return os.path.join(ROOT_USER_DIR, fname)
 
 
 def filename2user(filename):
-    """Convert a (relative or absolute) filename to the corresponding user id."""
+    """Convert a (relative or absolute) filename to the corresponding username."""
     fname = os.path.basename(filename)
     encoded = fname.split("~")[-1].split(".")[0]
     return urlsafe_b64decode(encoded.encode()).decode()
@@ -68,15 +68,14 @@ JWT_KEY = _load_jwt_key()
 
 def create_jwt(payload):
     """Create a new JWT with the given payload."""
-    if "exp" not in payload:
-        raise ValueError("JWT must have an exp field.")
+    for key in ("username", "expires", "seed"):
+        if key not in payload:
+            raise ValueError(f"JWT must have a {key} field.")
     return jwt.encode(payload, JWT_KEY, algorithm="HS256")
 
 
 def decode_jwt(token):
-    """Decode a JWT, validating it with our key and the exp claim.
-    Returns the payload as a dict.
-    """
+    """Decode a JWT, validating it with our key. Returns the payload as a dict."""
     return jwt.decode(token, JWT_KEY, algorithms=["HS256"])
 
 

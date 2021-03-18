@@ -20,8 +20,8 @@ def test_user2filename_and_filename2user():
         "unicode€éö ?@grr.com",
     ]
 
-    for email in examples:
-        filename = utils.user2filename(email)
+    for username in examples:
+        filename = utils.user2filename(username)
         fname = os.path.basename(filename)
         print(fname)
 
@@ -32,36 +32,36 @@ def test_user2filename_and_filename2user():
         assert all(c in fnamechars for c in fname)
 
         assert fname != filename
-        assert utils.filename2user(fname) == email
-        assert utils.filename2user(filename) == email
+        assert utils.filename2user(fname) == username
+        assert utils.filename2user(filename) == username
 
 
 def test_jwt_stuff():
+    exp = time.time() + 100
 
     # The secret key must be a long enough string
     k = utils._load_jwt_key()
     assert isinstance(k, str) and len(k) > 10
 
-    # Payload needs exp
-    payload = {"name": "fooooo"}
+    # Payload needs username, expires, seed.
     with raises(ValueError):
-        token = utils.create_jwt(payload)
+        token = utils.create_jwt({})
+    with raises(ValueError):
+        token = utils.create_jwt({"expires": exp, "seed": "x"})
+    with raises(ValueError):
+        token = utils.create_jwt({"username": "foo", "seed": "x"})
+    with raises(ValueError):
+        token = utils.create_jwt({"username": "foo", "expires": exp})
 
     # Get a JWT
-    payload = {"name": "foo", "exp": time.time() + 100}
+    payload = {"username": "foo", "expires": exp, "seed": "x"}
     token = utils.create_jwt(payload)
     assert isinstance(token, str) and token.count(".") == 2
 
     # Decode it
     assert utils.decode_jwt(token) == payload
 
-    # Cannot decode an expired token - the many o's are to triffer b64 padding
-    payload = {"name": "fooooo", "exp": time.time() - 1}
-    token = utils.create_jwt(payload)
-    with raises(Exception):
-        utils.decode_jwt(token)
-
-    # But we can always decode the unsafe way
+    # We can always decode the unsafe way
     assert utils.decode_jwt_nocheck(token) == payload
 
     # Cannot decode bullshit
