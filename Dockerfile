@@ -21,7 +21,7 @@ FROM python:3.8-slim-buster
 RUN pip --no-cache-dir install pip --upgrade && pip --no-cache-dir install \
     uvicorn uvloop httptools \
     fastuaparser itemdb asgineer requests \
-    jinja2 markdown pyscss pscript \
+    jinja2 markdown pscript \
     pyjwt cryptography
 
 # This causes the cache to skip, so that we get the latest TimeTagger version.
