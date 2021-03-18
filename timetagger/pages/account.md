@@ -23,7 +23,7 @@ async function refresh_auth_status() {
     let auth = tools.get_auth_info();
 
     if (auth) {
-        let html = "Logged in as <b>" + auth.email + "</b>";
+        let html = "Logged in as <b>" + auth.username + "</b>";
         //html += "<br>Web token valid until ";
         //html += new window.Date(auth.exp * 1000).toISOString().split("T")[0];
         //html += " (will be auto-renewed)";
@@ -111,7 +111,7 @@ window.addEventListener("load", refresh);
 
 <button class='whitebutton' onclick='nav_to("./login#page=./account");'>Log in</button>
 <button class='whitebutton' onclick='nav_to("./logout#page=./account");'>Log out</button>
-<button class='whitebutton' id='logoutallbutton' disbaled onclick='reset_webtoken_seed();'>Revoke access for all other devices</button>
+<button class='whitebutton' id='logoutallbutton' disbaled onclick='reset_webtoken_seed();'>Logout all other devices</button>
 
 <details style='font-size: 80%; padding:0.5em; border: 1px solid #ddd; border-radius:4px;'>
     <summary style='user-select:none;'>web-token details</summary>
@@ -119,7 +119,7 @@ window.addEventListener("load", refresh);
     Authentication occurs using a web-token that is obtained when logging in.
     The token is valid for 14 days, and is refreshed when you use the application.
     It is recommended to log out on devices that you do not own. In case you forget,
-    or when a device is stolen, you can also revoke all current tokens.
+    or when a device is lost/stolen, the token seed can be reset, causing all other sessions to log out.
     </p>
 </details>
 <br />

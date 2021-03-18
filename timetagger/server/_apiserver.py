@@ -84,13 +84,7 @@ class AuthException(Exception):
 
 
 async def api_handler_triage(request, path, auth_info, db):
-    """The API handler that triages over the API options.
-
-    On authenication: the 3d argument is the JWT payload obtained with
-    `authenticate()` (auth step 1). The current function will check the
-    seed of the payload against the seed in the user db (auth step 2).
-    An AuthException is raised if this check fails.
-    """
+    """The API handler that triages over the API options."""
 
     if path == "updates":
         if request.method == "GET":
@@ -136,25 +130,6 @@ async def api_handler_triage(request, path, auth_info, db):
         return 404, {}, f"/api/v2/{path} is not a valid API path"
 
 
-async def authenticate(request):
-    """Open the user db and return the auth_info and database.
-    This will also validate the token seed, and raise AuthException when
-    it does not match.
-    """
-    # First path of auth
-    auth_info = await _validate_token_and_get_info(request)
-    # Open the database, this creates it if it does not yet exist
-    dbname = user2filename(auth_info["email"])
-    db = await itemdb.AsyncItemDB(dbname)
-    # Ensure tables
-    await db.ensure_table("userinfo", *INDICES["userinfo"])
-    await db.ensure_table("records", *INDICES["records"])
-    await db.ensure_table("settings", *INDICES["settings"])
-    # Second part of auth
-    await _validate_token_seed(db, auth_info)
-    return auth_info, db
-
-
 # %% Auth
 
 
@@ -163,43 +138,55 @@ WEBTOKEN_LIFETIME = WEBTOKEN_DAYS * 24 * 60 * 60
 API_TOKEN_EXP = 32503748400  # the year 3000
 
 
-async def _validate_token_and_get_info(request):
-    """Authenticate the request by validating the token in the HTTP header.
-    Raises an AuthException if the authentication fails.
-
-    Returns the JWT payload. This validate the expiration and that this is
-    a token that we issues. It does not verify the token seed yet, this
-    must happen when the database is opened.
+async def authenticate(request):
+    """Authenticate the user, returning (auth_info, db) if all is well.
+    Raises AuthException if an authtoken is missing, not issued by us,
+    does not match the seed (i.e. has been revoked), or has expired.
     """
-    # Get token from header
+
+    # Notes:
+    # * We raise an exception on auth fail, so that if the calling code
+    #   would forget to handle the non-authenticated case, the request
+    #   would still fail (albeit with a 500).
+    # * The validation is done in order of importance. The seed is checked
+    #   before the expiration. Clients can scan the 403 message for the word
+    #   "revoked" and handle revokation different from expiration.
+
+    st = time.time()
+
+    # Get jwt from header. Validates that a token is provided.
     token = request.headers.get("authtoken", "")
     if not token:
         raise AuthException("Missing jwt 'authtoken' in header.")
-    # Decode the jwt (also validates and checks exp)
+
+    # Decode the jwt to get auth_info. Validates that we created it.
     try:
-        return decode_jwt(token)
+        auth_info = decode_jwt(token)
     except Exception as err:
-        text = str(err)
-        if "expired" in text:
-            text = f"The token has expired (after {WEBTOKEN_DAYS} days)"
-        raise AuthException(text)
+        raise AuthException(str(err))
 
+    # Open the database, this creates it if it does not yet exist
+    dbname = user2filename(auth_info["username"])
+    db = await itemdb.AsyncItemDB(dbname)
+    await db.ensure_table("userinfo", *INDICES["userinfo"])
+    await db.ensure_table("records", *INDICES["records"])
+    await db.ensure_table("settings", *INDICES["settings"])
 
-async def _validate_token_seed(db, auth_info):
-    """Raises an AuthException if the seed in the auth_info does not match with
-    the seed in the db.
-    """
-    # Get tokenkind
-    if auth_info["exp"] > time.time() + WEBTOKEN_LIFETIME:
-        tokenkind = "apitoken"
-    else:
-        tokenkind = "webtoken"
-    # Get reference seed
+    # Get reference seed from db
+    expires = auth_info["expires"]
+    tokenkind = "apitoken" if expires > st + WEBTOKEN_LIFETIME else "webtoken"
     ref_seed = await _get_token_seed_from_db(db, tokenkind, False)
-    # Compare - make sure that seeds match and are nonzero
-    given_seed = auth_info.get("seed", "")
-    if not given_seed or given_seed != ref_seed:
-        raise AuthException(f"The {tokenkind} seed does not match")
+
+    # Compare seeds. Validates that the token is not revoked.
+    if not ref_seed or ref_seed != auth_info["seed"]:
+        raise AuthException(f"The {tokenkind} is revoked (seed does not match)")
+
+    # Check expiration last. Validates that the token is not too old.
+    if auth_info["expires"] < st:
+        raise AuthException(f"The {tokenkind} has expired (after {WEBTOKEN_DAYS} days)")
+
+    # All is well!
+    return auth_info, db
 
 
 async def get_webtoken(request, auth_info, db):
@@ -207,7 +194,7 @@ async def get_webtoken(request, auth_info, db):
     reset = request.querydict.get("reset", "")
     reset = reset.lower() not in ("", "false", "no", "0")
     # Auth
-    if auth_info["exp"] > time.time() + WEBTOKEN_LIFETIME:
+    if auth_info["expires"] > time.time() + WEBTOKEN_LIFETIME:
         return 403, {}, "Not allowed with a non-expiring token"
 
     return await _get_any_token(auth_info, db, "webtoken", reset)
@@ -218,7 +205,7 @@ async def get_apitoken(request, auth_info, db):
     reset = request.querydict.get("reset", "")
     reset = reset.lower() not in ("", "false", "no", "0")
     # Auth
-    if auth_info["exp"] > time.time() + WEBTOKEN_LIFETIME:
+    if auth_info["expires"] > time.time() + WEBTOKEN_LIFETIME:
         return 403, {}, "Not allowed with a non-expiring token"
 
     return await _get_any_token(auth_info, db, "apitoken", reset)
@@ -228,14 +215,14 @@ async def _get_any_token(auth_info, db, tokenkind, reset):
     assert tokenkind in ("webtoken", "apitoken")
     # Get expiration time
     if tokenkind == "apitoken":
-        exp = API_TOKEN_EXP
+        expires = API_TOKEN_EXP
     else:
-        exp = int(time.time()) + WEBTOKEN_LIFETIME
+        expires = int(time.time()) + WEBTOKEN_LIFETIME
     # Create token
     seed = await _get_token_seed_from_db(db, tokenkind, reset)
     payload = dict(
-        email=auth_info["email"],
-        exp=exp,
+        username=auth_info["username"],
+        expires=expires,
         seed=seed,
     )
     token = create_jwt(payload)
@@ -260,7 +247,7 @@ async def _get_token_seed_from_db(db, tokenkind, reset):
     return seed
 
 
-async def get_webtoken_unsafe(email, reset=False):
+async def get_webtoken_unsafe(username, reset=False):
     """This function provides a webtoken that can be used to
     authenticate future requests.
 
@@ -273,14 +260,14 @@ async def get_webtoken_unsafe(email, reset=False):
     use GET /api/v2/webtoken to get a fresh token once a day.
     """
     # Open db
-    dbname = user2filename(email)
+    dbname = user2filename(username)
     db = await itemdb.AsyncItemDB(dbname)
     await db.ensure_table("userinfo", *INDICES["userinfo"])
     # Produce payload
     seed = await _get_token_seed_from_db(db, "webtoken", reset)
     payload = dict(
-        email=email,
-        exp=int(time.time()) + WEBTOKEN_LIFETIME,
+        username=username,
+        expires=int(time.time()) + WEBTOKEN_LIFETIME,
         seed=seed,
     )
     # Return token

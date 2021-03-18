@@ -23,8 +23,8 @@ USER = "test"
 HEADERS = {}
 
 
-def get_webtoken_unsafe_sync(email, reset=False):
-    co = get_webtoken_unsafe(email, reset)
+def get_webtoken_unsafe_sync(username, reset=False):
+    co = get_webtoken_unsafe(username, reset)
     return asyncio.get_event_loop().run_until_complete(co)
 
 
@@ -79,6 +79,10 @@ def test_auth():
         # Access with header
         r = p.get("/api/v2/updates?since=0", headers=headers)
         assert r.status == 200
+        # No access if token is not produced by tt
+        r = p.get("/api/v2/updates?since=0", headers={"authtoken": "foo"})
+        assert r.status == 403
+
         # Get new auth token, old one should still work
         HEADERS["authtoken"] = get_webtoken_unsafe_sync(USER)
         assert HEADERS["authtoken"] != headers["authtoken"]
@@ -100,7 +104,16 @@ def test_auth():
         r = p.get("/api/v2/updates?since=0", headers=headers)
         assert r.status == 403
         assert "expired " in r.body.decode().lower()
+        assert "revoked " not in r.body.decode().lower()
         _apiserver.WEBTOKEN_LIFETIME = ori_exp
+
+        # Now revoke that expired token. Now it's marked as revoked,
+        # because revoked is worse than expired, and clients can use that info.
+        HEADERS["authtoken"] = get_webtoken_unsafe_sync(USER, True)
+        r = p.get("/api/v2/updates?since=0", headers=headers)
+        assert r.status == 403
+        assert "expired " not in r.body.decode().lower()
+        assert "revoked " in r.body.decode().lower()
 
 
 def test_fails():
@@ -641,8 +654,8 @@ def test_webtoken():
         d = dejsonize(r)
         assert set(d.keys()) == {"status", "token"}
         assert isinstance(d["token"], str) and d["token"].count(".") == 2
-        assert decode_jwt_nocheck(d["token"])["email"] == USER
-        assert decode_jwt_nocheck(d["token"])["exp"] < time.time() + 1209601
+        assert decode_jwt_nocheck(d["token"])["username"] == USER
+        assert decode_jwt_nocheck(d["token"])["expires"] < time.time() + 1209601
 
         # We can use it to get another
         assert d["token"] != headers["authtoken"]
@@ -665,8 +678,8 @@ def test_webtoken():
         assert r.status == 200
         d = dejsonize(r)
         assert isinstance(d["token"], str) and d["token"].count(".") == 2
-        assert decode_jwt_nocheck(d["token"])["email"] == USER
-        assert decode_jwt_nocheck(d["token"])["exp"] < time.time() + 1209601
+        assert decode_jwt_nocheck(d["token"])["username"] == USER
+        assert decode_jwt_nocheck(d["token"])["expires"] < time.time() + 1209601
 
         # Now the old token is invalid (i.e. revoked)
         r = p.get("http://localhost/api/v2/webtoken", headers=HEADERS)
@@ -689,8 +702,8 @@ def test_apitoken():
         d = dejsonize(r)
         assert set(d.keys()) == {"status", "token"}
         assert isinstance(d["token"], str) and d["token"].count(".") == 2
-        assert decode_jwt_nocheck(d["token"])["email"] == USER
-        assert decode_jwt_nocheck(d["token"])["exp"] > 30000000000
+        assert decode_jwt_nocheck(d["token"])["username"] == USER
+        assert decode_jwt_nocheck(d["token"])["expires"] > 30000000000
 
         # We can use it to do stuff ...
         assert d["token"] != headers["authtoken"]
@@ -711,8 +724,8 @@ def test_apitoken():
         assert r.status == 200
         d = dejsonize(r)
         assert isinstance(d["token"], str) and d["token"].count(".") == 2
-        assert decode_jwt_nocheck(d["token"])["email"] == USER
-        assert decode_jwt_nocheck(d["token"])["exp"] > 30000000000
+        assert decode_jwt_nocheck(d["token"])["username"] == USER
+        assert decode_jwt_nocheck(d["token"])["expires"] > 30000000000
 
         # It's different now
         assert d["token"] != headers["authtoken"]

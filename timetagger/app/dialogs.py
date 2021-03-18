@@ -387,7 +387,7 @@ class MenuDialog(BaseDialog):
         elif window.store.get_auth:
             auth = window.store.get_auth()
             if auth:
-                text = "Signed in as " + auth.email
+                text = "Signed in as " + auth.username
             else:
                 text = "Not signed in"
         if window.timetaggerversion:
@@ -1810,7 +1810,7 @@ class ReportDialog(BaseDialog):
         if window.store.get_auth:
             auth = window.store.get_auth()
             if auth:
-                user = auth.email  # noqa
+                user = auth.username  # noqa
 
         for row in rows:
             if row[0] == "blank":
