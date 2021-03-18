@@ -12,8 +12,8 @@ import pkg_resources
 import jinja2
 import pscript
 import markdown
-import scss
 
+from . import _utils as utils
 from .. import __version__
 
 
@@ -38,22 +38,14 @@ def _get_base_style():
     fname = pkg_resources.resource_filename("timetagger.common", "_style_embed.scss")
     with open(fname, "rb") as f:
         text = f.read().decode()
-    style_embed = scss.compiler.compile_string(text)
-    # Find lines that define scss variables
-    var_lines = []
-    for line in text.splitlines():
-        line = line.strip()
-        if line.startswith("$") and ": " in line and line.endswith(";"):
-            var_lines.append(line)
-    preamble = "\n".join(var_lines) + "\n"
-    return style_embed, preamble
+    return utils.get_scss_vars(text), utils.compile_scss_to_css(text)
 
 
-style_embed, style_preamble = _get_base_style()
+style_vars, style_embed = _get_base_style()
 
 
 def compile_scss(text):
-    return scss.compiler.compile_string(style_preamble + text)
+    return utils.compile_scss_to_css(text, **style_vars)
 
 
 def md2html(text, template):

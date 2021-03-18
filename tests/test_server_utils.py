@@ -69,5 +69,30 @@ def test_jwt_stuff():
         utils.decode_jwt("not.a.token")
 
 
+def test_scss_stuff():
+    text = """
+    $foo: #fff;
+    $bar: 1px solid $foo;
+    p {
+        border: $bar;
+        color: $spam;
+    }
+    """
+
+    css = """
+    p {
+        border: 1px solid #fff;
+        color: red;
+    }
+    """
+
+    vars = utils.get_scss_vars(text)
+    assert vars == {"$foo": "#fff", "$bar": "1px solid $foo"}
+    assert utils.compile_scss_to_css(text, spam="red") == css
+
+    with raises(ValueError):
+        utils.compile_scss_to_css(text)
+
+
 if __name__ == "__main__":
     run_tests(globals())
