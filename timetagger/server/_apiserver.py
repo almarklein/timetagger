@@ -72,7 +72,7 @@ INDICES = {
 
 class AuthException(Exception):
     """Exception raised when authentication fails.
-    You should catch this error and respond with 403.
+    You should catch this error and respond with 401.
     """
 
     pass
@@ -90,7 +90,8 @@ async def api_handler_triage(request, path, auth_info, db):
         if request.method == "GET":
             return await get_updates(request, auth_info, db)
         else:
-            return 405, {}, "api/v2/updates can only be used with GET and PUT"
+            expl = "/updates can only be used with GET"
+            return 405, {}, "method not allowed: " + expl
 
     elif path == "records":
         if request.method == "GET":
@@ -98,7 +99,8 @@ async def api_handler_triage(request, path, auth_info, db):
         elif request.method == "PUT":
             return await put_records(request, auth_info, db)
         else:
-            return 405, {}, "api/v2/records can only be used with GET and PUT"
+            expl = "/records can only be used with GET and PUT"
+            return 405, {}, "method not allowed: " + expl
 
     elif path == "settings":
         if request.method == "GET":
@@ -106,28 +108,33 @@ async def api_handler_triage(request, path, auth_info, db):
         elif request.method == "PUT":
             return await put_settings(request, auth_info, db)
         else:
-            return 405, {}, "api/v2/records can only be used with GET and PUT"
+            expl = "/settings can only be used with GET and PUT"
+            return 405, {}, "method not allowed: " + expl
 
     elif path == "forcereset":
         if request.method == "PUT":
             return await put_forcereset(request, auth_info, db)
         else:
-            return 405, {}, "/api/v2/forcereset can only be used with PUT"
+            expl = "/forcereset can only be used with PUT"
+            return 405, {}, "method not allowed: " + expl
 
     elif path == "webtoken":
         if request.method in ("GET"):
             return await get_webtoken(request, auth_info, db)
         else:
-            return 405, {}, "/api/v2/webtoken can only be used with GET"
+            expl = "/webtoken can only be used with GET"
+            return 405, {}, "method not allowed: " + expl
 
     elif path == "apitoken":
         if request.method in ("GET"):
             return await get_apitoken(request, auth_info, db)
         else:
-            return 405, {}, "/api/v2/apitoken can only be used with GET"
+            expl = "/apitoken can only be used with GET"
+            return 405, {}, "method not allowed: " + expl
 
     else:
-        return 404, {}, f"/api/v2/{path} is not a valid API path"
+        expl = f"/{path} is not a valid API path"
+        return 404, {}, "not found: " + expl
 
 
 # %% Auth
@@ -149,7 +156,7 @@ async def authenticate(request):
     #   would forget to handle the non-authenticated case, the request
     #   would still fail (albeit with a 500).
     # * The validation is done in order of importance. The seed is checked
-    #   before the expiration. Clients can scan the 403 message for the word
+    #   before the expiration. Clients can scan the 401 message for the word
     #   "revoked" and handle revokation different from expiration.
 
     st = time.time()
@@ -195,7 +202,7 @@ async def get_webtoken(request, auth_info, db):
     reset = reset.lower() not in ("", "false", "no", "0")
     # Auth
     if auth_info["expires"] > time.time() + WEBTOKEN_LIFETIME:
-        return 403, {}, "Not allowed with a non-expiring token"
+        return 403, {}, "forbidden: /webtoken needs auth with a web-token"
 
     return await _get_any_token(auth_info, db, "webtoken", reset)
 
@@ -206,7 +213,7 @@ async def get_apitoken(request, auth_info, db):
     reset = reset.lower() not in ("", "false", "no", "0")
     # Auth
     if auth_info["expires"] > time.time() + WEBTOKEN_LIFETIME:
-        return 403, {}, "Not allowed with a non-expiring token"
+        return 403, {}, "forbidden: /apitoken needs auth with a web-token"
 
     return await _get_any_token(auth_info, db, "apitoken", reset)
 
@@ -227,7 +234,7 @@ async def _get_any_token(auth_info, db, tokenkind, reset):
     )
     token = create_jwt(payload)
 
-    result = dict(status="ok", token=token)
+    result = dict(token=token)
     return 200, {}, result
 
 
@@ -283,16 +290,16 @@ async def get_updates(request, auth_info, db):
     # Parse since
     since_str = request.querydict.get("since", "").strip()
     if not since_str:
-        return 400, {}, "/api/v2/updates needs since"
+        return 400, {}, "bad request: /updates needs since"
     try:
         since = float(since_str)
     except ValueError:
-        return 400, {}, "/api/v2/updates since needs a number (timestamp)"
+        return 400, {}, "bad request: /updates since needs a number (timestamp)"
 
     # # Parse pollmethod option
     # pollmethod = request.querydict.get("pollmethod", "").strip() or "short"
     # if pollmethod not in ("short", "long"):
-    #     return 400, {}, "/api/v2/records pollmethod must be 'short' or 'long'"
+    #     return 400, {}, "/records pollmethod must be 'short' or 'long'"
 
     server_time = time.time()
 
@@ -300,7 +307,6 @@ async def get_updates(request, auth_info, db):
     # account for limited resolution of getmtime.
     if db.mtime + 0.2 < since:
         return dict(
-            status="ok",
             server_time=server_time,
             reset=0,  # Not False; is used in the tests to know that we exited early
             records=[],
@@ -325,7 +331,6 @@ async def get_updates(request, auth_info, db):
 
     # Return result
     result = dict(
-        status="ok",
         server_time=server_time,
         reset=reset,
         records=records,
@@ -339,24 +344,21 @@ async def get_records(request, auth_info, db):
     # Parse timerange option
     timerange_str = request.querydict.get("timerange", "").strip()
     if not timerange_str:
-        return 400, {}, "/api/v2/records needs timerange (2 timestamps)"
+        return 400, {}, "bad request: /records needs timerange (2 timestamps)"
     timerange = timerange_str.split("-")
     try:
         timerange = [float(x) for x in timerange]
         if len(timerange) != 2:
             raise ValueError()
     except ValueError:
-        return 400, {}, "/api/v2/records timerange needs 2 numbers (timestamps)"
+        return 400, {}, "bad request: /records timerange needs 2 numbers (timestamps)"
 
     # Collect records
     query = f"t2 >= {timerange[0]} AND t1 <= {timerange[1]}"
     records = await db.select("records", query)
 
     # Return result
-    result = dict(
-        status="ok",
-        records=records,
-    )
+    result = dict(records=records)
     return 200, {}, result
 
 
@@ -370,10 +372,7 @@ async def get_settings(request, auth_info, db):
     settings = await db.select_all("settings")
 
     # Return result
-    result = dict(
-        status="ok",
-        settings=settings,
-    )
+    result = dict(settings=settings)
     return 200, {}, result
 
 
@@ -394,8 +393,8 @@ async def _push_items(request, auth_info, db, what):
     spec = SPECS[what]
 
     accepted = []  # keys of accepted items (but might have mt < current)
-    fail = []  # keys of corrupt items
-    errors = []  # error messages, matching up with fail
+    failed = []  # keys of corrupt items
+    errors = []  # error messages, matching up with failed
     errors2 = []  # error messages for items that did not even have a key
 
     async with db:
@@ -426,7 +425,7 @@ async def _push_items(request, auth_info, db, what):
                     raise ValueError("Item was modified after a reset")
             except Exception as err:
                 # Item is corrupt - mark it as failed
-                fail.append(item["key"])
+                failed.append(item["key"])
                 errors.append(str(err))
                 # Re-put the current item if there was one, otherwise ignore
                 if cur_item is not None:
@@ -453,9 +452,8 @@ async def _push_items(request, auth_info, db, what):
 
     # Return result
     result = dict(
-        status=("fail" if fail else "ok"),
         accepted=accepted,
-        fail=fail,
+        failed=failed,
         errors=errors + errors2,
     )
     return 200, {}, result

@@ -82,7 +82,7 @@ async def api_handler(request, path):
     try:
         auth_info, db = await authenticate(request)
     except AuthException as err:
-        return 403, {}, f"Auth failed: {err}"
+        return 401, {}, f"unauthorized: {err}"
 
     # Handle endpoints that require authentication
     return await api_handler_triage(request, path, auth_info, db)
@@ -103,10 +103,11 @@ async def webtoken_for_localhost(request):
 
     # Establish that we can trust the client
     if request.host not in ("localhost", "127.0.0.1"):
-        return 403, {}, "Not on localhost"
+        return 403, {}, "forbidden: must be on localhost"
 
     # Return the webtoken for the default user
-    return await get_webtoken_unsafe("defaultuser")
+    token = await get_webtoken_unsafe("defaultuser")
+    return 200, {}, dict(token=token)
 
 
 if __name__ == "__main__":

@@ -183,7 +183,7 @@ async def renew_webtoken(verbose=True, reset=False):
     if res.status != 200:
         text = await res.text()
         console.warn("Could not renew token: " + text)
-        if res.status == 403 and "revoked" in text:
+        if res.status == 401 and "revoked" in text:
             # When revoked, we logout to drop local changes.
             # See notes in stores.py where we do the same.
             if "/app/" in location.pathname:
