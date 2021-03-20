@@ -53,7 +53,7 @@ async def our_api_handler(request):
     try:
         auth_info, db = await authenticate(request)
     except AuthException as err:
-        return 403, {}, f"Auth failed: {err}"
+        return 401, {}, f"Auth failed: {err}"
 
     return await api_handler_triage(request, path, auth_info, db)
 
@@ -75,13 +75,13 @@ def test_auth():
         assert r.status == 200
         # No headers, no access
         r = p.get("/api/v2/updates?since=0")
-        assert r.status == 403
+        assert r.status == 401
         # Access with header
         r = p.get("/api/v2/updates?since=0", headers=headers)
         assert r.status == 200
         # No access if token is not produced by tt
         r = p.get("/api/v2/updates?since=0", headers={"authtoken": "foo"})
-        assert r.status == 403
+        assert r.status == 401
 
         # Get new auth token, old one should still work
         HEADERS["authtoken"] = get_webtoken_unsafe_sync(USER)
@@ -92,7 +92,7 @@ def test_auth():
         # This confirms the revoking of tokens
         HEADERS["authtoken"] = get_webtoken_unsafe_sync(USER, reset=True)
         r = p.get("/api/v2/updates?since=0", headers=headers)
-        assert r.status == 403
+        assert r.status == 401
         # And the new token works
         r = p.get("/api/v2/updates?since=0", headers=HEADERS)
         assert r.status == 200
@@ -102,7 +102,7 @@ def test_auth():
         _apiserver.WEBTOKEN_LIFETIME = -10
         headers["authtoken"] = get_webtoken_unsafe_sync(USER)
         r = p.get("/api/v2/updates?since=0", headers=headers)
-        assert r.status == 403
+        assert r.status == 401
         assert "expired " in r.body.decode().lower()
         assert "revoked " not in r.body.decode().lower()
         _apiserver.WEBTOKEN_LIFETIME = ori_exp
@@ -111,7 +111,7 @@ def test_auth():
         # because revoked is worse than expired, and clients can use that info.
         HEADERS["authtoken"] = get_webtoken_unsafe_sync(USER, True)
         r = p.get("/api/v2/updates?since=0", headers=headers)
-        assert r.status == 403
+        assert r.status == 401
         assert "expired " not in r.body.decode().lower()
         assert "revoked " in r.body.decode().lower()
 
@@ -164,7 +164,7 @@ def test_settings():
         r = p.get("http://localhost/api/v2/settings", headers=HEADERS)
         assert r.status == 200
         d = dejsonize(r)
-        assert set(d.keys()) == {"status", "settings"}
+        assert set(d.keys()) == {"settings"}
         x = d["settings"]
         assert isinstance(x, list) and len(x) == 0
 
@@ -179,7 +179,8 @@ def test_settings():
             headers=HEADERS,
         )
         assert r.status == 200
-        assert "ok" in r.body.decode().lower()
+        d = dejsonize(r)
+        assert set(d.keys()) == {"accepted", "failed", "errors"}
 
         # Now there are two
         r = p.get("http://localhost/api/v2/settings", headers=HEADERS)
@@ -202,7 +203,6 @@ def test_settings():
             headers=HEADERS,
         )
         assert r.status == 200
-        assert dejsonize(r)["status"] == "ok"
         assert len(dejsonize(r)["accepted"]) == 3
 
         # Now there are three
@@ -225,7 +225,6 @@ def test_settings():
             headers=HEADERS,
         )
         assert r.status == 200
-        assert dejsonize(r)["status"] == "fail"
         assert dejsonize(r)["accepted"] == ["pref4"]
         assert "missing" in dejsonize(r)["errors"][0]
 
@@ -237,7 +236,6 @@ def test_settings():
             headers=HEADERS,
         )
         assert r.status == 200
-        assert dejsonize(r)["status"] == "fail"
         assert dejsonize(r)["accepted"] == []
         assert "invalid literal" in dejsonize(r)["errors"][0]
 
@@ -262,7 +260,6 @@ def test_settings():
             headers=HEADERS,
         )
         assert r.status == 200
-        assert dejsonize(r)["status"] == "fail"
         assert dejsonize(r)["accepted"] == []
         assert "less than 256" in dejsonize(r)["errors"][0]
         assert "less than 256" in dejsonize(r)["errors"][1]
@@ -297,7 +294,8 @@ def test_records():
             headers=HEADERS,
         )
         assert r.status == 200
-        assert dejsonize(r)["status"] == "ok"
+        d = dejsonize(r)
+        assert set(d.keys()) == {"accepted", "failed", "errors"}
         assert dejsonize(r)["accepted"] == ["r11", "r12"]
         assert dejsonize(r)["errors"] == []
 
@@ -318,7 +316,8 @@ def test_records():
             headers=HEADERS,
         )
         assert r.status == 200
-        assert "ok" in r.body.decode().lower()
+        d = dejsonize(r)
+        assert "accepted" in r.body.decode().lower()
 
         # Check status
         r = p.get("http://localhost/api/v2/updates?since=0", headers=HEADERS)
@@ -334,7 +333,6 @@ def test_records():
             headers=HEADERS,
         )
         assert r.status == 200
-        assert dejsonize(r)["status"] == "ok"
         assert dejsonize(r)["accepted"] == ["r22"]
 
         # -- fails
@@ -351,7 +349,6 @@ def test_records():
             "http://localhost/api/v2/records", json.dumps([]).encode(), headers=HEADERS
         )
         assert r.status == 200
-        assert dejsonize(r)["status"] == "ok"
         assert dejsonize(r)["accepted"] == []
 
         # Try adding record with BAD missing fields
@@ -365,9 +362,8 @@ def test_records():
             headers=HEADERS,
         )
         assert r.status == 200
-        assert dejsonize(r)["status"] == "fail"
         assert dejsonize(r)["accepted"] == ["r21"]
-        assert dejsonize(r)["fail"] == ["r22"]
+        assert dejsonize(r)["failed"] == ["r22"]
         assert "missing" in dejsonize(r)["errors"][0]
 
         # Try adding record with wrong field type
@@ -381,9 +377,8 @@ def test_records():
             headers=HEADERS,
         )
         assert r.status == 200
-        assert dejsonize(r)["status"] == "fail"
         assert dejsonize(r)["accepted"] == []
-        assert dejsonize(r)["fail"] == ["r23", "r24"]
+        assert dejsonize(r)["failed"] == ["r23", "r24"]
         assert "invalid literal" in dejsonize(r)["errors"][0]
         assert "invalid literal" in dejsonize(r)["errors"][1]
 
@@ -408,9 +403,8 @@ def test_records():
             headers=HEADERS,
         )
         assert r.status == 200
-        assert dejsonize(r)["status"] == "fail"
         assert dejsonize(r)["accepted"] == []
-        assert dejsonize(r)["fail"] == ["r26", "r27"]
+        assert dejsonize(r)["failed"] == ["r26", "r27"]
         assert "less than 256" in dejsonize(r)["errors"][0]
         assert "less than 256" in dejsonize(r)["errors"][1]
 
@@ -427,9 +421,8 @@ def test_records():
             headers=HEADERS,
         )
         assert r.status == 200
-        assert dejsonize(r)["status"] == "fail"
         assert dejsonize(r)["accepted"] == []
-        assert dejsonize(r)["fail"] == ["r28", "r29"]
+        assert dejsonize(r)["failed"] == ["r28", "r29"]
         assert "invalid literal" in dejsonize(r)["errors"][0]
         assert "invalid literal" in dejsonize(r)["errors"][1]
         assert "not a dict with str" in dejsonize(r)["errors"][2]
@@ -454,7 +447,7 @@ def test_records_get():
         r = p.get("http://localhost/api/v2/records?timerange=0-999", headers=HEADERS)
         assert r.status == 200
         d = dejsonize(r)
-        assert set(d.keys()) == {"status", "records"}
+        assert set(d.keys()) == {"records"}
         assert d["records"] == []
 
         # Add records
@@ -469,13 +462,12 @@ def test_records_get():
             headers=HEADERS,
         )
         assert r.status == 200
-        assert dejsonize(r)["status"] == "ok"
 
         # Get current records
         r = p.get("http://localhost/api/v2/records?timerange=0-999", headers=HEADERS)
         assert r.status == 200
         d = dejsonize(r)
-        assert set(d.keys()) == {"status", "records"}
+        assert set(d.keys()) == {"records"}
         assert set(r["key"] for r in d["records"]) == {"r11", "r12", "r13"}
 
         # Get section containing only first
@@ -485,7 +477,7 @@ def test_records_get():
             )
             assert r.status == 200
             d = dejsonize(r)
-            assert set(d.keys()) == {"status", "records"}
+            assert set(d.keys()) == {"records"}
             assert set(r["key"] for r in d["records"]) == {"r11"}
 
         # Get section containing only second
@@ -495,7 +487,7 @@ def test_records_get():
             )
             assert r.status == 200
             d = dejsonize(r)
-            assert set(d.keys()) == {"status", "records"}
+            assert set(d.keys()) == {"records"}
             assert set(r["key"] for r in d["records"]) == {"r12"}
 
         # Get section containing only third (running record)
@@ -505,7 +497,7 @@ def test_records_get():
             )
             assert r.status == 200
             d = dejsonize(r)
-            assert set(d.keys()) == {"status", "records"}
+            assert set(d.keys()) == {"records"}
             assert set(r["key"] for r in d["records"]) == {"r13"}
 
         # Fails
@@ -530,6 +522,7 @@ def test_updates():
         r = p.get("http://localhost/api/v2/updates?since=0", headers=HEADERS)
         assert r.status == 200
         d = dejsonize(r)
+        assert set(d.keys()) == {"server_time", "reset", "records", "settings"}
         assert isinstance(d, dict)
         assert "server_time" in d
         assert "reset" in d
@@ -544,7 +537,6 @@ def test_updates():
             headers=HEADERS,
         )
         assert r.status == 200
-        assert "ok" in r.body.decode().lower()
 
         # Post another record
         records = [dict(key="r2", mt=110, t1=200, t2=210, ds="A record 2!")]
@@ -554,7 +546,6 @@ def test_updates():
             headers=HEADERS,
         )
         assert r.status == 200
-        assert "ok" in r.body.decode().lower()
 
         # Get updates again
         r = p.get("http://localhost/api/v2/updates?since=0", headers=HEADERS)
@@ -575,7 +566,6 @@ def test_updates():
             headers=HEADERS,
         )
         assert r.status == 200
-        assert "ok" in r.body.decode().lower()
 
         # If we query all updates, we get 3
         r = p.get("http://localhost/api/v2/updates?since=0", headers=HEADERS)
@@ -652,7 +642,7 @@ def test_webtoken():
         r = p.get("http://localhost/api/v2/webtoken", headers=headers)
         assert r.status == 200
         d = dejsonize(r)
-        assert set(d.keys()) == {"status", "token"}
+        assert set(d.keys()) == {"token"}
         assert isinstance(d["token"], str) and d["token"].count(".") == 2
         assert decode_jwt_nocheck(d["token"])["username"] == USER
         assert decode_jwt_nocheck(d["token"])["expires"] < time.time() + 1209601
@@ -683,7 +673,7 @@ def test_webtoken():
 
         # Now the old token is invalid (i.e. revoked)
         r = p.get("http://localhost/api/v2/webtoken", headers=HEADERS)
-        assert r.status == 403
+        assert r.status == 401
 
         # Let's not break the other tests
         HEADERS["authtoken"] = headers["authtoken"]
@@ -700,7 +690,7 @@ def test_apitoken():
         r = p.get("http://localhost/api/v2/apitoken", headers=HEADERS)
         assert r.status == 200
         d = dejsonize(r)
-        assert set(d.keys()) == {"status", "token"}
+        assert set(d.keys()) == {"token"}
         assert isinstance(d["token"], str) and d["token"].count(".") == 2
         assert decode_jwt_nocheck(d["token"])["username"] == USER
         assert decode_jwt_nocheck(d["token"])["expires"] > 30000000000
@@ -715,7 +705,7 @@ def test_apitoken():
 
         # ... but we cannot use it to get new tokens of any kind
         r = p.get("http://localhost/api/v2/webtoken", headers=headers)
-        assert r.status == 403
+        assert r.status == 403  # 403 is authorization, 401 is authentication
         r = p.get("http://localhost/api/v2/apitoken", headers=headers)
         assert r.status == 403
 
@@ -734,7 +724,7 @@ def test_apitoken():
 
         # Now the old token is invalid
         r = p.get("http://localhost/api/v2/updates?since=0", headers=headers)
-        assert r.status == 403
+        assert r.status == 401
 
         # And the new token works
         headers["authtoken"] = d["token"]

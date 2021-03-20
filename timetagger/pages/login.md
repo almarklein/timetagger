@@ -18,7 +18,7 @@ async function login() {
         return;
     }
 
-    let token = await res.text();
+    let token = JSON.parse(await res.text()).token;
     tools.set_auth_info_from_token(token);
     el.innerText = "Token exchange succesful";
 

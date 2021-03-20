@@ -864,7 +864,7 @@ class ConnectedDataStore(BaseDataStore):
             # will get the server's version back when we pull.
             d = JSON.parse(await res.text())
             # d.accepted -> list of ok keys
-            for key in d.fail:
+            for key in d.failed:
                 self[kind]._drop(key)
             for err in d.errors:
                 self._set_state("warning")
@@ -887,13 +887,13 @@ class ConnectedDataStore(BaseDataStore):
             text = await res.text()
             console.warn(res.status + " (" + res.statusText + ") " + text)
             self._set_state("error")  # E.g. Wifi or server down, or 500
-            if res.status == 403:
+            if res.status == 401:
                 # Our token is probably expired. There may be local
                 # changes that have not yet been pushed, which would
                 # be lost if we logout. On the other hand, this may be
                 # a lost/stolen device and the user revoked the token.
                 # We can distinguish between these cases by determining
-                # that the 403 is due to a token seed mismatch (revoked).
+                # that the 401 is due to a token seed mismatch (revoked).
                 self._auth_cantuse = text
                 if "revoked" in text:
                     window.location.href = "../logout"
