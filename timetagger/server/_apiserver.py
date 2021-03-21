@@ -24,7 +24,7 @@ logger = logging.getLogger("asgineer")
 # * Other incoming fields are simply ignored.
 # * There is a special field st (server time) that the server adds to each item.
 # * We have tests to ensure that the lines below line up with the same
-#   values client/stores.py.
+#   values in client/stores.py.
 
 to_int = int
 to_float = float
@@ -72,7 +72,7 @@ INDICES = {
 
 class AuthException(Exception):
     """Exception raised when authentication fails.
-    You should catch this error and respond with 401.
+    You should catch this error and respond with 401 unauthorized.
     """
 
     pass
@@ -189,6 +189,7 @@ async def authenticate(request):
         raise AuthException(f"The {tokenkind} is revoked (seed does not match)")
 
     # Check expiration last. Validates that the token is not too old.
+    # If a token is both revoked and expired, we want to emit the revoked-message.
     if auth_info["expires"] < st:
         raise AuthException(f"The {tokenkind} has expired (after {WEBTOKEN_DAYS} days)")
 
@@ -256,12 +257,15 @@ async def _get_token_seed_from_db(db, tokenkind, reset):
 
 async def get_webtoken_unsafe(username, reset=False):
     """This function provides a webtoken that can be used to
-    authenticate future requests.
+    authenticate future requests. It is intended to bootstrap the
+    authentication; the caller of this function is responsible for the
+    request being authenticated in another way, for example:
 
-    The caller of this function is responsible for the request being secure, e.g. by:
-    * Checking that we're serving on localhost.
-    * Validating a JWT from another trusted source.
-    * Going through an OAuth workflow with a trusted auth provider.
+    * Checking that the request is from localhost (for local use only).
+    * Obtaining and validating a JWT from a trusted auth provider (e.g. Auth0).
+    * Going through an OAuth workflow with a trusted provider (e.g Google or Github).
+    * Implement an authenticate-via-email workflow.
+    * Implement username/password authentication.
 
     The provided webtoken expires in two weeks. It is recommended to
     use GET /api/v2/webtoken to get a fresh token once a day.
