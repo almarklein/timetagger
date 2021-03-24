@@ -2,11 +2,11 @@ version: 2
 
 formats: all
 
+mkdocs:
+  configuration: docs/mkdocs.yml
+
 python:
   version: 3.7
   install:
-    - requirements: docs/docs_requirements.txt
-    - method: pip
-
-mkdocs:
-  configuration: docs/mkdocs.yml
+  - requirements: docs/docs_requirements.txt
+  - method: pip
