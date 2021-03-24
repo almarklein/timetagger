@@ -1,0 +1,10 @@
+site_name: TimeTagger
+nav:
+    - Home: index.md
+    - Library API: libapi.md
+    - Web API: webapi.md
+theme: readthedocs
+markdown_extensions:
+  - admonition
+  - codehilite
+  - mkautodoc
