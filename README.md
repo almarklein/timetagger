@@ -32,9 +32,10 @@ Maybe I'll someday implement it in something that compiles down to Wasm :)
 
 This repo is organized as a library, making it quite flexible to apply tweaks.
 See `run.py` for an example of how to run it as a web app.
+See the [docs](https://timetagger.readthedocs.io) for more info.
 
-You can also see it in action at https://timetagger.app - you can also
-purchase an account for $2 per month so you don't have to worry about
+You can also see it in action at https://timetagger.app - you can
+purchase an account for €3 per month so you don't have to worry about
 maintaining a server, backups, and all that. Plus you'd sponsor this
 project and open source in general.
 
@@ -74,8 +75,3 @@ pip install invoke black flake8 pytest requests
 * `invoke format` to autoformat the code (using black)
 * `invoke lint` to detect linting errors (using flake8)
 * `invoke tests` to run tests (using pytest)
-
-
-## API
-
-TODO
