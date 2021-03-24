@@ -454,7 +454,7 @@ def test_records_get():
         records = [
             dict(key="r11", mt=110, t1=100, t2=150, ds="#p1"),
             dict(key="r12", mt=110, t1=310, t2=350, ds="#p1"),
-            dict(key="r13", mt=110, t1=700, t2=700, ds="#p1"),
+            dict(key="r13", mt=110, t1=700, t2=701, ds="#p1"),
         ]
         r = p.put(
             "http://localhost/api/v2/records",
@@ -490,7 +490,7 @@ def test_records_get():
             assert set(d.keys()) == {"records"}
             assert set(r["key"] for r in d["records"]) == {"r12"}
 
-        # Get section containing only third (running record)
+        # Get section containing only third (short record)
         for tr in ["600-800", "699-701"]:
             r = p.get(
                 f"http://localhost/api/v2/records?timerange={tr}", headers=HEADERS
@@ -499,6 +499,59 @@ def test_records_get():
             d = dejsonize(r)
             assert set(d.keys()) == {"records"}
             assert set(r["key"] for r in d["records"]) == {"r13"}
+
+        # Using a zero range works if that timestamp is inside a record
+        r = p.get(f"http://localhost/api/v2/records?timerange=120-120", headers=HEADERS)
+        assert r.status == 200
+        assert set(r["key"] for r in dejsonize(r)["records"]) == {"r11"}
+
+        # Using a reversed range works if that range is fully inside a record
+        r = p.get(f"http://localhost/api/v2/records?timerange=140-110", headers=HEADERS)
+        assert r.status == 200
+        assert set(r["key"] for r in dejsonize(r)["records"]) == {"r11"}
+        # And only fully
+        r = p.get(f"http://localhost/api/v2/records?timerange=151-110", headers=HEADERS)
+        assert r.status == 200
+        assert set(r["key"] for r in dejsonize(r)["records"]) == set()
+
+        # Add some running records
+        now = int(time.time())
+        records = [
+            dict(key="r21", mt=110, t1=now - 2000, t2=now - 2000, ds="#p1"),
+            dict(key="r22", mt=110, t1=now - 3000, t2=now - 3000, ds="#p1"),
+            dict(key="r23", mt=110, t1=now - 4000, t2=now - 4000, ds="#p1"),
+        ]
+        r = p.put(
+            "http://localhost/api/v2/records",
+            json.dumps(records).encode(),
+            headers=HEADERS,
+        )
+        assert r.status == 200
+
+        # If we sample *somewhere* in a running records range, we'd get it
+        for tr in [(-5000, 10), (-2500, 10), (-100, -90), (100, 110), (0, 0)]:
+            trs = f"{now + tr[0]}-{now + tr[1]}"
+            r = p.get(
+                f"http://localhost/api/v2/records?timerange={trs}", headers=HEADERS
+            )
+            assert r.status == 200
+            d = dejsonize(r)
+            keys = [r["key"] for r in d["records"]]
+            assert set(keys) == {"r21", "r22", "r23"}
+
+        # Query before when the 2nd and 3d have started -> should only get 1st
+        trs = f"{now - 3500}-{now - 3500}"
+        r = p.get(f"http://localhost/api/v2/records?timerange={trs}", headers=HEADERS)
+        d = dejsonize(r)
+        keys = [r["key"] for r in d["records"]]
+        assert set(keys) == {"r23"}
+
+        # Query before when the 3d has started -> should only get 1st and 2nd
+        trs = f"{now - 3500}-{now - 2999}"
+        r = p.get(f"http://localhost/api/v2/records?timerange={trs}", headers=HEADERS)
+        d = dejsonize(r)
+        keys = [r["key"] for r in d["records"]]
+        assert set(keys) == {"r22", "r23"}
 
         # Fails
         r = p.get(f"http://localhost/api/v2/records", headers=HEADERS)
