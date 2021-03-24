@@ -1,9 +1,15 @@
 site_name: TimeTagger
+site_description: Tag your time, get the insight.
+theme: readthedocs
+
+repo_name: almarklein/timetagger
+repo_url: https://github.com/almarklein/timetagger
+
 nav:
     - Home: index.md
     - Library API: libapi.md
     - Web API: webapi.md
-theme: readthedocs
+
 markdown_extensions:
   - admonition
   - codehilite
