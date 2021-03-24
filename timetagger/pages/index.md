@@ -37,4 +37,6 @@ This is the stub index page for TimeTagger,
 an open source time-tracker that feels lightweight and has powerful reporting.
 
 The source code for this project is on
-[https://github.com/almarklein/timetagger](https://github.com/almarklein/timetagger).
+[Github](https://github.com/almarklein/timetagger),
+and the docs are on
+[read the docs](https://timetagger.readthedocs.io/en/latest/).
