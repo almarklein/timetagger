@@ -358,7 +358,8 @@ async def get_records(request, auth_info, db):
         return 400, {}, "bad request: /records timerange needs 2 numbers (timestamps)"
 
     # Collect records
-    query = f"t2 >= {timerange[0]} AND t1 <= {timerange[1]}"
+    tr1, tr2 = int(timerange[0]), int(timerange[1])
+    query = f"(t2 >= {tr1} AND t1 <= {tr2}) OR (t1 == t2 AND t1 <= {tr2})"
     records = await db.select("records", query)
 
     # Return result
