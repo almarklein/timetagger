@@ -1,4 +1,4 @@
-# The TimeTagger public web API
+# TimeTagger public web API
 
 
 
