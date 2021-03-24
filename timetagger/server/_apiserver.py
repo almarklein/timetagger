@@ -75,7 +75,8 @@ class AuthException(Exception):
     You should catch this error and respond with 401 unauthorized.
     """
 
-    pass
+    def __init__(self, msg):
+        super().__init__(msg)
 
 
 # %% Main handler
