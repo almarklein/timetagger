@@ -91,19 +91,15 @@ def black_wrapper(writeback):
 @task
 def clean(ctx):
     """Clean the repo of temp files etc."""
+    # Walk over all files and delete based on name
     for root, dirs, files in os.walk(ROOT_DIR):
         for dname in dirs:
             if dname in (
                 "__pycache__",
                 ".cache",
-                "htmlcov",
                 ".hypothesis",
-                ".pytest_cache",
-                "dist",
-                "build",
                 "_build",
                 ".mypy_cache",
-                LIBNAME + ".egg-info",
             ):
                 shutil.rmtree(os.path.join(root, dname))
                 print("Removing", dname)
@@ -111,6 +107,22 @@ def clean(ctx):
             if fname.endswith((".pyc", ".pyo")) or fname in (".coverage"):
                 os.remove(os.path.join(root, fname))
                 print("Removing", fname)
+    # Delete specific files and directories
+    for fname in [
+        "docs/site",
+        "htmlcov",
+        ".pytest_cache",
+        "dist",
+        "build",
+        LIBNAME + ".egg-info",
+    ]:
+        filename = os.path.join(ROOT_DIR, fname)
+        if os.path.isfile(filename):
+            os.remove(filename)
+            print("Removing", filename)
+        elif os.path.isdir(filename):
+            shutil.rmtree(filename)
+            print("Removing", filename)
 
 
 @task

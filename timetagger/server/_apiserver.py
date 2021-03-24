@@ -74,6 +74,7 @@ class AuthException(Exception):
     """Exception raised when authentication fails.
     You should catch this error and respond with 401 unauthorized.
     """
+
     def __init__(self, msg):
         super.__init__(msg)
 
