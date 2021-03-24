@@ -4,11 +4,12 @@ theme: readthedocs
 
 repo_name: almarklein/timetagger
 repo_url: https://github.com/almarklein/timetagger
+edit_uri: ""
 
 nav:
-    - Home: index.md
-    - Library API: libapi.md
-    - Web API: webapi.md
+    - Home: docs/index.md
+    - Library API: docs/libapi.md
+    - Web API: docs/webapi.md
 
 markdown_extensions:
   - admonition
