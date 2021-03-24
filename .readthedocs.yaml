@@ -1,0 +1,13 @@
+version: 2
+
+formats: all
+
+python:
+  version: 3.8
+  install:
+    - requirements: requirements.txt
+    - requirements: docs/docs_requirements.txt
+    - method: pip
+
+mkdocs:
+  configuration: docs/mkdocs.yml
