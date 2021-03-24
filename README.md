@@ -5,6 +5,10 @@
 *Tag your time, get the insight* - an open source time tracker with a focus on
 a simple and interactive user experience.
 
+* Website: https://timetagger.app
+* Docs: https://timetagger.readthedocs.io
+* CLI tool: https://github.com/almarklein/timetagger_cli
+
 
 ## Introduction
 
