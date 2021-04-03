@@ -216,7 +216,7 @@ class BaseDialog:
     def is_shown(self):
         return self.maindiv.style.display == "block"
 
-    def open(self, callback):
+    def open(self, callback=None):
         self._callback = callback
         # Disable main app and any "parent" dialogs
         if self.MODAL:
@@ -1124,10 +1124,13 @@ class RecordDialog(BaseDialog):
         """Get all current tags. If different, update suggestions. """
         # Show info about current tags in description
         tags, parts = utils.get_tags_and_parts_from_string(self._ds_input.value)
-        tags_html = "Tags: "
+        tags_html = "Tags:&nbsp; &nbsp;"
         if len(tags) == 0:
             tags = ["#untagged"]
-        tags_list = [f"<span style='color:#000'>{t}</span>" for t in tags]
+        tags_list = []
+        for tag in tags:
+            clr = window.store.settings.get_color_for_tag(tag)
+            tags_list.append(f"<b style='color:{clr};'>#</b>{tag[1:]}")
         tags_html += "&nbsp; &nbsp;".join(tags_list)
         # Get suggested tags
         self._suggested_tags_list = []
@@ -1262,8 +1265,45 @@ class RecordDialog(BaseDialog):
         self.close()
 
 
-class ColorDialog(BaseDialog):
-    """Dialog to set the color for a tag combination."""
+class TagColorSelectionDialog(BaseDialog):
+    """Select a tag to define the color for. """
+
+    def open(self, tags, callback):
+        if isinstance(tags, str):
+            tags = tags.split(" ")
+
+        self.maindiv.innerHTML = f"""
+            <h1><i class='fas'>\uf53f</i>&nbsp;&nbsp;Select tag to set color for
+                <button type='button'><i class='fas'>\uf00d</i></button>
+                </h1>
+            <div></div>
+        """
+
+        close_but = self.maindiv.children[0].children[-1]
+        _, buttondiv = self.maindiv.children
+        close_but.onclick = self.close
+
+        for tag in tags:
+            clr = window.store.settings.get_color_for_tag(tag)
+            el = document.createElement("button")
+            el.setAttribute("type", "button")
+            el.classList.add("actionbutton")
+            el.innerHTML = f"<b style='color:{clr};'>#</b>" + tag[1:]
+            el.onclick = self._make_click_handler(tag, callback)
+            buttondiv.appendChild(el)
+
+        super().open(None)
+
+    def _make_click_handler(self, tag, callback):
+        def handler():
+            self.close()
+            self._canvas.tag_color_dialog.open(tag, callback),
+
+        return handler
+
+
+class TagColorDialog(BaseDialog):
+    """Dialog to set the color for a tag."""
 
     def open(self, tagz, callback=None):
 
@@ -1272,7 +1312,8 @@ class ColorDialog(BaseDialog):
         tags.sort()
         self._tagz = tagz = tags.join(" ")
 
-        self._default_color = utils.color_from_name(self._tagz)
+        self._default_color = window.front.COLORS.acc_clr
+        # self._default_color = utils.color_from_name(self._tagz)
 
         self.maindiv.innerHTML = f"""
             <h1><i class='fas'>\uf53f</i>&nbsp;&nbsp;Set color for {tagz}
@@ -1280,7 +1321,7 @@ class ColorDialog(BaseDialog):
                 </h1>
             <input type='text' style='width: 210px; border: 5px solid #eee' spellcheck='false' />
             <br>
-            <button type='button'><i class='fas'>\uf12d</i> Auto</button>
+            <button type='button'><i class='fas'>\uf12d</i> Default</button>
             <button type='button' style='margin-left: 2px'><i class='fas'>\uf2f1</i> Random</button>
             <br>
             <div style='display: inline-grid; grid-gap: 2px;'></div>
@@ -1323,7 +1364,7 @@ class ColorDialog(BaseDialog):
             self._make_clickable(el, hex)
             self._color_grid.appendChild(el)
 
-        self._set_color(window.store.settings.get_color_for_tagz(tagz))
+        self._set_color(window.store.settings.get_color_for_tag(tagz))
 
         super().open(callback)
         if utils.looks_like_desktop():
@@ -1359,12 +1400,12 @@ class ColorDialog(BaseDialog):
 
     def submit(self):
         clr = self._color_input.value
-        cur_color = window.store.settings.get_color_for_tagz(self._tagz)
+        cur_color = window.store.settings.get_color_for_tag(self._tagz)
         if clr != cur_color:
             if clr == self._default_color:
-                window.store.settings.set_color_for_tagz(self._tagz, "")
+                window.store.settings.set_color_for_tag(self._tagz, "")
             else:
-                window.store.settings.set_color_for_tagz(self._tagz, clr)
+                window.store.settings.set_color_for_tag(self._tagz, clr)
         super().submit()
 
 

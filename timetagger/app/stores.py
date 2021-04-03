@@ -316,21 +316,19 @@ class SettingsStore(BaseStore):
         for item in settings:
             self._items[item.key] = item
 
-    def set_color_for_tagz(self, tagz, color):
-        key = "color " + tagz
+    def set_color_for_tag(self, tag, color):
+        key = "color " + tag
         ob = self.create(key, color)
         self.put(ob)
 
-    def get_color_for_tagz(self, tagz):
-        tags = tagz.split(" ")
-        tags.sort()
-        tagz = tags.join(" ")
-        key = "color " + tagz
+    def get_color_for_tag(self, tag):
+        key = "color " + tag
         ob = self.get_by_key(key)
         if ob is not None and ob.value:
             return ob.value
         else:
-            return utils.color_from_name(tagz)
+            return window.front.COLORS.acc_clr
+            # return utils.color_from_name(tag)
 
 
 class RecordStore(BaseStore):
@@ -956,6 +954,7 @@ class DemoDataStore(BaseDataStore):
         nowyear = dt.get_year_month_day(dt.now())[0]
         self._years = list(range(nowyear - 5, nowyear + 1))
 
+        self._create_colors()
         self._create_tags()
         self._create_one_year_of_data(self._years.pop(-1))
 
@@ -976,11 +975,20 @@ class DemoDataStore(BaseDataStore):
         else:
             await tools.sleepms(200)
 
+    def _create_colors(self):
+        colors = {
+            "#admin": "#ED8CC7",
+            "#client1": "#607FE0",
+            "#client2": "#429270",
+        }
+        for tag, color in colors.items():
+            self.settings.set_color_for_tag(tag, color)
+
     def _create_tags(self):
 
         self._tag_groups1 = [
-            ["#unpaid #admin", "#unpaid #reading"],
-            ["#unpaid #admin", "#unpaid #traveling"],
+            ["#admin", "#reading"],
+            ["#admin", "#traveling"],
         ]
 
         self._tag_groups2 = [
@@ -1045,7 +1053,7 @@ class DemoDataStore(BaseDataStore):
                     # Put some predictable stuff on today, whatever day it is.
                     if y == nowyear and m == nowmonth and d == nowday:
                         for start, stop, tag in [
-                            ("08:51", "09:11", "#unpaid #admin"),
+                            ("08:51", "09:11", "#admin"),
                             ("09:11", "10:27", "#client1 #meeting"),
                             ("10:29", "11:52", "#client1 #code"),
                             ("12:51", "13:32", "#client1 #code"),

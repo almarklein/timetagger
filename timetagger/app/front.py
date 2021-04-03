@@ -19,6 +19,7 @@ SMALLER = 0.85
 BUTTON_ROUNDNESS = 4
 RECORD_AREA_ROUNDNESS = 4
 RECORD_ROUNDNESS = 6
+COLORBAND_ROUNDNESS = 4
 ANALYSIS_ROUNDNESS = 6
 
 PI = 3.141_592_653_589_793
@@ -95,7 +96,7 @@ def set_colors():
 
         COLORS.record_bg = "#fafafa"
         COLORS.record_text = COLORS.prim1_clr
-        COLORS.record_edge = COLORS.prim2_clr
+        COLORS.record_edge = COLORS.prim1_clr
 
         window.document.body.classList.remove("darkmode")
 
@@ -120,6 +121,16 @@ def set_colors():
         # window.document.body.style.background = "rgb(0, 0, 0)"
 
 
+def draw_tag(ctx, tag, x, y):
+    """Like fillText, but colors the hashtag in the tag's color."""
+    ori_color = ctx.fillStyle
+    ctx.fillStyle = window.store.settings.get_color_for_tag(tag)
+    ctx.fillText(tag[0], x, y)
+    x += ctx.measureText(tag[0]).width
+    ctx.fillStyle = ori_color
+    ctx.fillText(tag[1:], x, y)
+
+
 class TimeTaggerCanvas(BaseCanvas):
     """Main class for the time app. Does the layout and acts as the root
     application object.
@@ -141,15 +152,17 @@ class TimeTaggerCanvas(BaseCanvas):
         self.timeselection_dialog = dialogs.TimeSelectionDialog(self)
         self.settings_dialog = dialogs.SettingsDialog(self)
         self.record_dialog = dialogs.RecordDialog(self)
-        self.color_dialog = dialogs.ColorDialog(self)
+        self.tag_color_selection_dialog = dialogs.TagColorSelectionDialog(self)
+        self.tag_color_dialog = dialogs.TagColorDialog(self)
         self.report_dialog = dialogs.ReportDialog(self)
         self.tag_manage_dialog = dialogs.TagManageDialog(self)
         self.export_dialog = dialogs.ExportDialog(self)
         self.import_dialog = dialogs.ImportDialog(self)
 
+        # The order here is also the draw-order. Records must come after analytics.
         self.widgets = {
-            "RecordsWidget": RecordsWidget(self),
             "AnalyticsWidget": AnalyticsWidget(self),
+            "RecordsWidget": RecordsWidget(self),
             "TopWidget": TopWidget(self),
         }
 
@@ -800,7 +813,10 @@ class Widget:
         for i in range(len(texts)):
             text, width, font = texts[i], widths[i], fonts[i]
             ctx.font = font
-            ctx.fillText(text, x, 0.5 * (y1 + y2))
+            if text.startsWith("#"):
+                draw_tag(ctx, text, x, 0.5 * (y1 + y2))
+            else:
+                ctx.fillText(text, x, 0.5 * (y1 + y2))
             x += width + opt.space
 
         return w
@@ -1449,7 +1465,7 @@ class RecordsWidget(Widget):
         self._draw_ticks(ctx, x3, y1, x4, y2)
         self._draw_edge(ctx, x3, y1, x4, y2)
         self._draw_record_area(ctx, x3, x4, x2, y1, y2)
-        ctx.clearRect(0, 0, self._canvas.w, y1 - 33)
+        ctx.clearRect(0, 0, x2 - x1, y1 - 33)
         self._draw_top_and_bottom_cover(ctx, x1, x3, x4, x2, y1 - 50, y1, 0.333)
         self._draw_top_and_bottom_cover(ctx, x1, x3, x4, x2, y2, self._canvas.h, -0.02)
 
@@ -1487,7 +1503,6 @@ class RecordsWidget(Widget):
         drawstrokerect(0.0 * lw)
 
     def _draw_top_and_bottom_cover(self, ctx, x1, x2, x3, x4, y1, y2, stop):
-
         grd1 = ctx.createLinearGradient(x1, y1, x1, y2)
         grd2 = ctx.createLinearGradient(x1, y1, x1, y2)
         # grd3 = ctx.createLinearGradient(x1, y1, x1, y2)
@@ -1509,7 +1524,7 @@ class RecordsWidget(Widget):
             grd2.addColorStop(1 + stop, color1)
             grd2.addColorStop(1.0, color1)
         ctx.fillStyle = grd1
-        ctx.fillRect(0, y1, self._canvas.w, y2 - y1)
+        ctx.fillRect(0, y1, x2, y2 - y1)
         ctx.fillStyle = grd2
         ctx.fillRect(x2, y1, x3 - x2 + 50, y2 - y1 - 2)
 
@@ -1870,35 +1885,64 @@ class RecordsWidget(Widget):
 
         # Define roundness and how much each slab moves outward
         rn = RECORD_ROUNDNESS
-        rn = grid_round(rn)
-        rne = min(rn, 0.5 * (ry2 - ry1))  # for in timeline
+        rnb = COLORBAND_ROUNDNESS
+        rne = min(min(0.5 * (ry2 - ry1), rn), rnb)  # for in timeline
 
         timeline_only = ry2 < y1 or ry1 > y2
 
         # Draw record representation
+        path = window.Path2D()
         if timeline_only:
-            ctx.beginPath()
-            ctx.arc(x2 + rne, ry2 - rne, rne, 0.5 * PI, 1.0 * PI)
-            ctx.arc(x2 + rne, ry1 + rne, rne, 1.0 * PI, 1.5 * PI)
-            ctx.arc(x3 - rn, ry1 + rn, rn, 1.5 * PI, 2.0 * PI)
-            ctx.arc(x3 - rn, ry2 - rn, rn, 0.0 * PI, 0.5 * PI)
-            ctx.closePath()
+            path.arc(x2 + rne, ry2 - rne, rne, 0.5 * PI, 1.0 * PI)
+            path.arc(x2 + rne, ry1 + rne, rne, 1.0 * PI, 1.5 * PI)
+            path.arc(x3 - rne, ry1 + rne, rne, 1.5 * PI, 2.0 * PI)
+            path.arc(x3 - rne, ry2 - rne, rne, 0.0 * PI, 0.5 * PI)
+            path.closePath()
         else:
-            ctx.beginPath()
-            ctx.arc(x2 + rne, ry2 - rne, rne, 0.5 * PI, 1.0 * PI)
-            ctx.arc(x2 + rne, ry1 + rne, rne, 1.0 * PI, 1.5 * PI)
-            ctx.lineTo(x4, ry1)
-            ctx.lineTo(x5, ty1)
-            ctx.arc(x6 - rn, ty1 + rn, rn, 1.5 * PI, 2.0 * PI)
-            ctx.arc(x6 - rn, ty2 - rn, rn, 0.0 * PI, 0.5 * PI)
-            ctx.lineTo(x5, ty2)
-            ctx.lineTo(x4, ry2)
-            ctx.closePath()
+            path.arc(x2 + rne, ry2 - rne, rne, 0.5 * PI, 1.0 * PI)
+            path.arc(x2 + rne, ry1 + rne, rne, 1.0 * PI, 1.5 * PI)
+            path.lineTo(x4, ry1)
+            path.lineTo(x5, ty1)
+            path.arc(x6 - rn, ty1 + rn, rn, 1.5 * PI, 2.0 * PI)
+            path.arc(x6 - rn, ty2 - rn, rn, 0.0 * PI, 0.5 * PI)
+            path.lineTo(x5, ty2)
+            path.lineTo(x4, ry2)
+            path.closePath()
         ctx.fillStyle = COLORS.record_bg
-        ctx.fill()
+        ctx.fill(path)
+
         ctx.strokeStyle = COLORS.record_edge
         ctx.lineWidth = 1.2
-        ctx.stroke()
+
+        # Draw coloured edge
+        tagz = tags.join(" ")
+        tagz = self._canvas.widgets.AnalyticsWidget.tagzmap.get(tagz, tagz)
+        colors = [
+            window.store.settings.get_color_for_tag(tag) for tag in tagz.split(" ")
+        ]
+        # Width and xpos
+        ew = 8 / len(colors) ** 0.5
+        ew = max(ew, rnb)
+        ex = x2
+        # First band
+        ctx.fillStyle = colors[0]
+        ctx.beginPath()
+        ctx.arc(x2 + rne, ry2 - rne, rne, 0.5 * PI, 1.0 * PI)
+        ctx.arc(x2 + rne, ry1 + rne, rne, 1.0 * PI, 1.5 * PI)
+        ctx.lineTo(x2 + ew, ry1)
+        ctx.lineTo(x2 + ew, ry2)
+        ctx.closePath()
+        ctx.fill()
+        # Remaining bands
+        for color in colors[1:]:
+            ex += ew  # + 0.15  # small offset creates subtle band
+            ctx.fillStyle = color
+            ctx.fillRect(ex, ry1, ew, ry2 - ry1)
+
+        # todo: day-transitions appear over the records
+
+        # Draw record edge
+        ctx.stroke(path)
 
         # Running records have a small outset
         inset, outset = 0, 0
@@ -1924,14 +1968,6 @@ class RecordsWidget(Widget):
                 ry2 + outset,
                 {"recordrect": True, "region": 0, "record": record},
             )
-
-        # Draw coloured edge
-        ctx.fillStyle = window.store.settings.get_color_for_tagz(tags.join(" "))
-        ctx.beginPath()
-        ctx.arc(x2 + rne, ry2 - rne, rne, 0.5 * PI, 1.0 * PI)
-        ctx.arc(x2 + rne, ry1 + rne, rne, 1.0 * PI, 1.5 * PI)
-        ctx.closePath()
-        ctx.fill()
 
         # The marker that indicates whether the record has been modified
         if record.st == 0:
@@ -1984,8 +2020,8 @@ class RecordsWidget(Widget):
         max_x = x6 - 4
         space_width = ctx.measureText(" ").width + 2
         x = x5 + 55
+        ctx.fillStyle = COLORS.record_text if tags_selected else faded_clr
         for part in ds_parts:
-            ctx.fillStyle = COLORS.record_text if tags_selected else faded_clr
             if part.startswith("#"):
                 texts = [part]
             else:
@@ -1997,7 +2033,10 @@ class RecordsWidget(Widget):
                     continue
                 new_x = x + ctx.measureText(text).width + space_width
                 if new_x <= max_x:
-                    ctx.fillText(text, x, text_ypos, max_x - x)
+                    if tags_selected and text.startswith("#"):
+                        draw_tag(ctx, text, x, text_ypos)
+                    else:
+                        ctx.fillText(text, x, text_ypos, max_x - x)
                 else:
                     ctx.fillText("…", x, text_ypos, max_x - x)
                 x = new_x
@@ -2168,7 +2207,7 @@ class RecordsWidget(Widget):
         for i in range(len(stats_list)):
             tagz, count = stats_list[i]
             width = fullwidth * count / sumcount
-            ctx.fillStyle = window.store.settings.get_color_for_tagz(tagz)
+            ctx.fillStyle = window.store.settings.get_color_for_tag(tagz)
             ctx.fillRect(x, y1, width, (y2 - y1))
             x += width  # Next
 
@@ -2593,6 +2632,7 @@ class AnalyticsWidget(Widget):
         self._time_at_last_draw = 0
         self._time_since_last_draw = 0
         self._npixels_each = 0
+        self.tagzmap = {}  # public map of tagz -> tagz
         # Init tag cache and root
         self._tag_bars = {}  # name -> bar-info
         self._tag_bars[""] = {
@@ -2713,6 +2753,7 @@ class AnalyticsWidget(Widget):
         name_map = utils.get_better_tag_order_from_stats(
             stats, self.selected_tags, False
         )
+        self.tagzmap.update(name_map)
 
         # Replace the stats with the fixed names
         new_stats = {}
@@ -3029,9 +3070,6 @@ class AnalyticsWidget(Widget):
         x2, x3 = unit.x2, unit.x3
         y2, y3 = unit.y2, unit.y3
 
-        # x_ref = self.rect[0] + self._max_cum_offset + 30
-        x_ref = self.rect[0] + 42
-
         is_root = unit.level == 0
         target_npixels = self._npixels_each
         npixels = min(y3 - y2, target_npixels)
@@ -3041,14 +3079,15 @@ class AnalyticsWidget(Widget):
 
         # Roundness
         rn = min(ANALYSIS_ROUNDNESS, npixels / 2)
+        rnb = min(COLORBAND_ROUNDNESS, npixels / 2)
 
         # Draw front
-        ctx.beginPath()
-        ctx.arc(x3 - rn, y2 + rn, rn, 1.5 * PI, 2.0 * PI)
-        ctx.arc(x3 - rn, y3 - rn, rn, 0.0 * PI, 0.5 * PI)
-        ctx.arc(x2 + rn, y3 - rn, rn, 0.5 * PI, 1.0 * PI)
-        ctx.arc(x2 + rn, y2 + rn, rn, 1.0 * PI, 1.5 * PI)
-        ctx.closePath()
+        path = window.Path2D()
+        path.arc(x3 - rn, y2 + rn, rn, 1.5 * PI, 2.0 * PI)
+        path.arc(x3 - rn, y3 - rn, rn, 0.0 * PI, 0.5 * PI)
+        path.arc(x2 + rnb, y3 - rnb, rnb, 0.5 * PI, 1.0 * PI)
+        path.arc(x2 + rnb, y2 + rnb, rnb, 1.0 * PI, 1.5 * PI)
+        path.closePath()
         if is_root:
             ctx.lineWidth = 3
             ctx.strokeStyle = COLORS.panel_edge
@@ -3057,11 +3096,11 @@ class AnalyticsWidget(Widget):
             ctx.lineWidth = 1.2
             ctx.strokeStyle = COLORS.record_edge
             ctx.fillStyle = COLORS.record_bg
-        ctx.fill()
-        ctx.stroke()
+        ctx.fill(path)
 
         # Draw more, or are we (dis)appearing?
         if unit.height / target_npixels < 0.3:
+            ctx.stroke(path)
             return
 
         ymid = y2 + 0.55 * npixels
@@ -3070,17 +3109,34 @@ class AnalyticsWidget(Widget):
 
         # Draw coloured edge
         if unit.level > 0 and unit.level == self._maxlevel:
+            colors = [
+                window.store.settings.get_color_for_tag(tag)
+                for tag in unit.tagz.split(" ")
+            ]
+            # Width and xpos
+            ew = 8 / len(colors) ** 0.5
+            ew = max(ew, rnb)
+            ex = x2
+            # First band
+            ctx.fillStyle = colors[0]
             ctx.beginPath()
-            ctx.arc(x2 + rn, y3 - rn, rn, 0.5 * PI, 1.0 * PI)
-            ctx.arc(x2 + rn, y2 + rn, rn, 1.0 * PI, 1.5 * PI)
+            ctx.arc(x2 + rnb, y3 - rnb, rnb, 0.5 * PI, 1.0 * PI)
+            ctx.arc(x2 + rnb, y2 + rnb, rnb, 1.0 * PI, 1.5 * PI)
+            ctx.lineTo(x2 + ew, y2)
+            ctx.lineTo(x2 + ew, y3)
             ctx.closePath()
-            ctx.fillStyle = window.store.settings.get_color_for_tagz(unit.tagz)
             ctx.fill()
+            # Remaining bands
+            for color in colors[1:]:
+                ex += ew  # + 0.15  # small offset creates subtle band
+                ctx.fillStyle = color
+                ctx.fillRect(ex, y2, ew, y3 - y2)
+            ex += ew
             # That coloured region is also a button
             self._picker.register(
                 x2,
                 y2,
-                x2 + rn,
+                ex,
                 y3,
                 {"button": True, "action": "chosecolor:" + unit.tagz},
             )
@@ -3088,10 +3144,13 @@ class AnalyticsWidget(Widget):
             self._canvas.register_tooltip(
                 x2,
                 y2,
-                x2 + rn,
+                ex,
                 y3,
                 tt_text,
             )
+
+        # Draw edge
+        ctx.stroke(path)
 
         # Get duration text
         show_secs = False
@@ -3117,9 +3176,12 @@ class AnalyticsWidget(Widget):
         # Define text labels, and draw initial duration
         texts = []
         if is_root:
-            tx = x_ref
             if len(self.selected_tags):
+                tx = unit.x2 + 11
                 texts.push([" ←  back to all ", "select:", "Full overview"])
+                if len(self.selected_tags) == 1:
+                    action = "chosecolor:" + self.selected_tags[0]
+                    texts.push(["fas-\uf53f", action, "Select a diferent color"])
             else:
                 ctx.textAlign = "right"
                 ctx.fillText(duration, x_ref_duration, ty)
@@ -3154,23 +3216,21 @@ class AnalyticsWidget(Widget):
             if action and text.startswith("#"):
                 opt = {
                     "ref": "leftmiddle",
-                    "body": False,
-                    "padding": 0,
                     "color": COLORS.record_text,
+                    # "padding": 0,
                 }
                 dx = self._draw_button(ctx, tx, ty, None, 30, text, action, tt, opt)
-                ctx.beginPath()
-                ctx.moveTo(tx, ty + 10)
-                ctx.lineTo(tx + dx, ty + 10)
-                ctx.stroke()
                 tx += dx + 12
             elif action:
                 opt = {"ref": "leftmiddle"}
                 dx = self._draw_button(ctx, tx, ty, None, 30, text, action, tt, opt)
-                tx = dx + 4
+                tx += dx + 4
             else:
                 ctx.fillStyle = COLORS.record_text
-                ctx.fillText(text, tx, ty)
+                if text.startsWith("#"):
+                    draw_tag(ctx, text, tx, ty)
+                else:
+                    ctx.fillText(text, tx, ty)
                 tx += ctx.measureText(text).width + 12
 
     def on_pointer(self, ev):
@@ -3198,8 +3258,11 @@ class AnalyticsWidget(Widget):
                         self.selected_tags = []
                 elif picked.action.startswith("chosecolor:"):
                     _, _, tagz = picked.action.partition(":")
-                    if tagz:
-                        self._canvas.color_dialog.open(tagz, self.update)
+                    tags = tagz.split(" ")
+                    if len(tags) == 1:
+                        self._canvas.tag_color_dialog.open(tags[0], self.update)
+                    elif len(tags) > 1:
+                        self._canvas.tag_color_selection_dialog.open(tags, self.update)
                 self.update()
 
 
