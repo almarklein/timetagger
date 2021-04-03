@@ -1273,7 +1273,7 @@ class TagColorSelectionDialog(BaseDialog):
             tags = tags.split(" ")
 
         self.maindiv.innerHTML = f"""
-            <h1><i class='fas'>\uf53f</i>&nbsp;&nbsp;Select tag to set color for
+            <h1><i class='fas'>\uf53f</i>&nbsp;&nbsp;Select color for ...
                 <button type='button'><i class='fas'>\uf00d</i></button>
                 </h1>
             <div></div>
