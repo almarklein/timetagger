@@ -78,8 +78,8 @@ def set_colors():
 
     # Grays chosen to work in both light and dark mode
     COLORS.tick_text = "rgba(130, 130, 130, 1)"
-    COLORS.tick_stripe1 = "rgba(130, 130, 130, 0.6)"  # day
-    COLORS.tick_stripe2 = "rgba(130, 130, 130, 0.3)"  # major
+    COLORS.tick_stripe1 = COLORS.prim1_clr  # "rgba(130, 130, 130, 0.6)"  # day
+    COLORS.tick_stripe2 = "rgba(130, 130, 130, 0.4)"  # major
     COLORS.tick_stripe3 = "rgba(130, 130, 130, 0.08)"  # minor
 
     if light_mode:
@@ -1622,7 +1622,6 @@ class RecordsWidget(Widget):
         # Draw records or stats
         if stat_period is None:
             self._can_interact_with_records = True
-            self._draw_records(ctx, x1, x2, x3, y1, y2)
             # Draw day boundaries
             t3 = dt.floor(t1, "1D")
             t4 = dt.add(dt.floor(t2, "1D"), "1D")
@@ -1635,6 +1634,8 @@ class RecordsWidget(Widget):
                 ctx.lineTo(x2, y)
                 t3 = dt.add(t3, "1D")
             ctx.stroke()
+            # Draw records themselves
+            self._draw_records(ctx, x1, x2, x3, y1, y2)
         else:
             self._help_text = "click on a " + stat_name + " to zoom"
             self._can_interact_with_records = False
@@ -1938,8 +1939,6 @@ class RecordsWidget(Widget):
             ex += ew  # + 0.15  # small offset creates subtle band
             ctx.fillStyle = color
             ctx.fillRect(ex, ry1, ew, ry2 - ry1)
-
-        # todo: day-transitions appear over the records
 
         # Draw record edge
         ctx.stroke(path)
