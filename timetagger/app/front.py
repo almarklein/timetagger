@@ -1892,23 +1892,22 @@ class RecordsWidget(Widget):
         timeline_only = ry2 < y1 or ry1 > y2
 
         # Draw record representation
-        path = window.Path2D()
+        path = utils.RoundedPath()
         if timeline_only:
-            path.arc(x2 + rne, ry2 - rne, rne, 0.5 * PI, 1.0 * PI)
-            path.arc(x2 + rne, ry1 + rne, rne, 1.0 * PI, 1.5 * PI)
-            path.arc(x3 - rne, ry1 + rne, rne, 1.5 * PI, 2.0 * PI)
-            path.arc(x3 - rne, ry2 - rne, rne, 0.0 * PI, 0.5 * PI)
-            path.closePath()
+            path.addVertex(x2, ry2, rne)
+            path.addVertex(x2, ry1, rne)
+            path.addVertex(x3, ry1, rne)
+            path.addVertex(x3, ry2, rne)
         else:
-            path.arc(x2 + rne, ry2 - rne, rne, 0.5 * PI, 1.0 * PI)
-            path.arc(x2 + rne, ry1 + rne, rne, 1.0 * PI, 1.5 * PI)
-            path.lineTo(x4, ry1)
-            path.lineTo(x5, ty1)
-            path.arc(x6 - rn, ty1 + rn, rn, 1.5 * PI, 2.0 * PI)
-            path.arc(x6 - rn, ty2 - rn, rn, 0.0 * PI, 0.5 * PI)
-            path.lineTo(x5, ty2)
-            path.lineTo(x4, ry2)
-            path.closePath()
+            path.addVertex(x2, ry2, rne)
+            path.addVertex(x2, ry1, rne)
+            path.addVertex(x4, ry1, 4)
+            path.addVertex(x5, ty1, 4)
+            path.addVertex(x6, ty1, rn)
+            path.addVertex(x6, ty2, rn)
+            path.addVertex(x5, ty2, 4)
+            path.addVertex(x4, ry2, 4)
+        path = path.toPath2D()
         ctx.fillStyle = COLORS.record_bg
         ctx.fill(path)
 
