@@ -1465,7 +1465,7 @@ class RecordsWidget(Widget):
         self._draw_ticks(ctx, x3, y1, x4, y2)
         self._draw_edge(ctx, x3, y1, x4, y2)
         self._draw_record_area(ctx, x3, x4, x2, y1, y2)
-        ctx.clearRect(0, 0, x2 - x1, y1 - 33)
+        ctx.clearRect(0, 0, x2, y1 - 33)
         self._draw_top_and_bottom_cover(ctx, x1, x3, x4, x2, y1 - 50, y1, 0.333)
         self._draw_top_and_bottom_cover(ctx, x1, x3, x4, x2, y2, self._canvas.h, -0.02)
 
@@ -1524,9 +1524,9 @@ class RecordsWidget(Widget):
             grd2.addColorStop(1 + stop, color1)
             grd2.addColorStop(1.0, color1)
         ctx.fillStyle = grd1
-        ctx.fillRect(0, y1, x2, y2 - y1)
+        ctx.fillRect(0, y1, x4, y2 - y1)
         ctx.fillStyle = grd2
-        ctx.fillRect(x2, y1, x3 - x2 + 50, y2 - y1 - 2)
+        ctx.fillRect(x2, y1, x4 - x2, y2 - y1 - 2)
 
     def _draw_ticks(self, ctx, x1, y1, x2, y2):
         PSCRIPT_OVERLOAD = False  # noqa
@@ -2183,30 +2183,36 @@ class RecordsWidget(Widget):
         stats_dict = window.store.records.get_stats(t1, t2)
         selected_tags = self._canvas.widgets.AnalyticsWidget.selected_tags
 
-        # Turn stats into tuples and sort. Also filter selected.
-        stats_list = []
-        sumcount = 0
+        # Collect per-tag. Also filter selected.
+        tag_stats = {}
+        sumcount_full = 0
+        sumcount_nominal = 0
         sumcount_selected = 0
         for tagz, count in stats_dict.items():
-            sumcount += count  # of unfiltered tags
             tags = tagz.split(" ")
+            sumcount_full += count * len(tags)
+            sumcount_nominal += count
             if len(selected_tags):
                 if not all([tag in tags for tag in selected_tags]):
                     continue
             sumcount_selected += count
-            stats_list.push((tagz, count))
+            for tag in tags:
+                tag_stats[tag] = tag_stats.get(tag, 0) + count
+
+        # Turn stats into tuples and sort.
+        stats_list = [(tag, count) for tag, count in tag_stats.items()]
         stats_list.sort(key=lambda x: -x[1])
 
         # Calculate dimensions
-        fullwidth = x2 - x1  # * (sumcount / (t2 - t1)) # ** 0.5
-        fullheight = (y2 - y1) * (sumcount / (t2 - t1))  # ** 0.5
+        fullwidth = x2 - x1  # * (sumcount_full / (t2 - t1)) # ** 0.5
+        fullheight = (y2 - y1) * (sumcount_full / (t2 - t1))  # ** 0.5
 
-        # Show amount of time spend on each tagz.
+        # Show amount of time spend on each tag
         x = x1
         for i in range(len(stats_list)):
-            tagz, count = stats_list[i]
-            width = fullwidth * count / sumcount
-            ctx.fillStyle = window.store.settings.get_color_for_tag(tagz)
+            tag, count = stats_list[i]
+            width = fullwidth * count / sumcount_full
+            ctx.fillStyle = window.store.settings.get_color_for_tag(tag)
             ctx.fillRect(x, y1, width, (y2 - y1))
             x += width  # Next
 
@@ -2228,11 +2234,14 @@ class RecordsWidget(Widget):
             ctx.fillStyle = COLORS.prim2_clr
 
         # Draw duration at the left
-        ctx.font = f"{bigfontsize}px {FONT.default}"
+        fontsizeleft = bigfontsize * (0.7 if selected_tags else 0.9)
+        ctx.font = f"{fontsizeleft}px {FONT.default}"
         ctx.textBaseline = "bottom"
         ctx.textAlign = "left"
-        duration = sumcount_selected if len(selected_tags) else sumcount
-        ctx.fillText(f"{dt.duration_string(duration, False)}", x1 + 10, y2 - ymargin)
+        duration_text = dt.duration_string(sumcount_selected, False)
+        if selected_tags:
+            duration_text += " / " + dt.duration_string(sumcount_nominal, False)
+        ctx.fillText(duration_text, x1 + 10, y2 - ymargin)
 
         # Draw time-range indication at the right
         ctx.font = f"bold {bigfontsize}px {FONT.default}"
