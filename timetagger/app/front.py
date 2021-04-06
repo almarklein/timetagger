@@ -1939,7 +1939,8 @@ class RecordsWidget(Widget):
             ctx.fillStyle = color
             ctx.fillRect(ex, ry1, ew, ry2 - ry1)
 
-        # Draw record edge
+        # Set back bg color, and draw the record edge
+        ctx.fillStyle = COLORS.record_bg
         ctx.stroke(path)
 
         # Running records have a small outset
