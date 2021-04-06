@@ -466,15 +466,16 @@ class RoundedPath:
             dx3, dy3 = x3 - x2, y3 - y2
             dn1 = (dx1 * dx1 + dy1 * dy1) ** 0.5
             dn3 = (dx3 * dx3 + dy3 * dy3) ** 0.5
+            dn1 = max(dn1, 0.001)
+            dn3 = max(dn3, 0.001)
 
-            r = min(min(dn1 / 2, dn3 / 2), r2)
-
+            r = min(min(dn1 / 3, dn3 / 3), r2)
             x1, y1 = x2 + r * dx1 / dn1, y2 + r * dy1 / dn1
             x3, y3 = x2 + r * dx3 / dn3, y2 + r * dy3 / dn3
 
-            m = max(r, 2) - 1
-            for j in range(m + 1):
-                f3 = j / m
+            n_segments = max(int(0.5 * r), 1)
+            for j in range(n_segments + 1):
+                f3 = j / n_segments
                 f1 = 1 - f3
                 f2 = min(f1, f3)
                 x = (f1 * x1 + f2 * x2 + f3 * x3) / (f1 + f2 + f3)
