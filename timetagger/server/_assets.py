@@ -24,6 +24,7 @@ logger = logging.getLogger("asgineer")
 
 IMAGE_EXTS = ".png", ".jpg", ".gif", ".ico", ".mp4", ".svg"
 FONT_EXTS = ".ttf", ".otf", ".woff", ".woff2"
+AUDIO_EXTS = ".wav", ".mp3", ".ogg"
 
 re_fas = re.compile(r"\>(\\uf[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F])\<")
 
@@ -141,7 +142,7 @@ def create_assets_from_dir(dirname, template=None):
         elif fname.endswith((".txt", ".js", ".css", ".json")):
             # Text assets
             assets[fname] = open(os.path.join(dirname, fname), "rb").read().decode()
-        elif fname.endswith(IMAGE_EXTS + FONT_EXTS):
+        elif fname.endswith(IMAGE_EXTS + FONT_EXTS + AUDIO_EXTS):
             # Binary assets
             assets[fname] = open(os.path.join(dirname, fname), "rb").read()
         else:

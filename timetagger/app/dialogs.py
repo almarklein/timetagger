@@ -977,6 +977,7 @@ class RecordDialog(BaseDialog):
             <div></div>
             <h2><i class='fas'>\uf017</i>&nbsp;&nbsp;Time</h2>
             <div></div>
+            <label><input type='checkbox' /> Activate Pomodoro timer</label>
             <div style='margin-top:2em;'></div>
             <div style='display: flex;justify-content: flex-end;'>
                 <button type='button' class='actionbutton'><i class='fas'>\uf00d</i>&nbsp;&nbsp;Cancel</button>
@@ -997,6 +998,7 @@ class RecordDialog(BaseDialog):
             self._tags_div,
             _,  # Time header
             self._time_node,
+            self._pomodoro_label,  # Pomo input
             _,  # Splitter
             self._buttons,
             self._delete_but2,
@@ -1004,6 +1006,7 @@ class RecordDialog(BaseDialog):
         #
         self._title_div = h1.children[1]
         self._cancel_but1 = self.maindiv.children[0].children[-1]
+        self._pomodoro_check = self._pomodoro_label.children[0]
         (
             self._cancel_but2,
             self._delete_but1,
@@ -1246,6 +1249,9 @@ class RecordDialog(BaseDialog):
         # Apply
         window.store.records.put(self._record)
         super().submit(self._record)
+        # todo: we also want this to work with resume ... so maybe a global on/off?
+        if self._pomodoro_check.checked:
+            window.canvas.pomodoro_dialog.start_work()
 
     def resume_record(self):
         """Start a new record with the same description."""
@@ -2552,3 +2558,174 @@ class SettingsDialog(BaseDialog):
         stopwatch = bool(self._stopwatch_check.checked)
         ob = window.store.settings.create("stopwatch", stopwatch)
         window.store.settings.put(ob)
+
+
+class PomodoroDialog(BaseDialog):
+    """Dialog to control the Pomodoro timer."""
+
+    def __init__(self, canvas):
+        super().__init__(canvas)
+        self._init()
+        self._set_state("pre-work")
+        window.setInterval(self._update, 1000)
+        self._sounds = {
+            "wind": Audio("wind-up-1-534.ogg"),
+            "work_end": Audio("eventually-590.ogg"),
+            "break_end": Audio("time-is-now-585.ogg"),
+            "manual_end": Audio("clearly-602.ogg"),
+        }
+
+    def _init(self):
+
+        html = f"""
+            <h1><i class='fas'>\uf0f3</i>&nbsp;&nbsp;Pomodoro
+                <button type='button'><i class='fas'>\uf00d</i></button>
+            </h1>
+            <center>
+                <div style='margin: 1em; font-size: 140%;'>25:00</div>
+                <button type='button' class='actionbutton' style='margin: 1em;'>Start</button>
+            </center>
+            <p style='color: #888; margin-top: 1em;'>
+            Pomodoro timer. See
+            <a href='https://en.wikipedia.org/wiki/Pomodoro_Technique' target='new'>Wikipedia</a>
+            for more info.
+            Using sounds from notificationsounds.com.
+            </p>
+            """
+
+        self.maindiv.innerHTML = html
+
+        self._close_but = self.maindiv.children[0].children[-1]
+        self._close_but.onclick = self.close
+        (
+            self._label,
+            self._button,
+        ) = self.maindiv.children[1].children
+
+        self._button.onclick = self._on_button_click
+
+    def open(self, callback=None):
+        super().open(callback)
+
+    def _play_sound(self, sound):
+        audio = self._sounds[sound]
+        if audio.currentTime:
+            audio.currentTime = 0
+        audio.play()
+
+    def _set_state(self, state):
+        if state == "pre-work":
+            etime = 0
+            self._button.innerHTML = "Start working"
+        elif state == "work":
+            etime = dt.now() + 25 * 60
+            self._button.innerHTML = "Stop"
+        elif state == "pre-break":
+            etime = 0
+            self._button.innerHTML = "Start break"
+        elif state == "break":
+            etime = dt.now() + 5 * 60
+            self._button.innerHTML = "Stop"
+        else:
+            console.warn("Invalid pomodoro state: " + state)
+            return
+        self._state = state, etime
+        self._update()
+
+    def time_left(self):
+        etime = self._state[1]
+        left = max(0, etime - dt.now())
+        if left:
+            return self._state[0] + ": " + dt.duration_string(left, True)[2:]
+        else:
+            return None
+
+    def start_work(self):
+        self._set_state("work")
+
+        # Now is a good time to ask for permission,
+        # assuming that this call origonally came from a user's mouse click.
+        if window.Notification and window.Notification.permission == "default":
+            Notification.requestPermission()
+
+        self._play_sound("wind")
+
+    def stop(self):
+        self._set_state("pre-work")
+
+    def _on_button_click(self):
+        state, etime = self._state
+        if state == "pre-work":
+            self._set_state("work")
+            self._play_sound("wind")
+        elif state == "work":
+            self._set_state("pre-break")
+            self._play_sound("manual_end")
+        elif state == "pre-break":
+            self._set_state("break")
+            self._play_sound("wind")
+        elif state == "break":
+            self._set_state("pre-work")
+            self._play_sound("manual_end")
+        else:
+            self._set_state("pre-work")
+
+    def _update(self):
+        if window.document.hidden or not self.is_shown():
+            return
+
+        state, etime = self._state
+
+        if state == "pre-work":
+            self._label.innerHTML = "Work (25:00)"
+
+        elif state == "work":
+            left = max(0, etime - dt.now())
+            self._label.innerHTML = "Working: " + dt.duration_string(left, True)[2:]
+            if not left:
+                self._set_state("pre-break")
+                self.alarm(state)
+
+        elif state == "pre-break":
+            self._label.innerHTML = "Break (25:00)"
+
+        elif state == "break":
+            left = max(0, etime - dt.now())
+            self._label.innerHTML = "Break: " + dt.duration_string(left, True)[2:]
+            if not left:
+                self._set_state("pre-work")
+                self.alarm(state)
+
+        else:
+            self._set_state("pre-work")
+
+    def alarm(self, old_state):
+
+        # Open this dialog
+        self.open()
+
+        # Make a sound
+        if old_state == "work":
+            self._play_sound("work_end")
+        elif old_state == "break":
+            self._play_sound("break_end")
+
+        # Todo: blink the title?
+
+        # Show a system notification
+        if window.Notification and Notification.permission == "granted":
+            if old_state == "break":
+                title = "Your break is over, back to work!"
+            elif old_state == "work":
+                title = "Time for a break!"
+            else:
+                title = "Pomodoro"
+
+            options = {
+                "icon": "./timetagger192_sf.png",
+                "body": "Click to go TimeTagger",
+                "requireInteraction": True,
+                "tag": "timetagger-pomodoro",  # replace previous notifications
+                # vibrate: [200, 100, 200],
+            }
+            Notification(title, options)

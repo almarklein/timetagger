@@ -158,6 +158,7 @@ class TimeTaggerCanvas(BaseCanvas):
         self.tag_manage_dialog = dialogs.TagManageDialog(self)
         self.export_dialog = dialogs.ExportDialog(self)
         self.import_dialog = dialogs.ImportDialog(self)
+        self.pomodoro_dialog = dialogs.PomodoroDialog(self)
 
         # The order here is also the draw-order. Records must come after analytics.
         self.widgets = {
@@ -1111,7 +1112,11 @@ class TopWidget(Widget):
                 tagz = window.store.records.tags_from_record(records[0]).join(" ")
                 stop_tt += " " + tagz
                 if self._canvas._show_stopwatch:
-                    running_summary = dt.duration_string(now - records[0].t1, True)
+                    pomo = self._canvas.pomodoro_dialog.time_left()
+                    if pomo:
+                        running_summary = "Pomodoro " + pomo
+                    else:
+                        running_summary = dt.duration_string(now - records[0].t1, True)
                 else:
                     running_summary = "Timer running"
 
