@@ -439,6 +439,53 @@ def create_pointer_event(node, e):
     )
 
 
+class RoundedPath:
+    """A helper class to create a closed path with rounded corners."""
+
+    def __init__(self):
+        self._points = []
+
+    def addVertex(self, x, y, r):
+        self._points.push((x, y, r))
+
+    def toPath2D(self):
+        PSCRIPT_OVERLOAD = False  # noqa
+
+        path = window.Path2D()
+
+        points = self._points.copy()
+        points.insert(0, self._points[-1])
+        points.append(self._points[0])
+
+        for i in range(len(self._points)):
+            x1, y1, r1 = points[i]
+            x2, y2, r2 = points[i + 1]  # its about this point
+            x3, y3, r3 = points[i + 2]
+
+            dx1, dy1 = x1 - x2, y1 - y2
+            dx3, dy3 = x3 - x2, y3 - y2
+            dn1 = (dx1 * dx1 + dy1 * dy1) ** 0.5
+            dn3 = (dx3 * dx3 + dy3 * dy3) ** 0.5
+            dn1 = max(dn1, 0.001)
+            dn3 = max(dn3, 0.001)
+
+            r = min(min(dn1 / 3, dn3 / 3), r2)
+            x1, y1 = x2 + r * dx1 / dn1, y2 + r * dy1 / dn1
+            x3, y3 = x2 + r * dx3 / dn3, y2 + r * dy3 / dn3
+
+            n_segments = max(int(0.5 * r), 1)
+            for j in range(n_segments + 1):
+                f3 = j / n_segments
+                f1 = 1 - f3
+                f2 = min(f1, f3)
+                x = (f1 * x1 + f2 * x2 + f3 * x3) / (f1 + f2 + f3)
+                y = (f1 * y1 + f2 * y2 + f3 * y3) / (f1 + f2 + f3)
+                path.lineTo(x, y)
+
+        path.closePath()
+        return path
+
+
 class Picker:
     """A class that helps with picking."""
 
