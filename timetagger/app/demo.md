@@ -22,7 +22,7 @@ window.addEventListener("load", function() {
 
 function set_demotime() {
     // Call to run demo at a specific moment in time, nice for making screenshots
-    var demodeltatime = dt.now() - new Date("2021-03-11T16:15:00").getTime() / 1000;
+    var demodeltatime = dt.now() - new Date("2021-04-07T16:15:00").getTime() / 1000;
     dt.now = function() { return new Date().getTime() / 1000 - demodeltatime};
 }
 
