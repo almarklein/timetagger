@@ -1112,11 +1112,10 @@ class TopWidget(Widget):
                 tagz = window.store.records.tags_from_record(records[0]).join(" ")
                 stop_tt += " " + tagz
                 if self._canvas._show_stopwatch:
+                    running_summary = dt.duration_string(now - records[0].t1, True)
                     pomo = self._canvas.pomodoro_dialog.time_left()
                     if pomo:
-                        running_summary = "Pomodoro " + pomo
-                    else:
-                        running_summary = dt.duration_string(now - records[0].t1, True)
+                        running_summary = pomo + " | " + running_summary
                 else:
                     running_summary = "Timer running"
 
@@ -1158,6 +1157,22 @@ class TopWidget(Widget):
                 ["fas-\uf04b", "Record"],
                 "record_start",
                 start_tt,
+                {"ref": "topright", "font": FONT.condensed},
+            )
+            x -= dx
+
+        ob = window.store.settings.get_by_key("pomodoro") or {}
+        pomo_config = ob.get("value", {})
+        if pomo_config.get("enabled", False):
+            dx = self._draw_button(
+                ctx,
+                x,
+                y,
+                None,
+                h,
+                "fas-\uf2f2",
+                "pomo",
+                "Show Pomodoro dialog",
                 {"ref": "topright", "font": FONT.condensed},
             )
             x -= dx
@@ -1339,6 +1354,9 @@ class TopWidget(Widget):
             t1, t2 = self._canvas.range.get_range()
             tags = self._canvas.widgets.AnalyticsWidget.selected_tags
             self._canvas.report_dialog.open(t1, t2, tags)
+
+        elif action == "pomo":
+            self._canvas.pomodoro_dialog.open()
 
         elif action.startswith("record_"):
             # A time tracking action
