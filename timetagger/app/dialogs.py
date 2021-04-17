@@ -2502,10 +2502,14 @@ class SettingsDialog(BaseDialog):
                 <option value=1>Light mode</option>
                 <option value=2>Dark mode</option>
             </select>
-            <h2><i class='fas'>\uf2f2</i>&nbsp;&nbsp;Show stopwatch of running record</h2>
+            <h2><i class='fas'>\uf2f2</i>&nbsp;&nbsp;Pomodoro</h2>
+            <label>
+                <input type='checkbox' checked='false'></input>
+                Enable pomodoro </label>
+            <h2><i class='fas'>\uf085</i>&nbsp;&nbsp;Misc</h2>
             <label>
                 <input type='checkbox' checked='true'></input>
-                Show stopwatch</label>
+                Show elapsed time below start-button</label>
             <h2><i class='fas'>\uf11c</i>&nbsp;&nbsp;Keyboard shortcuts</h2>
             <div class='formlayout'>{shortcuts_html}</div>
             <br /><br />
@@ -2520,7 +2524,9 @@ class SettingsDialog(BaseDialog):
             self._timezone_div,
             _,  # Darmode header
             self._darkmode_select,
-            _,  # Stopwatch header
+            _,  # Pomodoro header
+            self._pomodoro_label,
+            _,  # Misc header
             self._stopwatch_label,
             _,  # Shortcuts header
             self._shortcuts_div,
@@ -2536,6 +2542,13 @@ class SettingsDialog(BaseDialog):
         self._darkmode_select.onchange = self._on_darkmode_change
         ob = window.store.settings.get_by_key("darkmode")
         self._darkmode_select.value = 1 if ob is None else ob.value
+
+        # Pomodoro
+        self._pomodoro_check = self._pomodoro_label.children[0]
+        self._pomodoro_check.onchange = self._on_pomodoro_check
+        ob = window.store.settings.get_by_key("pomodoro") or {}
+        pomo_config = ob.get("value", {})
+        self._pomodoro_check.checked = pomo_config.get("enabled", False)
 
         # Stopwatch
         self._stopwatch_check = self._stopwatch_label.children[0]
@@ -2554,6 +2567,11 @@ class SettingsDialog(BaseDialog):
         if window.front:
             window.front.set_colors()
 
+    def _on_pomodoro_check(self):
+        pomo_config = {"enabled": bool(self._pomodoro_check.checked)}
+        ob = window.store.settings.create("pomodoro", pomo_config)
+        window.store.settings.put(ob)
+
     def _on_stopwatch_check(self):
         stopwatch = bool(self._stopwatch_check.checked)
         ob = window.store.settings.create("stopwatch", stopwatch)
@@ -2571,14 +2589,14 @@ class PomodoroDialog(BaseDialog):
         self._sounds = {
             "wind": Audio("wind-up-1-534.ogg"),
             "work_end": Audio("eventually-590.ogg"),
-            "break_end": Audio("time-is-now-585.ogg"),
+            "break_end": Audio("eventually-590.ogg"),
             "manual_end": Audio("clearly-602.ogg"),
         }
 
     def _init(self):
 
         html = f"""
-            <h1><i class='fas'>\uf0f3</i>&nbsp;&nbsp;Pomodoro
+            <h1><i class='fas'>\uf2f2</i>&nbsp;&nbsp;Pomodoro
                 <button type='button'><i class='fas'>\uf00d</i></button>
             </h1>
             <center>
@@ -2671,31 +2689,34 @@ class PomodoroDialog(BaseDialog):
             self._set_state("pre-work")
 
     def _update(self):
-        if window.document.hidden or not self.is_shown():
-            return
+
+        # Always do this
 
         state, etime = self._state
+        left = max(0, etime - dt.now())
 
-        if state == "pre-work":
-            self._label.innerHTML = "Work (25:00)"
-
-        elif state == "work":
-            left = max(0, etime - dt.now())
-            self._label.innerHTML = "Working: " + dt.duration_string(left, True)[2:]
+        if state == "work":
             if not left:
                 self._set_state("pre-break")
                 self.alarm(state)
-
-        elif state == "pre-break":
-            self._label.innerHTML = "Break (25:00)"
-
         elif state == "break":
-            left = max(0, etime - dt.now())
-            self._label.innerHTML = "Break: " + dt.duration_string(left, True)[2:]
             if not left:
                 self._set_state("pre-work")
                 self.alarm(state)
 
+        # Exit early if we're not shown
+        if window.document.hidden or not self.is_shown():
+            return
+
+        # Update GUI
+        if state == "pre-work":
+            self._label.innerHTML = "Work (25:00)"
+        elif state == "work":
+            self._label.innerHTML = "Working: " + dt.duration_string(left, True)[2:]
+        elif state == "pre-break":
+            self._label.innerHTML = "Break (5:00)"
+        elif state == "break":
+            self._label.innerHTML = "Break: " + dt.duration_string(left, True)[2:]
         else:
             self._set_state("pre-work")
 
@@ -2711,6 +2732,7 @@ class PomodoroDialog(BaseDialog):
             self._play_sound("break_end")
 
         # Todo: blink the title?
+        # or just *change* the title. When pinned, this'd cause a blue dot to appear
 
         # Show a system notification
         if window.Notification and Notification.permission == "granted":
@@ -2722,7 +2744,7 @@ class PomodoroDialog(BaseDialog):
                 title = "Pomodoro"
 
             options = {
-                "icon": "./timetagger192_sf.png",
+                "icon": "timetagger192_sf.png",
                 "body": "Click to go TimeTagger",
                 "requireInteraction": True,
                 "tag": "timetagger-pomodoro",  # replace previous notifications
