@@ -2596,8 +2596,15 @@ class PomodoroDialog(BaseDialog):
 
     def __init__(self, canvas):
         super().__init__(canvas)
+
+        # Note that we assume that this is the only code touching the document title
+        self._original_title = window.document.title
+
+        # Init
         self._init()
         self._set_state("pre-work")
+
+        # Setup callbacks
         window.setInterval(self._update, 250)
         window.document.addEventListener("visibilitychange", self._update)
         if window.navigator.serviceWorker:
@@ -2607,6 +2614,8 @@ class PomodoroDialog(BaseDialog):
                 )
             except Exception:
                 pass
+
+        # Prepare sounds
         self._sounds = {
             "wind": Audio("wind-up-1-534.ogg"),
             "work_end": Audio("eventually-590.ogg"),
@@ -2666,19 +2675,24 @@ class PomodoroDialog(BaseDialog):
     def _set_state(self, state):
         if state == "pre-work":
             etime = 0
+            pretitle = ""
             self._button.innerHTML = "Start working"
         elif state == "work":
             etime = dt.now() + 25 * 60
+            pretitle = "Working | "
             self._button.innerHTML = "Stop"
         elif state == "pre-break":
             etime = 0
+            pretitle = ""
             self._button.innerHTML = "Start break"
         elif state == "break":
             etime = dt.now() + 5 * 60
+            pretitle = "Break | "
             self._button.innerHTML = "Stop"
         else:
             console.warn("Invalid pomodoro state: " + state)
             return
+        window.document.title = pretitle + self._original_title
         self._state = state, etime
         self._update()
 
@@ -2763,13 +2777,13 @@ class PomodoroDialog(BaseDialog):
         elif old_state == "break":
             self._play_sound("break_end")
 
-        # Todo: blink the title?
-        # or just *change* the title. When pinned, this'd cause a blue dot to appear
+        # The window title is changed on _set_state, causing a blue dot
+        # to appear when pinned. This is also part of the "alarm".
 
         # Show a system notification
         if window.Notification and Notification.permission == "granted":
             if old_state == "break":
-                title = "Your break is over, back to work!"
+                title = "Break is over, back to work!"
                 actions = [
                     {"action": "work", "title": "Start 25m work"},
                     {"action": "close", "title": "Close"},
@@ -2789,8 +2803,9 @@ class PomodoroDialog(BaseDialog):
                 "body": "Click to open TimeTagger",
                 "requireInteraction": True,
                 "tag": "timetagger-pomodoro",  # replace previous notifications
-                # vibrate: [200, 100, 200],
             }
+            # If we show the notification via the service worker, we
+            # can show actions, making the flow easier for users.
             if window.pwa and window.pwa.sw_reg:
                 options.actions = actions
                 window.pwa.sw_reg.showNotification(title, options)
@@ -2798,6 +2813,9 @@ class PomodoroDialog(BaseDialog):
                 Notification(title, options)
 
     def on_notificationclick(self, message_event):
+        """This is a callback for service worker events.
+        We filter on 'notificationclick' types (defined by us).
+        """
         event = message_event.data
         if event.type != "notificationclick":
             return
