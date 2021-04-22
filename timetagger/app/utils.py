@@ -3,7 +3,7 @@ Utilities.
 """
 
 from pscript import this_is_js
-from pscript.stubs import window, perf_counter, RawJS, Math, JSON
+from pscript.stubs import window, perf_counter, localStorage, RawJS, Math, JSON
 
 
 def looks_like_desktop():
@@ -518,7 +518,7 @@ class LocalSettings:
         self._cache = self._load_settings()
 
     def _load_settings(self):
-        x = window.localStorage.getItem("timetagger_local_settings")
+        x = localStorage.getItem("timetagger_local_settings")
         if x:
             try:
                 return JSON.parse(x)
@@ -530,7 +530,7 @@ class LocalSettings:
 
     def _save_settings(self):
         x = JSON.stringify(self._cache)
-        window.localStorage.setItem("timetagger_local_settings", x)
+        localStorage.setItem("timetagger_local_settings", x)
 
     def get(self, key, default_=None):
         """ Get a settings item. """
