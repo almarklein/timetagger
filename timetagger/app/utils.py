@@ -3,7 +3,7 @@ Utilities.
 """
 
 from pscript import this_is_js
-from pscript.stubs import window, perf_counter, RawJS, Math
+from pscript.stubs import window, perf_counter, RawJS, Math, JSON
 
 
 def looks_like_desktop():
@@ -509,6 +509,40 @@ class Picker:
         for x1, y1, x2, y2, ob in self._regions:
             if y1 < y < y2 and x1 < x < x2:
                 return ob
+
+
+class LocalSettings:
+    """ Settings stored in localstorage. Also easier API than the stores. """
+
+    def __init__(self):
+        self._cache = self._load_settings()
+
+    def _load_settings(self):
+        x = window.localStorage.getItem("timetagger_local_settings")
+        if x:
+            try:
+                return JSON.parse(x)
+            except Exception as err:
+                window.console.warn("Cannot parse local settings JSON: " + str(err))
+                return {}
+        else:
+            return {}
+
+    def _save_settings(self):
+        x = JSON.stringify(self._cache)
+        window.localStorage.setItem("timetagger_local_settings", x)
+
+    def get(self, key, default_=None):
+        """ Get a settings item. """
+        return self._cache.get(key, default_)
+
+    def set(self, key, value):
+        """ Save a setting. """
+        self._cache[key] = value
+        self._save_settings()
+
+
+window.localsettings = LocalSettings()
 
 
 class BaseCanvas:

@@ -54,11 +54,7 @@ window.addEventListener("load", init_module)
 def set_colors():
 
     # Dark vs light mode
-    mode = 1
-    if window.store and window.store.settings:
-        ob = window.store.settings.get_by_key("darkmode")
-        if ob is not None:
-            mode = ob.value
+    mode = mode = window.localsettings.get("darkmode", 1)
     if mode == 1:
         light_mode = True
     elif mode == 2:
@@ -140,7 +136,6 @@ class TimeTaggerCanvas(BaseCanvas):
         super().__init__(canvas)
 
         self._now = None
-        self._show_stopwatch = True
 
         self._last_picked_widget = None
         self._prefer_show_analytics = False
@@ -237,15 +232,6 @@ class TimeTaggerCanvas(BaseCanvas):
 
         # Set current moment as consistent reference for "now"
         self._now = dt.now()
-
-        # Also determine current settings
-        ob = window.store.settings.get_by_key("stopwatch")
-        if ob is not None:
-            self._show_stopwatch = ob.get("value", True)
-        ob = window.store.settings.get_by_key("darkmode")
-        if ob is not None and ob.value != self._darkmode:
-            self._darkmode = ob.value
-            set_colors()
 
         # Update the range if it is animating
         self.range.animation_update()
@@ -1111,7 +1097,7 @@ class TopWidget(Widget):
             if len(records) == 1:
                 tagz = window.store.records.tags_from_record(records[0]).join(" ")
                 stop_tt += " " + tagz
-                if self._canvas._show_stopwatch:
+                if window.localsettings.get("show_stopwatch", True):
                     running_summary = dt.duration_string(now - records[0].t1, True)
                     pomo = self._canvas.pomodoro_dialog.time_left()
                     if pomo:
@@ -1161,9 +1147,7 @@ class TopWidget(Widget):
             )
             x -= dx
 
-        ob = window.store.settings.get_by_key("pomodoro") or {}
-        pomo_config = ob.get("value", {})
-        if pomo_config.get("enabled", False):
+        if window.localsettings.get("pomodoro_enabled", False):
             dx = self._draw_button(
                 ctx,
                 x,

@@ -3,7 +3,7 @@ Implementation of HTML-based dialogs.
 """
 
 from pscript import this_is_js
-from pscript.stubs import window, document, console, Math, isFinite, Date, isNaN
+from pscript.stubs import window, document, console, Math, isFinite, Date, isNaN, Audio, Notification
 
 
 if this_is_js():
@@ -977,7 +977,6 @@ class RecordDialog(BaseDialog):
             <div></div>
             <h2><i class='fas'>\uf017</i>&nbsp;&nbsp;Time</h2>
             <div></div>
-            <label><input type='checkbox' /> Activate Pomodoro timer</label>
             <div style='margin-top:2em;'></div>
             <div style='display: flex;justify-content: flex-end;'>
                 <button type='button' class='actionbutton'><i class='fas'>\uf00d</i>&nbsp;&nbsp;Cancel</button>
@@ -998,7 +997,6 @@ class RecordDialog(BaseDialog):
             self._tags_div,
             _,  # Time header
             self._time_node,
-            self._pomodoro_label,  # Pomo input
             _,  # Splitter
             self._buttons,
             self._delete_but2,
@@ -1006,7 +1004,6 @@ class RecordDialog(BaseDialog):
         #
         self._title_div = h1.children[1]
         self._cancel_but1 = self.maindiv.children[0].children[-1]
-        self._pomodoro_check = self._pomodoro_label.children[0]
         (
             self._cancel_but2,
             self._delete_but1,
@@ -1249,9 +1246,6 @@ class RecordDialog(BaseDialog):
         # Apply
         window.store.records.put(self._record)
         super().submit(self._record)
-        # todo: we also want this to work with resume ... so maybe a global on/off?
-        if self._pomodoro_check.checked:
-            window.canvas.pomodoro_dialog.start_work()
 
     def resume_record(self):
         """Start a new record with the same description."""
@@ -2494,9 +2488,8 @@ class SettingsDialog(BaseDialog):
             <h1><i class='fas'>\uf013</i>&nbsp;&nbsp;Settings
                 <button type='button'><i class='fas'>\uf00d</i></button>
             </h1>
-            <h2><i class='fas'>\uf4fd</i>&nbsp;&nbsp;Time zone</h2>
-            <div></div>
-            <h2><i class='fas'>\uf042</i>&nbsp;&nbsp;Dark mode</h2>
+            <center style='font-size:80%'>Settings for this device</center>
+            <h2><i class='fas'>\uf042</i>&nbsp;&nbsp;Dark/light mode</h2>
             <select>
                 <option value=0>Auto detect</option>
                 <option value=1>Light mode</option>
@@ -2505,11 +2498,15 @@ class SettingsDialog(BaseDialog):
             <h2><i class='fas'>\uf2f2</i>&nbsp;&nbsp;Pomodoro</h2>
             <label>
                 <input type='checkbox' checked='false'></input>
-                Enable pomodoro </label>
+                Enable pomodoro (experimental) </label>
             <h2><i class='fas'>\uf085</i>&nbsp;&nbsp;Misc</h2>
             <label>
                 <input type='checkbox' checked='true'></input>
                 Show elapsed time below start-button</label>
+            <hr style='margin-top: 1em;' />
+            <center style='font-size:80%'>Other settings</center>
+            <h2><i class='fas'>\uf4fd</i>&nbsp;&nbsp;Time zone</h2>
+            <div></div>
             <h2><i class='fas'>\uf11c</i>&nbsp;&nbsp;Keyboard shortcuts</h2>
             <div class='formlayout'>{shortcuts_html}</div>
             <br /><br />
@@ -2520,14 +2517,17 @@ class SettingsDialog(BaseDialog):
         self._close_but.onclick = self.close
         (
             _,  # Dialog title
-            _,  # Timezone header
-            self._timezone_div,
+            _,  # Section: per device
             _,  # Darmode header
             self._darkmode_select,
             _,  # Pomodoro header
             self._pomodoro_label,
             _,  # Misc header
             self._stopwatch_label,
+            _,  # hr
+            _,  # Section: info
+            _,  # Timezone header
+            self._timezone_div,
             _,  # Shortcuts header
             self._shortcuts_div,
         ) = self.maindiv.children
@@ -2540,42 +2540,36 @@ class SettingsDialog(BaseDialog):
 
         # Darkmode
         self._darkmode_select.onchange = self._on_darkmode_change
-        ob = window.store.settings.get_by_key("darkmode")
-        self._darkmode_select.value = 1 if ob is None else ob.value
+        darkmode = window.localsettings.get("darkmode", 1)
+        self._darkmode_select.value = darkmode
 
         # Pomodoro
         self._pomodoro_check = self._pomodoro_label.children[0]
         self._pomodoro_check.onchange = self._on_pomodoro_check
-        ob = window.store.settings.get_by_key("pomodoro") or {}
-        pomo_config = ob.get("value", {})
-        self._pomodoro_check.checked = pomo_config.get("enabled", False)
+        pomo_enabled = window.localsettings.get("pomodoro_enabled", False)
+        self._pomodoro_check.checked = pomo_enabled
 
         # Stopwatch
         self._stopwatch_check = self._stopwatch_label.children[0]
         self._stopwatch_check.onchange = self._on_stopwatch_check
-        ob = window.store.settings.get_by_key("stopwatch")
-        if ob is not None:
-            self._stopwatch_check.checked = ob.get("value", True)
+        show_stopwatch = window.localsettings.get("show_stopwatch", True)
+        self._stopwatch_check.checked = show_stopwatch
 
         super().open(callback)
 
     def _on_darkmode_change(self):
-        window.select = self._darkmode_select
-        mode = int(self._darkmode_select.value)
-        ob = window.store.settings.create("darkmode", mode)
-        window.store.settings.put(ob)
+        darkmode = int(self._darkmode_select.value)
+        window.localsettings.set("darkmode", darkmode)
         if window.front:
             window.front.set_colors()
 
     def _on_pomodoro_check(self):
-        pomo_config = {"enabled": bool(self._pomodoro_check.checked)}
-        ob = window.store.settings.create("pomodoro", pomo_config)
-        window.store.settings.put(ob)
+        pomo_enabled = bool(self._pomodoro_check.checked)
+        window.localsettings.set("pomodoro_enabled", pomo_enabled)
 
     def _on_stopwatch_check(self):
-        stopwatch = bool(self._stopwatch_check.checked)
-        ob = window.store.settings.create("stopwatch", stopwatch)
-        window.store.settings.put(ob)
+        show_stopwatch = bool(self._stopwatch_check.checked)
+        window.localsettings.set("show_stopwatch", show_stopwatch)
 
 
 class PomodoroDialog(BaseDialog):
@@ -2585,7 +2579,8 @@ class PomodoroDialog(BaseDialog):
         super().__init__(canvas)
         self._init()
         self._set_state("pre-work")
-        window.setInterval(self._update, 1000)
+        window.setInterval(self._update, 250)
+        window.document.addEventListener("visibilitychange", self._update)
         self._sounds = {
             "wind": Audio("wind-up-1-534.ogg"),
             "work_end": Audio("eventually-590.ogg"),
@@ -2603,12 +2598,21 @@ class PomodoroDialog(BaseDialog):
                 <div style='margin: 1em; font-size: 140%;'>25:00</div>
                 <button type='button' class='actionbutton' style='margin: 1em;'>Start</button>
             </center>
-            <p style='color: #888; margin-top: 1em;'>
-            Pomodoro timer. See
+            <details style='color: #777; margin: 1em; font-size: 87%;'>
+            <summary style='cursor: pointer;'>The Pomodoro Technique</summary>
+            <p>
+            The Pomodoro Technique is a time management method where you
+            alternate between 25 minutes of work and 5 minutes of break.
+            It is recommended to use breaks to leave your chair if you
+            sit during work. See
             <a href='https://en.wikipedia.org/wiki/Pomodoro_Technique' target='new'>Wikipedia</a>
             for more info.
+            </p><p>
+            The Pomodoro timer is automatically started and stopped as you
+            start/stop tracking time.
+            </p><p>
             Using sounds from notificationsounds.com.
-            </p>
+            </p></details>
             """
 
         self.maindiv.innerHTML = html
@@ -2662,7 +2666,7 @@ class PomodoroDialog(BaseDialog):
         self._set_state("work")
 
         # Now is a good time to ask for permission,
-        # assuming that this call origonally came from a user's mouse click.
+        # assuming that this call originally came from a user's mouse click.
         if window.Notification and window.Notification.permission == "default":
             Notification.requestPermission()
 
