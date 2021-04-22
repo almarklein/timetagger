@@ -1107,7 +1107,7 @@ class TopWidget(Widget):
 
         x0 = x
 
-        # Stop button
+        # Start & stop button
         if has_running:
             dx = self._draw_button(
                 ctx,
@@ -1147,7 +1147,9 @@ class TopWidget(Widget):
             )
             x -= dx
 
+        # Pomodoro button
         if window.localsettings.get("pomodoro_enabled", False):
+            x -= 3
             dx = self._draw_button(
                 ctx,
                 x,
@@ -3233,7 +3235,7 @@ class AnalyticsWidget(Widget):
             if action and text.startswith("#"):
                 opt = {
                     "ref": "leftmiddle",
-                    "color": COLORS.record_text,
+                    "color": COLORS.button_text,
                     # "padding": 0,
                 }
                 dx = self._draw_button(ctx, tx, ty, None, 30, text, action, tt, opt)
