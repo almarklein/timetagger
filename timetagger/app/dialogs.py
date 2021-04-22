@@ -2640,7 +2640,7 @@ class PomodoroDialog(BaseDialog):
             alternate between 25 minutes of work and 5 minute breaks.
             It is recommended to use breaks to leave your chair if you
             sit during work. See
-            <a href='https://en.wikipedia.org/wiki/Pomodoro_Technique' target='new'>Wikipedia</a>
+            <a href='https://timetagger.app/pomodoro/' target='new'>this article</a>
             for more info.
             </p><p>
             The Pomodoro timer is automatically started and stopped as you
