@@ -2600,6 +2600,13 @@ class PomodoroDialog(BaseDialog):
         self._set_state("pre-work")
         window.setInterval(self._update, 250)
         window.document.addEventListener("visibilitychange", self._update)
+        if window.navigator.serviceWorker:
+            try:
+                window.navigator.serviceWorker.addEventListener(
+                    "message", self.on_notificationclick
+                )
+            except Exception:
+                pass
         self._sounds = {
             "wind": Audio("wind-up-1-534.ogg"),
             "work_end": Audio("eventually-590.ogg"),
@@ -2763,16 +2770,42 @@ class PomodoroDialog(BaseDialog):
         if window.Notification and Notification.permission == "granted":
             if old_state == "break":
                 title = "Your break is over, back to work!"
+                actions = [
+                    {"action": "work", "title": "Start 25m work"},
+                    {"action": "close", "title": "Close"},
+                ]
             elif old_state == "work":
                 title = "Time for a break!"
+                actions = [
+                    {"action": "break", "title": "Start 5m break"},
+                    {"action": "close", "title": "Close"},
+                ]
             else:
                 title = "Pomodoro"
+                actions = []
 
             options = {
                 "icon": "timetagger192_sf.png",
-                "body": "Click to go TimeTagger",
+                "body": "Click to open TimeTagger",
                 "requireInteraction": True,
                 "tag": "timetagger-pomodoro",  # replace previous notifications
                 # vibrate: [200, 100, 200],
             }
-            Notification(title, options)
+            if window.pwa and window.pwa.sw_reg:
+                options.actions = actions
+                window.pwa.sw_reg.showNotification(title, options)
+            else:
+                Notification(title, options)
+
+    def on_notificationclick(self, message_event):
+        event = message_event.data
+        if event.type != "notificationclick":
+            return
+        if not window.localsettings.get("pomodoro_enabled", False):
+            return
+        if event.action == "work":
+            self._set_state("work")
+            self._play_sound("wind")
+        elif event.action == "break":
+            self._set_state("break")
+            self._play_sound("wind")

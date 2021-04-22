@@ -69,3 +69,17 @@ async function cache_or_network(event) {
     }
     return response;
 }
+
+
+// Notifications
+
+self.addEventListener('notificationclick', on_notificationclick);
+
+async function on_notificationclick(event) {
+    event.notification.close();
+    let all_clients = await clients.matchAll();
+    for (let client of all_clients) {
+        client.postMessage({type: "notificationclick", action: event.action});
+        console.log('[SW] proxying notificationclick ' + event.action);
+    }
+}
