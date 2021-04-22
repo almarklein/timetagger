@@ -1361,6 +1361,8 @@ class TopWidget(Widget):
                 for record in records:
                     record.t2 = max(record.t1 + 10, now)
                     window.store.records.put(record)
+                if window.localsettings.get("pomodoro_enabled", False):
+                    self._canvas.pomodoro_dialog.stop()
 
         elif action.startswith("nav_"):
             # A navigation action
