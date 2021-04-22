@@ -542,7 +542,8 @@ class LocalSettings:
         self._save_settings()
 
 
-window.localsettings = LocalSettings()
+if this_is_js():
+    window.localsettings = LocalSettings()
 
 
 class BaseCanvas:
