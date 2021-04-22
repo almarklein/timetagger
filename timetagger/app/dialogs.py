@@ -3,7 +3,17 @@ Implementation of HTML-based dialogs.
 """
 
 from pscript import this_is_js
-from pscript.stubs import window, document, console, Math, isFinite, Date, isNaN, Audio, Notification
+from pscript.stubs import (
+    window,
+    document,
+    console,
+    Math,
+    isFinite,
+    Date,
+    isNaN,
+    Audio,
+    Notification,
+)
 
 
 if this_is_js():
@@ -1246,6 +1256,12 @@ class RecordDialog(BaseDialog):
         # Apply
         window.store.records.put(self._record)
         super().submit(self._record)
+        # Start pomo?
+        if window.localsettings.get("pomodoro_enabled", False):
+            if self._lmode == "start":
+                self._canvas.pomodoro_dialog.start_work()
+            elif self._lmode == "stop":
+                self._canvas.pomodoro_dialog.stop()
 
     def resume_record(self):
         """Start a new record with the same description."""
@@ -1263,6 +1279,9 @@ class RecordDialog(BaseDialog):
         window.store.records.put(record)
         # Close the dialog - don't apply local changes
         self.close()
+        # Start pomo?
+        if window.localsettings.get("pomodoro_enabled", False):
+            self._canvas.pomodoro_dialog.start_work()
 
 
 class TagColorSelectionDialog(BaseDialog):
@@ -2602,14 +2621,15 @@ class PomodoroDialog(BaseDialog):
             <summary style='cursor: pointer;'>The Pomodoro Technique</summary>
             <p>
             The Pomodoro Technique is a time management method where you
-            alternate between 25 minutes of work and 5 minutes of break.
+            alternate between 25 minutes of work and 5 minute breaks.
             It is recommended to use breaks to leave your chair if you
             sit during work. See
             <a href='https://en.wikipedia.org/wiki/Pomodoro_Technique' target='new'>Wikipedia</a>
             for more info.
             </p><p>
             The Pomodoro timer is automatically started and stopped as you
-            start/stop tracking time.
+            start/stop tracking time. This feature is experimental - do
+            let us know about problems and suggestions!
             </p><p>
             Using sounds from notificationsounds.com.
             </p></details>
@@ -2628,6 +2648,7 @@ class PomodoroDialog(BaseDialog):
 
     def open(self, callback=None):
         super().open(callback)
+        self._update()
 
     def _play_sound(self, sound):
         audio = self._sounds[sound]
