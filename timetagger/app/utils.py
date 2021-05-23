@@ -512,7 +512,7 @@ class Picker:
 
 
 class LocalSettings:
-    """ Settings stored in localstorage. Also easier API than the stores. """
+    """Settings stored in localstorage. Also easier API than the stores."""
 
     def __init__(self):
         self._cache = self._load_settings()
@@ -533,11 +533,11 @@ class LocalSettings:
         localStorage.setItem("timetagger_local_settings", x)
 
     def get(self, key, default_=None):
-        """ Get a settings item. """
+        """Get a settings item."""
         return self._cache.get(key, default_)
 
     def set(self, key, value):
-        """ Save a setting. """
+        """Save a setting."""
         self._cache[key] = value
         self._save_settings()
 
