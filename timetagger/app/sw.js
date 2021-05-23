@@ -88,7 +88,9 @@ function on_notificationclick(event) {
                 var client = clientList[i];
                 console.log('[SW] proxying notificationclick ' + event.action);
                 client.postMessage({type: "notificationclick", action: event.action});
-                return client.focus();
+                if (event.action !== 'close') {
+                    return client.focus();
+                }
             }
         }));
     });
