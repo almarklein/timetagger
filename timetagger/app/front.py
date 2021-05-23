@@ -1404,10 +1404,18 @@ class TopWidget(Widget):
             elif action == "nav_backward" or action == "nav_forward":
                 t1, t2 = self._canvas.range.get_target_range()
                 nsecs = t2 - t1
-                if action == "nav_backward":
-                    self._canvas.range.animate_range(t1 - nsecs, t1)
+                if nsecs < 80000:
+                    if action == "nav_backward":
+                        self._canvas.range.animate_range(t1 - nsecs, t1, None, False)
+                    else:
+                        self._canvas.range.animate_range(t2, t2 + nsecs, None, False)
                 else:
-                    self._canvas.range.animate_range(t2, t2 + nsecs)
+                    res = self._current_scale["now"]
+                    if action == "nav_backward":
+                        res = "-" + res
+                    t1 = dt.add(t1, res)
+                    t2 = dt.add(t2, res)
+                    self._canvas.range.animate_range(t1, t2, None, False)
             elif action == "nav_menu":
                 self._canvas.timeselection_dialog.open()
 

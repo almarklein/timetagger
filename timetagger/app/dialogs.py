@@ -1131,7 +1131,7 @@ class RecordDialog(BaseDialog):
                 self._set_mode("Edit")
 
     def _query_tags(self):
-        """Get all current tags. If different, update suggestions. """
+        """Get all current tags. If different, update suggestions."""
         # Show info about current tags in description
         tags, parts = utils.get_tags_and_parts_from_string(self._ds_input.value)
         tags_html = "Tags:&nbsp; &nbsp;"
@@ -1285,7 +1285,7 @@ class RecordDialog(BaseDialog):
 
 
 class TagColorSelectionDialog(BaseDialog):
-    """Select a tag to define the color for. """
+    """Select a tag to define the color for."""
 
     def open(self, tags, callback):
         if isinstance(tags, str):
