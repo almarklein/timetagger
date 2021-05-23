@@ -75,11 +75,22 @@ async function cache_or_network(event) {
 
 self.addEventListener('notificationclick', on_notificationclick);
 
-async function on_notificationclick(event) {
+function on_notificationclick(event) {
     event.notification.close();
-    let all_clients = await clients.matchAll();
-    for (let client of all_clients) {
-        client.postMessage({type: "notificationclick", action: event.action});
-        console.log('[SW] proxying notificationclick ' + event.action);
-    }
+
+    var promise = new Promise(function(resolve) {
+        setTimeout(resolve, 1);
+    }).then(function() {
+        event.waitUntil(clients.matchAll({
+            type: "window"
+        }).then(function(clientList) {
+            for (var i = 0; i < clientList.length; i++) {
+                var client = clientList[i];
+                console.log('[SW] proxying notificationclick ' + event.action);
+                client.postMessage({type: "notificationclick", action: event.action});
+                return client.focus();
+            }
+        }));
+    });
+    event.waitUntil(promise);
 }

@@ -2720,8 +2720,7 @@ class PomodoroDialog(BaseDialog):
     def _on_button_click(self):
         state, etime = self._state
         if state == "pre-work":
-            self._set_state("work")
-            self._play_sound("wind")
+            self.start_work()
         elif state == "work":
             self._set_state("pre-break")
             self._play_sound("manual_end")

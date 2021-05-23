@@ -1,5 +1,6 @@
 $prim1_clr: #0F2C3E;
 $prim2_clr: #A4B0B8;
+$prim3_clr: #849098;
 $sec1_clr: #E6E7E5;
 $sec2_clr: #F4F4F4;
 $acc_clr: #DEAA22;
@@ -155,7 +156,7 @@ header a, footer a, a.link-icon {
 /**************** Headers ****************/
 
 h1, h2, h3, h4 {
-    color: $prim2_clr;
+    color: $prim3_clr;
 }
 h1 {
     color: $prim1_clr;
