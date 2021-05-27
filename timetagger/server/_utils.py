@@ -71,7 +71,10 @@ def create_jwt(payload):
     for key in ("username", "expires", "seed"):
         if key not in payload:
             raise ValueError(f"JWT must have a {key} field.")
-    return jwt.encode(payload, JWT_KEY, algorithm="HS256")
+    result = jwt.encode(payload, JWT_KEY, algorithm="HS256")
+    if isinstance(result, bytes):
+        return result.decode()
+    return result
 
 
 def decode_jwt(token):
