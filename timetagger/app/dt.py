@@ -148,12 +148,15 @@ def time2localstr(t):
 
 def round(t, res):
     """Round the given date to the nearest resolution step."""
+    PSCRIPT_OVERLOAD = False  # noqa
     dt = add(t, res) - t
     return floor(t + 0.5 * dt, res)
 
 
 def floor(t, res):
     """Round the given date down to the nearest smaller resolution step."""
+    PSCRIPT_OVERLOAD = False  # noqa
+
     resName = res[-1]
     resFactor = float(res[:-1])
 
@@ -205,6 +208,7 @@ def add(t, delta):
     or a delta string like '4h', "21s", "2M" or "2Y". Works correctly for months
     and keeps leap years into account.
     """
+    PSCRIPT_OVERLOAD = False  # noqa
 
     if isinstance(delta, (float, int)):
         delta = str(delta) + "s"
