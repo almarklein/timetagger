@@ -503,7 +503,15 @@ class TimeRange:
         t1, t2 = self.get_range()
         nsecs = t2 - t1
 
-        # todo: can cache here, cause its called twice per draw anyway
+        # We use a cache with 1 entry, so if the "tick-args" are the
+        # same as last time, the result is re-used.
+        cache_key = str((t1, t2, npixels))
+        if not self._cache_tick_data:
+            self._cache_tick_data = {}
+        if cache_key == self._cache_tick_data.key:
+            return self._cache_tick_data.result
+        else:
+            self._cache_tick_data.key = cache_key
 
         # Determine interval - distance between ticks depends on total size;
         # if there is a lot of space, its ugly to have loads of ticks
@@ -577,7 +585,8 @@ class TimeRange:
                 break
             t = t_new
 
-        return ticks, minor_ticks, granularity
+        self._cache_tick_data.result = ticks, minor_ticks, granularity
+        return self._cache_tick_data.result
 
     def get_stat_period(self):
         """Get the time period over which to display stats, given the current range."""
