@@ -967,6 +967,10 @@ class RecordDialog(BaseDialog):
         super().__init__(canvas)
         self._record = None
         self._no_user_edit_yet = True
+        self._suggested_tags1 = {}
+        self._suggested_tags2 = []
+        self._suggested_tags3 = []
+        self._suggested_tags4 = []
 
     def open(self, mode, record, callback=None):
         """Show/open the dialog for the given record. On submit, the
@@ -982,9 +986,12 @@ class RecordDialog(BaseDialog):
                 <button type='button'><i class='fas'>\uf00d</i></button>
             </h1>
             <h2><i class='fas'>\uf305</i>&nbsp;&nbsp;Description</h2>
-            <input type='text' style='width: calc(100% - 4em);' spellcheck='false' />
-            <div style='color:#777;'></div>
+            <div style='position: relative; display: inline-block; width:100%;'>
+                <input type='text' style='width: calc(100% - 4em); margin-bottom:' spellcheck='false' />
+                <div class='tag-suggestions-autocomp'></div>
+            </div>
             <div></div>
+            <div style='color:#777;'></div>
             <h2><i class='fas'>\uf017</i>&nbsp;&nbsp;Time</h2>
             <div></div>
             <div style='margin-top:2em;'></div>
@@ -1002,9 +1009,9 @@ class RecordDialog(BaseDialog):
         (
             h1,  # Dialog title
             _,  # Description header
-            self._ds_input,
-            self._tag_suggestions_div,
+            self._ds_container,
             self._tags_div,
+            self._tag_hints_div,
             _,  # Time header
             self._time_node,
             _,  # Splitter
@@ -1012,6 +1019,8 @@ class RecordDialog(BaseDialog):
             self._delete_but2,
         ) = self.maindiv.children
         #
+        self._ds_input = self._ds_container.children[0]
+        self._autocomp_div = self._ds_container.children[1]
         self._title_div = h1.children[1]
         self._cancel_but1 = self.maindiv.children[0].children[-1]
         (
@@ -1026,14 +1035,27 @@ class RecordDialog(BaseDialog):
             self._time_node, self._on_times_change, record.t1, record.t2, mode
         )
 
+        # Prepare autocompletion variables
+        self._autocomp_index = 0
+        self._autocomp_active_tag = ""
+        self._autocomp_active_tag = ""
+        self._autocomp_state = "", "", 0, 0
+        self._autocomp_div.hidden = True
+
+        # Get selected tags. A full search only once per session.
+        if self._suggested_tags1 is None:
+            self._suggested_tags1 = self._get_suggested_tags1()  # all
+        self._suggested_tags2 = self._get_suggested_tags2()  # recent
+        self._suggested_tags3 = self._get_suggested_tags3()  # all, updated
+        self._suggested_tags4 = []  # current suggestion
+
         # Prepare some things to show suggested tags
         window._record_dialog_add_tag = self._record_dialog_add_tag
-        self._suggested_tags_html = self._get_suggested_tags()
-        self._suggested_tags_list = []  # for keyboard shortcuts
+        window._record_dialog_autocomp_finish = self._autocomp_finish
 
         # Set some initial values
         self._ds_input.value = record.get("ds", "")
-        self._query_tags()
+        self._show_tags_from_ds()
         self._delete_but2.style.display = "none"
         self._no_user_edit_yet = True
 
@@ -1049,6 +1071,7 @@ class RecordDialog(BaseDialog):
         self._ds_input.onchange = self._on_user_edit_done
         self._delete_but1.onclick = self._delete1
         self._delete_but2.onclick = self._delete2
+        self.maindiv.addEventListener("click", self._autocomp_clear)
 
         # Enable for some more info (e.g. during dev)
         if False:
@@ -1101,11 +1124,114 @@ class RecordDialog(BaseDialog):
         else:
             console.warn("Unexpected record dialog mode " + mode)
 
+    def _get_tag_in_progress(self, val, i0):
+        """Get the partial tag that is being written."""
+        # Abort if there is a selection
+        if i0 != self._ds_input.selectionEnd:
+            return -1, ""
+        # Go
+        i = i0 - 1
+        while i >= 0:
+            c = val[i]
+            if c == "#":
+                return i, val[i:i0]
+            elif not utils.is_valid_tag_charcode(ord(c)):
+                return i, ""
+            i -= 1
+        return -1, ""
+
     def _on_user_edit(self):
-        self._query_tags()
         if self._no_user_edit_yet:
             self._no_user_edit_yet = False
             self._submit_but.disabled = False
+        self._show_tags_from_ds()
+        self._autocomp_init()
+
+    def _autocomp_init(self):
+        """Show tag suggestions in the autocompletion dialog."""
+
+        # Always clear first
+        self._autocomp_clear()
+
+        # Get partial tag being written
+        val = self._ds_input.value
+        i2 = self._ds_input.selectionStart
+        i1, tag_to_be = self._get_tag_in_progress(val, i2)
+        if not tag_to_be:
+            return
+
+        # Get what to suggest
+        if tag_to_be == "#":
+            headline = "Recent tags:"
+            metaprefix = "recently used "
+            suggestion_list = self._suggested_tags2
+        else:
+            headline = "Matching tags:"
+            metaprefix = "last used "
+            suggestion_list = self._suggested_tags3
+
+        # Create suggestions
+        self._suggested_tags4 = []
+        item = document.createElement("div")
+        item.classList.add("meta")
+        item.innerText = headline
+        self._autocomp_div.appendChild(item)
+        for tag, tag_t2 in suggestion_list:
+            if tag.startsWith(tag_to_be):
+                self._suggested_tags4.push(tag)
+                date = dt.time2localstr(tag_t2).split(" ")[0]
+                html = "<b>" + tag_to_be + "</b>" + tag[tag_to_be.length :]
+                html += "<span class='meta'>" + metaprefix + date + "<span>"
+                item = document.createElement("div")
+                item.classList.add("tag-suggestion")
+                item.innerHTML = html
+                item.setAttribute(
+                    "onclick", f'window._record_dialog_autocomp_finish("{tag}");'
+                )
+                self._autocomp_div.appendChild(item)
+
+        # Only show if there are any suggestions
+        if len(self._suggested_tags4):
+            self._autocomp_state = val, tag_to_be, i1, i2
+            self._autocomp_div.hidden = False
+            self._autocomp_make_active(0)
+
+    def _autocomp_make_active(self, index):
+        autocomp_count = len(self._suggested_tags4)
+        # Correct index (wrap around)
+        while index < 0:
+            index += autocomp_count
+        self._autocomp_index = index % autocomp_count
+        if not autocomp_count:
+            return
+        # Apply
+        self._autocomp_active_tag = self._suggested_tags4[self._autocomp_index]
+        # Fix css class
+        for i in range(self._autocomp_div.children.length):
+            self._autocomp_div.children[i].classList.remove("active")
+        child_index = self._autocomp_index + 1
+        active_child = self._autocomp_div.children[child_index]
+        active_child.classList.add("active")
+        # Make corresponding item visible
+        active_child.scrollIntoView({"block": "nearest"})
+
+    def _autocomp_clear(self):
+        self._autocomp_index = 0
+        self._autocomp_active_tag = ""
+        self._autocomp_div.hidden = True
+        self._autocomp_div.innerHTML = ""
+
+    def _autocomp_finish(self, tag):
+        self._autocomp_clear()
+        if tag:
+            val, tag_to_be, i1, i2 = self._autocomp_state
+            i3 = max(0, i1) + len(tag)
+            if len(val[i2:].strip()) == 0:
+                val = val.rstrip() + " "
+                i3 += 10
+            self._ds_input.value = val[:i1] + tag + val[i2:]
+            self._ds_input.selectionStart = self._ds_input.selectionEnd = i3
+            self._ds_input.focus()
 
     def _on_user_edit_done(self):
         ds = to_str(self._ds_input.value)
@@ -1130,7 +1256,7 @@ class RecordDialog(BaseDialog):
             else:
                 self._set_mode("Edit")
 
-    def _query_tags(self):
+    def _show_tags_from_ds(self):
         """Get all current tags. If different, update suggestions."""
         # Show info about current tags in description
         tags, parts = utils.get_tags_and_parts_from_string(self._ds_input.value)
@@ -1142,19 +1268,10 @@ class RecordDialog(BaseDialog):
             clr = window.store.settings.get_color_for_tag(tag)
             tags_list.append(f"<b style='color:{clr};'>#</b>{tag[1:]}")
         tags_html += "&nbsp; &nbsp;".join(tags_list)
-        # Get suggested tags
-        self._suggested_tags_list = []
-        if self._suggested_tags_html:
-            suggested_dict = self._suggested_tags_html.copy()
-            for tag in tags:
-                suggested_dict.pop(tag, None)
-            self._suggested_tags_list = suggested_dict.keys()[:6]
-            suggested_html = "Suggested tags:"
-            for i, tag in enumerate(self._suggested_tags_list):
-                html = suggested_dict[tag].replace(">#", f">{i + 1}: ")
-                suggested_html += "&nbsp; &nbsp;" + html
-        else:
-            suggested_html = "Use e.g. '&#35;meeting' to add one or more tags."
+        # Get hints
+        hint_html = ""
+        if len(self._suggested_tags2) == 0:
+            hint_html = "Use e.g. '&#35;meeting' to add one or more tags."
         # Detect duplicate tags
         tag_counts = {}
         for part in parts:
@@ -1162,9 +1279,9 @@ class RecordDialog(BaseDialog):
                 tag_counts[part] = tag_counts.get(part, 0) + 1
         duplicates = [tag for tag, count in tag_counts.items() if count > 1]
         if len(duplicates):
-            suggested_html += "<br>Duplicate tags: " + duplicates.join(" ")
+            hint_html += "<br>Duplicate tags: " + duplicates.join(" ")
         # Apply
-        self._tag_suggestions_div.innerHTML = suggested_html
+        self._tag_hints_div.innerHTML = hint_html
         self._tags_div.innerHTML = tags_html
 
     def _record_dialog_add_tag(self, tag):
@@ -1179,49 +1296,75 @@ class RecordDialog(BaseDialog):
 
     def _on_key(self, e):
         key = e.key.lower()
+        if not self._autocomp_div.hidden:
+            if key == "enter" or key == "return" or key == "tab":
+                self._autocomp_finish(self._autocomp_active_tag)
+                e.preventDefault()
+                return
+            elif key == "escape":
+                self._autocomp_clear()
+                return
+            elif key == "arrowdown":
+                self._autocomp_make_active(self._autocomp_index + 1)
+                e.preventDefault()
+                return
+            elif key == "arrowup":
+                self._autocomp_make_active(self._autocomp_index - 1)
+                e.preventDefault()
+                return
         if key == "enter" or key == "return":
             self.submit()
-        elif key in "123456789" and (e.ctrlKey or e.metaKey):
-            try:
-                index = int(key) - 1
-            except Exception:
-                return
-            if 0 <= index < len(self._suggested_tags_list):
-                tag = self._suggested_tags_list[index]
-                self._record_dialog_add_tag(tag)
-                e.preventDefault()  # don't insert the digit
         else:
             super()._on_key(e)
 
-    def _get_suggested_tags(self, max_suggestions=16):
-        # Get history of records
+    def _get_suggested_tags1(self):
+        """Get *all* tags ever used."""
+        PSCRIPT_OVERLOAD = False  # noqa
+        suggested_tags = {}
+        for r in window.store.records.get_dump():
+            tags, _ = utils.get_tags_and_parts_from_string(r.ds)
+            for tag in tags:
+                suggested_tags[tag] = max(r.t2, suggested_tags[tag] | 0)
+        return suggested_tags
+
+    def _get_suggested_tags2(self):
+        """Get recent tags and order by their usage/recent-ness."""
+        # Get history of somewhat recent records
         t2 = dt.now()
         t1 = t2 - 12 * 7 * 24 * 3600  # 12 weeks, about a quarter year
         records = window.store.records.get_records(t1, t2)
-        # Collect all tags and a corresponding score
+        # Apply Score
         tags_to_scores = {}
+        tags_to_t2 = {}
         for r in records.values():
             tags, _ = utils.get_tags_and_parts_from_string(r.ds)
             score = 1 / (t2 - r.t1)
             for tag in tags:
+                tags_to_t2[tag] = max(r.t2, tags_to_t2[tag] | 0)
                 tags_to_scores[tag] = (tags_to_scores[tag] | 0) + score
         # Put in a list
         score_tag_list = []
-        for tag, score in tags_to_scores.items():
+        for tag in tags_to_scores.keys():
             if tag == "#untagged":
                 continue
-            score_tag_list.append((score, tag))
+            score_tag_list.push((tag, tags_to_t2[tag], tags_to_scores[tag]))
         # Sort by score and trim names
-        score_tag_list.sort(key=lambda x: -x[0])
-        tag_names = [score_tag[1] for score_tag in score_tag_list[:max_suggestions]]
-        # Turn into html
-        html_parts = {}
-        for tag in tag_names:
-            x = f"<a onclick='window._record_dialog_add_tag(\"{tag}\")' "
-            x += f"style='cursor:pointer;'"
-            x += ">" + tag + "</a>"
-            html_parts[tag] = x
-        return html_parts
+        score_tag_list.sort(key=lambda x: -x[2])
+        tag_list = [score_tag[:2] for score_tag in score_tag_list]
+        return tag_list
+
+    def _get_suggested_tags3(self):
+        """Combine the full tag dict with the more recent tags."""
+        suggested_tags = self._suggested_tags1.copy()  # dict
+        new_tags = self._suggested_tags2  # list
+        for tag, tag_t2 in new_tags:
+            suggested_tags[tag] = tag_t2
+        # Compose full tag suggestions list
+        tag_list = []
+        for tag, tag_t2 in suggested_tags.items():
+            tag_list.push((tag, tag_t2))
+        tag_list.sort(key=lambda x: x[0])
+        return tag_list
 
     def _delete1(self):
         self._delete_but2.style.display = "block"
