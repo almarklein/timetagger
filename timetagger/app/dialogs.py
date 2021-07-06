@@ -1163,7 +1163,7 @@ class RecordDialog(BaseDialog):
         # Get what to suggest
         if tag_to_be == "#":
             headline = "Recent tags:"
-            metaprefix = "recently used "
+            metaprefix = "last used "
             suggestion_list = self._suggested_tags2
         else:
             headline = "Matching tags:"
@@ -1171,6 +1171,7 @@ class RecordDialog(BaseDialog):
             suggestion_list = self._suggested_tags3
 
         # Create suggestions
+        now = dt.now()
         self._suggested_tags4 = []
         item = document.createElement("div")
         item.classList.add("meta")
@@ -1179,7 +1180,9 @@ class RecordDialog(BaseDialog):
         for tag, tag_t2 in suggestion_list:
             if tag.startsWith(tag_to_be):
                 self._suggested_tags4.push(tag)
-                date = dt.time2localstr(tag_t2).split(" ")[0]
+                date = max(0, int((now - tag_t2) / 86400))
+                date = {0: "today", 1: "yesterday"}.get(date, date + " days ago")
+                # date = dt.time2localstr(tag_t2).split(" ")[0]
                 html = "<b>" + tag_to_be + "</b>" + tag[tag_to_be.length :]
                 html += "<span class='meta'>" + metaprefix + date + "<span>"
                 item = document.createElement("div")
