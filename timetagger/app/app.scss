@@ -29,8 +29,8 @@ body.darkmode #canvas { background: #171E28; }
     margin: 0;
     padding: 0.5em;
 }
-.dialog.verticalmenu .divider {   
-    border-top: 1px solid #bbb;    
+.dialog.verticalmenu .divider {
+    border-top: 1px solid #bbb;
     text-align: center;
     padding: 0;
     font-size: 80%;
@@ -258,6 +258,42 @@ body.darkmode .dialog button.actionbutton.submit { background: $acc_clr; }
 @media screen and (min-width: 600px) {
     .dialog button.actionbutton { margin-left: 1em; font-size: 100%; }
     .dialog button.actionbutton.submit { min-width: 7em; }
+}
+
+.dialog .tag-suggestions-autocomp {
+    position: absolute;
+    border: 1px solid #bbb;
+    border-radius: 4px;
+    background: #fff;
+    color: $prim1_clr;
+    border-top: none;
+    z-index: 99;
+    top: 100%;
+    left: 3px;
+    width: 50%;
+    max-height: 150px;
+    overflow-y: scroll;
+    box-shadow: 0 2px 2px rgba(0, 0, 0, 0.4);
+}
+
+.dialog .tag-suggestions-autocomp > div {
+    font-size: 85%;
+    padding: 4px;
+    cursor: pointer;
+    background-color: #fff;
+    border-bottom: 1px solid #d4d4d4;
+}
+.dialog .tag-suggestions-autocomp > div.meta {
+    cursor: default;
+    font-size: 70%;
+}
+.dialog .tag-suggestions-autocomp > div > span.meta {
+    font-size: 70%;
+    color: #bbb;
+    margin-left: 1em;
+}
+.dialog .tag-suggestions-autocomp .tag-suggestion.active, .dialog .tag-suggestions-autocomp > .tag-suggestion:hover {
+    background-color: #f5f5ff;
 }
 
 /* --- dialog table --- */
