@@ -692,7 +692,7 @@ class StartStopEdit:
         self.time2more.onclick = lambda: self.onchanged("time2more")
         self.time2less.onclick = lambda: self.onchanged("time2less")
 
-        self.reset(t1, t2)
+        self.reset(t1, t2, True)
         self._timer_handle = window.setInterval(self._update_duration, 200)
 
     def close(self):
@@ -726,7 +726,7 @@ class StartStopEdit:
                 t2 = max(self.initial_t1 + 1, dt.now())
                 self.reset(self.initial_t1, t2)
 
-    def reset(self, t1, t2):
+    def reset(self, t1, t2, initial=False):
         """Reset with a given t1 and t2."""
 
         # Store originals
@@ -746,7 +746,8 @@ class StartStopEdit:
 
         self._set_time_input_visibility()
         self.render()
-        window.setTimeout(self.callback, 1)
+        if not initial:
+            window.setTimeout(self.callback, 1)
 
     def _set_time_input_visibility(self):
         def show_subnode(i, show):
@@ -1150,12 +1151,15 @@ class RecordDialog(BaseDialog):
             i -= 1
         return val, i2, i2
 
-    def _on_user_edit(self):
+    def _mark_as_edited(self):
         if self._no_user_edit_yet:
             self._no_user_edit_yet = False
             self._submit_but.disabled = False
-        self._show_tags_from_ds()
+
+    def _on_user_edit(self):
+        self._mark_as_edited()
         self._autocomp_init()
+        self._show_tags_from_ds()
 
     def show_preset_tags(self, e):
         # Prevent that the click will hide the autocomp
@@ -1322,7 +1326,7 @@ class RecordDialog(BaseDialog):
         self._record.t1 = self._time_edit.t1
         self._record.t2 = self._time_edit.t2
         is_running = self._record.t1 == self._record.t2
-        self._on_user_edit()
+        self._mark_as_edited()
         # Swap mode?
         if was_running and not is_running:
             if self._lmode == "start":
