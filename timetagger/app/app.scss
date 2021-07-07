@@ -140,10 +140,18 @@ body.darkmode .tooltipdiv {
     margin: 8px;
     margin-top: 0;
 }
+.dialog > input, .dialog > div.container {
+    width: calc(100% - 16px);
+}
 @media screen and (min-width: 500px) {
     dialog > p, .dialog > input, .dialog > label, .dialog > button, .dialog > select, .dialog > div {
         margin-left: 2em;
-}}
+    }
+    .dialog > input, .dialog > div.container {
+        width: calc(100% - 3em);
+    }
+}
+
 
 .dialog h1 {
     position: -webkit-sticky; /* Safari */
@@ -270,8 +278,9 @@ body.darkmode .dialog button.actionbutton.submit { background: $acc_clr; }
     z-index: 99;
     top: 100%;
     left: 3px;
-    width: 50%;
-    max-height: 150px;
+    width: calc(100% - 6px);
+    max-width: 400px;
+    max-height: 180px;
     overflow-y: scroll;
     box-shadow: 0 2px 2px rgba(0, 0, 0, 0.4);
 }
