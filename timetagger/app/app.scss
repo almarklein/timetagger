@@ -281,7 +281,7 @@ body.darkmode .dialog button.actionbutton.submit { background: $acc_clr; }
     width: calc(100% - 6px);
     max-width: 400px;
     max-height: 180px;
-    overflow-y: scroll;
+    overflow-y: auto;
     box-shadow: 0 2px 2px rgba(0, 0, 0, 0.4);
 }
 
@@ -291,6 +291,8 @@ body.darkmode .dialog button.actionbutton.submit { background: $acc_clr; }
     cursor: pointer;
     background-color: #fff;
     border-bottom: 1px solid #d4d4d4;
+    white-space: nowrap;
+    overflow-x: hidden;
 }
 .dialog .tag-suggestions-autocomp > div.meta {
     cursor: default;
