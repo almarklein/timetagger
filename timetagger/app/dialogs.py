@@ -1079,6 +1079,7 @@ class RecordDialog(BaseDialog):
         self._ds_input.oninput = self._on_user_edit
         self._ds_input.onchange = self._on_user_edit_done
         self._preset_button.onclick = self.show_preset_tags
+        self._preset_edit.onclick = lambda: self._canvas.tag_preset_dialog.open()
         self._delete_but1.onclick = self._delete1
         self._delete_but2.onclick = self._delete2
         self.maindiv.addEventListener("click", self._autocomp_clear)
@@ -1646,6 +1647,112 @@ class TagColorDialog(BaseDialog):
             else:
                 window.store.settings.set_color_for_tag(self._tagz, clr)
         super().submit()
+
+
+class TagPresetsDialog(BaseDialog):
+    """Dialog to define tag presets."""
+
+    def open(self, callback=None):
+        self.maindiv.innerHTML = f"""
+            <h1><i class='fas'>\uf044</i>&nbsp;&nbsp;Tag presets
+                <button type='button'><i class='fas'>\uf00d</i></button>
+            </h1>
+            <p>
+            Predefine sets of tags, one per line. You can also drop a text file in the field below.
+            </p>
+            <button type='button'>Check & Save</button>
+            <div></div>
+            <textarea rows='12'
+                style='background: #fff; display: block; margin: 0.5em; width: calc(100% - 1.5em);'>
+            </textarea>
+            """
+
+        self._input_element = self.maindiv.children[-1]
+        self._input_element.value = ""
+        self._input_element.ondragexit = self._on_drop_stop
+        self._input_element.ondragover = self._on_drop_over
+        self._input_element.ondrop = self._on_drop
+
+        self._analysis_out = self.maindiv.children[-2]
+
+        self._apply_but = self.maindiv.children[2]
+        self._apply_but.onclick = self.do_apply
+
+        self._cancel_but = self.maindiv.children[0].children[-1]
+        self._cancel_but.onclick = self.close
+        super().open(callback)
+        self._load_current()
+
+    def _on_drop_stop(self, ev):
+        self._input_element.style.background = None
+
+    def _on_drop_over(self, ev):
+        ev.preventDefault()
+        self._input_element.style.background = "#DFD"
+
+    def _on_drop(self, ev):
+        ev.preventDefault()
+        self._on_drop_stop()
+
+        def apply_text(s):
+            self._input_element.value = s
+
+        if ev.dataTransfer.items:
+            for i in range(len(ev.dataTransfer.items)):
+                if ev.dataTransfer.items[i].kind == "file":
+                    file = ev.dataTransfer.items[i].getAsFile()
+                    ext = file.name.lower().split(".")[-1]
+                    if ext in ("xls", "xlsx", "xlsm", "pdf"):
+                        self._analysis_out.innerHTML = (
+                            f"Cannot process <u>{file.name}</u>. Drop a .csv file or "
+                            + f"copy the columns in Excel and paste here."
+                        )
+                        continue
+                    reader = window.FileReader()
+                    reader.onload = lambda: apply_text(reader.result)
+                    reader.readAsText(file)
+                    self._analysis_out.innerHTML = f"Read from <u>{file.name}</u>"
+                    break  # only process first one
+
+    def _load_current(self):
+        item = window.store.settings.get_by_key("tag_presets")
+        lines = (None if item is None else item.value) or []
+        text = "\n".join(lines)
+        if text:
+            text += "\n"
+        self._input_element.value = text
+
+    def do_apply(self):
+        """Normalize tags"""
+        # Process
+        self._analysis_out.innerHTML = "Processing ..."
+        lines1 = self._input_element.value.lstrip().splitlines()
+        lines2 = []
+        found_tags = {}
+        for line in lines1:
+            line = line.strip()
+            if line:
+                tags, parts = utils.get_tags_and_parts_from_string(to_str(line))
+                for tag in tags:
+                    found_tags[tag] = tag
+                line = parts.join("").strip()
+                if line:
+                    lines2.append(line)
+
+        # Save
+        item = window.store.settings.create("tag_presets", lines2)
+        window.store.settings.put(item)
+
+        # Report
+        self._load_current()
+        ntags = len(found_tags.keys())
+        self._analysis_out.innerHTML = (
+            "<i class='fas'>\uf00c</i> Saved "
+            + len(lines2)
+            + " presets, with "
+            + ntags
+            + " unique tags."
+        )
 
 
 class TagManageDialog(BaseDialog):
