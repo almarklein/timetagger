@@ -1235,11 +1235,13 @@ class RecordDialog(BaseDialog):
             self._ds_input.value = val[:i1] + tag + val[i2:]
             self._ds_input.selectionStart = self._ds_input.selectionEnd = i3
             self._ds_input.focus()
+        self._show_tags_from_ds()
 
     def _on_user_edit_done(self):
         ds = to_str(self._ds_input.value)
         _, parts = utils.get_tags_and_parts_from_string(ds)
         self._ds_input.value = parts.join("")
+        self._show_tags_from_ds()
 
     def _on_times_change(self):
         was_running = self._record.t1 == self._record.t2
