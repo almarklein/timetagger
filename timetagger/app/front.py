@@ -150,6 +150,7 @@ class TimeTaggerCanvas(BaseCanvas):
         self.tag_color_selection_dialog = dialogs.TagColorSelectionDialog(self)
         self.tag_color_dialog = dialogs.TagColorDialog(self)
         self.report_dialog = dialogs.ReportDialog(self)
+        self.tag_preset_dialog = dialogs.TagPresetsDialog(self)
         self.tag_manage_dialog = dialogs.TagManageDialog(self)
         self.export_dialog = dialogs.ExportDialog(self)
         self.import_dialog = dialogs.ImportDialog(self)
