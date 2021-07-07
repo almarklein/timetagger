@@ -967,10 +967,11 @@ class RecordDialog(BaseDialog):
         super().__init__(canvas)
         self._record = None
         self._no_user_edit_yet = True
-        self._suggested_tags1 = {}
-        self._suggested_tags2 = []
-        self._suggested_tags3 = []
-        self._suggested_tags4 = []
+        self._suggested_tags_all_dict = None  # will be calculated once
+        self._suggested_tags_recent = []
+        self._suggested_tags_all = []
+        self._suggested_tags_presets = []
+        self._suggested_tags_in_autocomp = []
 
     def open(self, mode, record, callback=None):
         """Show/open the dialog for the given record. On submit, the
@@ -1052,11 +1053,11 @@ class RecordDialog(BaseDialog):
         self._autocomp_div.hidden = True
 
         # Get selected tags. A full search only once per session.
-        if self._suggested_tags1 is None:
-            self._suggested_tags1 = self._get_suggested_tags1()  # all
-        self._suggested_tags2 = self._get_suggested_tags2()  # recent
-        self._suggested_tags3 = self._get_suggested_tags3()  # all, updated
-        self._suggested_tags4 = []  # current suggestion
+        if self._suggested_tags_all_dict is None:
+            self._suggested_tags_all_dict = self._get_suggested_tags_all_dict()
+        self._suggested_tags_recent = self._get_suggested_tags_recent()
+        self._suggested_tags_all = self._get_suggested_tags_all()
+        self._suggested_tags_in_autocomp = []  # current suggestion
 
         # Prepare some things to show suggested tags
         window._record_dialog_autocomp_finish = self._autocomp_finish
@@ -1160,12 +1161,7 @@ class RecordDialog(BaseDialog):
         if e and e.stopPropagation:
             e.stopPropagation()
         # Get list of preset strings
-        item = window.store.settings.get_by_key("tag_presets")
-        presets = (None if item is None else item.value) or []
-        presets = [
-            "#foo #bar",
-            "#spam #eggs",
-        ]
+        presets = self._get_suggested_tags_presets()
         # Produce suggestions
         suggestions = []
         for preset in presets:
@@ -1188,7 +1184,7 @@ class RecordDialog(BaseDialog):
         # Collect suggestions
         suggestions = []
         now = dt.now()
-        for tag, tag_t2 in self._suggested_tags2:
+        for tag, tag_t2 in self._suggested_tags_recent:
             date = max(0, int((now - tag_t2) / 86400))
             date = {0: "today", 1: "yesterday"}.get(date, date + " days ago")
             html = tag + "<span class='meta'>recent: " + date + "<span>"
@@ -1216,7 +1212,7 @@ class RecordDialog(BaseDialog):
         needle = tag_to_be[1:]  # the tag without the '#'
         matches1 = []
         matches2 = []
-        for tag, tag_t2 in self._suggested_tags3:
+        for tag, tag_t2 in self._suggested_tags_all:
             i = tag.indexOf(needle)
             if i > 0:
                 date = max(0, int((now - tag_t2) / 86400))
@@ -1250,9 +1246,9 @@ class RecordDialog(BaseDialog):
         item.innerHTML = headline
         self._autocomp_div.appendChild(item)
         # Add suggestions
-        self._suggested_tags4 = []
+        self._suggested_tags_in_autocomp = []
         for tag, html in suggestions:
-            self._suggested_tags4.push(tag)
+            self._suggested_tags_in_autocomp.push(tag)
             item = document.createElement("div")
             item.classList.add("tag-suggestion")
             item.innerHTML = html
@@ -1264,7 +1260,7 @@ class RecordDialog(BaseDialog):
         self._autocomp_make_active(0)
 
     def _autocomp_make_active(self, index):
-        autocomp_count = len(self._suggested_tags4)
+        autocomp_count = len(self._suggested_tags_in_autocomp)
         # Correct index (wrap around)
         while index < 0:
             index += autocomp_count
@@ -1272,7 +1268,9 @@ class RecordDialog(BaseDialog):
         if not autocomp_count:
             return
         # Apply
-        self._autocomp_active_tag = self._suggested_tags4[self._autocomp_index]
+        self._autocomp_active_tag = self._suggested_tags_in_autocomp[
+            self._autocomp_index
+        ]
         # Fix css class
         for i in range(self._autocomp_div.children.length):
             self._autocomp_div.children[i].classList.remove("active")
@@ -1350,7 +1348,7 @@ class RecordDialog(BaseDialog):
         tags_html += "&nbsp; &nbsp;".join(tags_list)
         # Get hints
         hint_html = ""
-        if len(self._suggested_tags2) == 0:
+        if len(self._suggested_tags_recent) == 0:
             hint_html = "Use e.g. '&#35;meeting' to add one or more tags."
         # Detect duplicate tags
         tag_counts = {}
@@ -1391,7 +1389,7 @@ class RecordDialog(BaseDialog):
         else:
             super()._on_key(e)
 
-    def _get_suggested_tags1(self):
+    def _get_suggested_tags_all_dict(self):
         """Get *all* tags ever used."""
         PSCRIPT_OVERLOAD = False  # noqa
         suggested_tags = {}
@@ -1401,7 +1399,7 @@ class RecordDialog(BaseDialog):
                 suggested_tags[tag] = max(r.t2, suggested_tags[tag] | 0)
         return suggested_tags
 
-    def _get_suggested_tags2(self):
+    def _get_suggested_tags_recent(self):
         """Get recent tags and order by their usage/recent-ness."""
         # Get history of somewhat recent records
         t2 = dt.now()
@@ -1427,18 +1425,23 @@ class RecordDialog(BaseDialog):
         tag_list = [score_tag[:2] for score_tag in score_tag_list]
         return tag_list
 
-    def _get_suggested_tags3(self):
+    def _get_suggested_tags_all(self):
         """Combine the full tag dict with the more recent tags."""
-        suggested_tags = self._suggested_tags1.copy()  # dict
-        new_tags = self._suggested_tags2  # list
+        tags_dict = self._suggested_tags_all_dict.copy()
+        new_tags = self._suggested_tags_recent
         for tag, tag_t2 in new_tags:
-            suggested_tags[tag] = tag_t2
+            tags_dict[tag] = tag_t2
         # Compose full tag suggestions list
         tag_list = []
-        for tag, tag_t2 in suggested_tags.items():
+        for tag, tag_t2 in tags_dict.items():
             tag_list.push((tag, tag_t2))
         tag_list.sort(key=lambda x: x[0])
         return tag_list
+
+    def _get_suggested_tags_presets(self):
+        """Get suggested tags based on the presets."""
+        item = window.store.settings.get_by_key("tag_presets")
+        return (None if item is None else item.value) or []
 
     def _delete1(self):
         self._delete_but2.style.display = "block"
