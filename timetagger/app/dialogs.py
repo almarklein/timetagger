@@ -1134,7 +1134,7 @@ class RecordDialog(BaseDialog):
         while i >= 0:
             c = val[i]
             if c == "#":
-                return i, val[i:i0]
+                return i, val[i:i0].toLowerCase()
             elif not utils.is_valid_tag_charcode(ord(c)):
                 return i, ""
             i -= 1
@@ -1170,28 +1170,44 @@ class RecordDialog(BaseDialog):
             metaprefix = "last used "
             suggestion_list = self._suggested_tags3
 
-        # Create suggestions
+        # Obtain suggestions
         now = dt.now()
+        matches1 = []
+        matches2 = []
+        needle = tag_to_be[1:]  # the tag without the '#'
+        for tag, tag_t2 in suggestion_list:
+            i = 1 if len(needle) == 0 else tag.indexOf(needle)
+            if i > 0:
+                date = max(0, int((now - tag_t2) / 86400))
+                date = {0: "today", 1: "yesterday"}.get(date, date + " days ago")
+                if i == 1:
+                    # The tag startswith the needle
+                    html = "<b>" + tag_to_be + "</b>" + tag[tag_to_be.length :]
+                    html += "<span class='meta'>" + metaprefix + date + "<span>"
+                    matches1.push((tag, html))
+                elif needle.length >= 2:
+                    # The tag contains the needle, and the needle is more than 1 char
+                    html = tag[:i] + "<b>" + needle + "</b>" + tag[i + needle.length :]
+                    html += "<span class='meta'>" + metaprefix + date + "<span>"
+                    matches2.push((tag, html))
+
+        matches1.extend(matches2)
+
+        # Create suggestions nodes
         self._suggested_tags4 = []
         item = document.createElement("div")
         item.classList.add("meta")
         item.innerText = headline
         self._autocomp_div.appendChild(item)
-        for tag, tag_t2 in suggestion_list:
-            if tag.startsWith(tag_to_be):
-                self._suggested_tags4.push(tag)
-                date = max(0, int((now - tag_t2) / 86400))
-                date = {0: "today", 1: "yesterday"}.get(date, date + " days ago")
-                # date = dt.time2localstr(tag_t2).split(" ")[0]
-                html = "<b>" + tag_to_be + "</b>" + tag[tag_to_be.length :]
-                html += "<span class='meta'>" + metaprefix + date + "<span>"
-                item = document.createElement("div")
-                item.classList.add("tag-suggestion")
-                item.innerHTML = html
-                item.setAttribute(
-                    "onclick", f'window._record_dialog_autocomp_finish("{tag}");'
-                )
-                self._autocomp_div.appendChild(item)
+        for tag, html in matches1:
+            self._suggested_tags4.push(tag)
+            item = document.createElement("div")
+            item.classList.add("tag-suggestion")
+            item.innerHTML = html
+            item.setAttribute(
+                "onclick", f'window._record_dialog_autocomp_finish("{tag}");'
+            )
+            self._autocomp_div.appendChild(item)
 
         # Only show if there are any suggestions
         if len(self._suggested_tags4):
