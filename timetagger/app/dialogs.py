@@ -986,8 +986,8 @@ class RecordDialog(BaseDialog):
                 <button type='button'><i class='fas'>\uf00d</i></button>
             </h1>
             <h2><i class='fas'>\uf305</i>&nbsp;&nbsp;Description</h2>
-            <div style='position: relative; display: inline-block; width:100%;'>
-                <input type='text' style='width: calc(100% - 4em); margin-bottom:' spellcheck='false' />
+            <div class='container' style='position: relative; display: inline-block; margin-right:1em;'>
+                <input type='text' style='width:100%;' spellcheck='false' />
                 <div class='tag-suggestions-autocomp'></div>
             </div>
             <div></div>
