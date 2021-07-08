@@ -1662,7 +1662,9 @@ class TagPresetsDialog(BaseDialog):
                 <button type='button'><i class='fas'>\uf00d</i></button>
             </h1>
             <p>
-            Predefine sets of tags, one per line. You can also drop a text file in the field below.
+            Use the text field below to define tag presets, one per line.
+            Each line may contain one or more tags.
+            You can also drag-and-drop a text file with presets.
             </p>
             <button type='button'>Check & Save</button>
             <div></div>
@@ -1736,10 +1738,10 @@ class TagPresetsDialog(BaseDialog):
         for line in lines1:
             line = line.strip()
             if line:
-                tags, parts = utils.get_tags_and_parts_from_string(to_str(line))
+                tags, _ = utils.get_tags_and_parts_from_string(to_str(line))
                 for tag in tags:
                     found_tags[tag] = tag
-                line = parts.join("").strip()
+                line = tags.join(" ")
                 if line:
                     lines2.append(line)
 
