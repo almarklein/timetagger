@@ -1208,6 +1208,7 @@ class RecordDialog(BaseDialog):
         val, i1, i2 = self._get_autocomp_state()
         tag_to_be = val[i1:i2].toLowerCase()
         if not tag_to_be:
+            self._autocomp_clear()
             return
         elif tag_to_be == "#":
             return self.show_recent_tags()  # Delegate
