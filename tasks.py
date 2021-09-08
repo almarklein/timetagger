@@ -54,7 +54,7 @@ def lint(ctx):
         "flake8",
         ROOT_DIR,
         "--max-line-length=999",
-        "--extend-ignore=N,E731,E203,F541",
+        "--extend-ignore=N,E731,E203,F541,D,B",
         "--exclude=build,dist,*.egg-info",
     ]
     ret_code = subprocess.call(cmd, cwd=ROOT_DIR)

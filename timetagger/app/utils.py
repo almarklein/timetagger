@@ -561,6 +561,7 @@ class BaseCanvas:
         self.node.setAttribute("tabindex", -1)  # allow catching key events
 
         # For tooltips
+        self._pointer_hover = ""
         self._tooltips = Picker()
         self._tooltipdiv = window.document.createElement("div")
         self._tooltipdiv.className = "tooltipdiv"
@@ -743,6 +744,12 @@ class BaseCanvas:
         x, y = ev.pos
         # Get tooltip object - if text is None it means no tooltip
         ob = self._tooltips.pick(x, y)
+        # Handle over. Schedule a new draw if the over-status changes.
+        hash = "" if ob is None else ob.hash
+        if hash != self._pointer_hover:
+            self._pointer_hover = hash
+            self.update()
+        # Don't show a tooltip if its text is empty
         if ob is not None and not ob.text:
             ob = None
         # Handle touch events - show tt during a touch, but only after a delay
@@ -813,9 +820,14 @@ class BaseCanvas:
                 self._tooltipdiv.style.right = self._tooltipdiv.xpos + 10 + "px"
 
     def register_tooltip(self, x1, y1, x2, y2, text, positioning="ob"):
-        """Register a tooltip at the given position."""
-        ob = {"rect": [x1, y1, x2, y2], "text": text, "positioning": positioning}
+        """Register a tooltip at the given position.
+        Returns whether the mouse hovers here now.
+        """
+        rect = [x1, y1, x2, y2]
+        hash = str(rect)
+        ob = {"rect": rect, "text": text, "positioning": positioning, "hash": hash}
         self._tooltips.register(x1, y1, x2, y2, ob)
+        return self._pointer_hover == ob.hash
 
     # To overload
 
