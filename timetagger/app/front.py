@@ -779,7 +779,7 @@ class Widget:
         # Register the button and tooltip
         ob = {"button": True, "action": action}
         self._picker.register(x1, y1, x2, y2, ob)
-        hoover = self._canvas.register_tooltip(x1, y1, x2, y2, tt, "below")
+        hover = self._canvas.register_tooltip(x1, y1, x2, y2, tt, "below")
 
         # Draw button body and its shadow
         rn = BUTTON_ROUNDNESS
@@ -794,11 +794,11 @@ class Widget:
                 ctx.arc(x1 + rn, y2 + dy - rn, rn, 0.5 * PI, 1.0 * PI)
                 ctx.closePath()
                 if i == 0:
-                    ctx.shadowBlur = 5 if hoover else 3
+                    ctx.shadowBlur = 5 if hover else 3
                     ctx.shadowColor = COLORS.button_shadow
                 ctx.fill()
                 ctx.shadowBlur = 0
-        elif hoover:
+        elif hover:
             ctx.fillStyle = "rgba(255,255,255,0.1)"
             ctx.beginPath()
             ctx.arc(x1 + rn, y1 + rn, rn, 1.0 * PI, 1.5 * PI)
