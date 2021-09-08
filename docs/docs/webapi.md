@@ -145,6 +145,15 @@ Settings are objects/dicts with the following fields:
 * `mt`: the modified time (set by the client).
 * `st`: the server time (set by the server when storing a record). Clients should set this to 0.0 for new records.
 
+
+### Deleting records
+
+Records cannot be deleted from the server's point of view. But by
+convention, records that have a `ds` (description) starting with
+"HIDDEN" are considered deleted by the client. Both the TimeTagger web
+client and CLI api honor this convention.
+
+
 ### Syncing and eventual consistency
 
 The `mt` (modified time) is set by a client when updating a record. This value is used to determine what object is older, in case two clients both update the same record. Note that client's clock can differ.
