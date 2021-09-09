@@ -1473,6 +1473,7 @@ class RecordsWidget(Widget):
             x3, x4 = 0, width
             height = max(200, 0.33 * (y2 - y1))
             y3, y4 = (y1 + y2) / 2 - height / 2, (y1 + y2) / 2 + height / 2
+            hover = self._canvas.register_tooltip(x3, y3, x4, y4, "")
             ctx.beginPath()
             ctx.moveTo(x3, y3)
             ctx.lineTo(x4, y3 + width)
@@ -1482,7 +1483,7 @@ class RecordsWidget(Widget):
             ctx.fill()
             ctx.textAlign = "center"
             ctx.textBaseline = "middle"
-            ctx.fillStyle = COLORS.prim1_clr
+            ctx.fillStyle = COLORS.tick_text if hover else COLORS.prim1_clr
             ctx.font = FONT.size + "px " + FONT.default
             for i, c in enumerate("Records"):
                 ctx.fillText(c, (x3 + x4) / 2, (y3 + y4) / 2 + (i - 3) * 18)
@@ -1498,6 +1499,7 @@ class RecordsWidget(Widget):
         ctx.fillStyle = COLORS.panel_bg
         ctx.fillRect(x3, y1, x4 - x3, y2 - y1)
 
+        # Draw animated arrow indicator
         self._draw_arrow(ctx, x1, y1, x2, y2, x3, x4)
 
         self._help_text = ""
@@ -1512,17 +1514,14 @@ class RecordsWidget(Widget):
         # Draw title text
         if self._canvas.w > 700:
             text1 = "Timeline"
-            text2 = self._help_text
             ctx.textAlign = "left"
             ctx.textBaseline = "top"
-            #
             ctx.font = "bold " + (FONT.size * 1.4) + "px " + FONT.mono
             ctx.fillStyle = COLORS.prim2_clr
             ctx.fillText(text1, 10, 65)
-            #
-            ctx.font = (FONT.size * 0.9) + "px " + FONT.default
-            ctx.fillStyle = COLORS.prim2_clr
-            ctx.fillText(text2, 10, 90)
+            # ctx.font = (FONT.size * 0.9) + "px " + FONT.default
+            # ctx.fillStyle = COLORS.prim2_clr
+            # ctx.fillText(self._help_text, 10, 90)
 
     def _draw_arrow(self, ctx, x1, y1, x2, y2, x3, x4):
         """Draw arrow to indicate that the timeline can be dragged.
@@ -1712,7 +1711,7 @@ class RecordsWidget(Widget):
             # Draw records themselves
             self._draw_records(ctx, x1, x2, x3, y1, y2)
         else:
-            self._help_text = "click on a " + stat_name + " to zoom"
+            # self._help_text = "click on a " + stat_name + " to zoom"
             self._can_interact_with_records = False
             t3 = dt.floor(t1, stat_period)
             while t3 < t2:
@@ -1722,9 +1721,10 @@ class RecordsWidget(Widget):
                 self._picker.register(
                     x1, y3, x3, y4, {"statrect": True, "t1": t3, "t2": t4}
                 )
-                # self._draw_stats(ctx, t3, t4, x1+10, y3, x3-10, y4, stat_period)
-                self._draw_stats(ctx, t3, t4, x2, y3, x3, y4, stat_period)
-                ctx.lineWidth = 2
+                hover = self._canvas.register_tooltip(x1, y3, x3, y4, "")
+                # self._draw_stats(ctx, t3, t4, x1+10, y3, x3-10, y4, stat_period, hover)
+                self._draw_stats(ctx, t3, t4, x2, y3, x3, y4, stat_period, hover)
+                ctx.lineWidth = 1.2
                 ctx.strokeStyle = COLORS.tick_stripe1
                 ctx.beginPath()
                 ctx.moveTo(x1, y3)
@@ -1781,8 +1781,8 @@ class RecordsWidget(Widget):
         # Select all records in this range. Sort so that smaller records are drawn on top.
         records = window.store.records.get_records(t1, t2).values()
 
-        if len(records) > 0:
-            self._help_text = "click a record to edit it"
+        # if len(records) > 0:
+        #     self._help_text = "click a record to edit it"
 
         # Sort records by size, so records cannot be completely overlapped by another
         records.sort(key=lambda r: r.t1 - (now if (r.t1 == r.t2) else r.t2))
@@ -2262,7 +2262,7 @@ class RecordsWidget(Widget):
                 duration_text = dt.duration_string(duration, True)
                 ctx.fillText(duration_text, 0.5 * (x1 + x2), 0.5 * (ry1 + ry2))
 
-    def _draw_stats(self, ctx, t1, t2, x1, y1, x2, y2, stat_period):
+    def _draw_stats(self, ctx, t1, t2, x1, y1, x2, y2, stat_period, hover):
 
         # Determine header for this block
         t = 0.5 * (t1 + t2)
@@ -2330,13 +2330,10 @@ class RecordsWidget(Widget):
         bigfontsize = max(FONT.size, bigfontsize)
         ymargin = (y2 - y1) / 20
 
-        # Draw big text in blue if it is the timerange containing today
-        if t1 < self._canvas.now() < t2:
-            ctx.fillStyle = COLORS.prim1_clr
-        else:
-            ctx.fillStyle = COLORS.prim2_clr
+        # Draw big text in stronger color if it is the timerange containing today
 
         # Draw duration at the left
+        ctx.fillStyle = COLORS.prim1_clr if hover else COLORS.prim2_clr
         fontsizeleft = bigfontsize * (0.7 if selected_tags else 0.9)
         ctx.font = f"{fontsizeleft}px {FONT.default}"
         ctx.textBaseline = "bottom"
@@ -2347,6 +2344,8 @@ class RecordsWidget(Widget):
         ctx.fillText(duration_text, x1 + 10, y2 - ymargin)
 
         # Draw time-range indication at the right
+        isnow = t1 < self._canvas.now() < t2
+        ctx.fillStyle = COLORS.prim1_clr if isnow else COLORS.prim2_clr
         ctx.font = f"bold {bigfontsize}px {FONT.default}"
         ctx.textBaseline = "bottom"
         ctx.textAlign = "right"
@@ -2772,6 +2771,7 @@ class AnalyticsWidget(Widget):
             x3, x4 = self._canvas.w - width, self._canvas.w
             height = max(220, 0.33 * (y2 - y1))
             y3, y4 = (y1 + y2) / 2 - height / 2, (y1 + y2) / 2 + height / 2
+            hover = self._canvas.register_tooltip(x3, y3, x4, y4, "")
             ctx.beginPath()
             ctx.moveTo(x4, y3)
             ctx.lineTo(x3, y3 + width)
@@ -2781,7 +2781,7 @@ class AnalyticsWidget(Widget):
             ctx.fill()
             ctx.textAlign = "center"
             ctx.textBaseline = "middle"
-            ctx.fillStyle = COLORS.prim1_clr
+            ctx.fillStyle = COLORS.tick_text if hover else COLORS.prim1_clr
             ctx.font = FONT.size + "px " + FONT.default
             for i, c in enumerate("Overview"):
                 ctx.fillText(c, (x3 + x4) / 2, (y3 + y4) / 2 + (i - 4) * 18)
@@ -2813,17 +2813,14 @@ class AnalyticsWidget(Widget):
         # Draw title text
         if self._canvas.w > 700:
             text1 = "Overview"
-            text2 = self._help_text
             ctx.textAlign = "right"
             ctx.textBaseline = "top"
-            #
             ctx.font = "bold " + (FONT.size * 1.4) + "px " + FONT.mono
             ctx.fillStyle = COLORS.prim2_clr
             ctx.fillText(text1, x2 - 10, 65)
-            #
-            ctx.font = (FONT.size * 0.9) + "px " + FONT.default
-            ctx.fillStyle = COLORS.prim2_clr
-            ctx.fillText(text2, x2 - 10, 90)
+            # ctx.font = (FONT.size * 0.9) + "px " + FONT.default
+            # ctx.fillStyle = COLORS.prim2_clr
+            # ctx.fillText(self._help_text, x2 - 10, 90)
 
         # Show some help if no records are shown
         if len(self._level_counts) == 1:
@@ -2988,12 +2985,12 @@ class AnalyticsWidget(Widget):
             if bar.height > 0:
                 self._draw_one_stat_unit(ctx, bar, root.cum_t)
 
-        # Determine help text
-        if self._maxlevel > 0:
-            if len(self.selected_tags) == 0:
-                self._help_text = "click a tag to filter"
-            else:
-                self._help_text = "click more tags to filter more"
+        # # Determine help text
+        # if self._maxlevel > 0:
+        #     if len(self.selected_tags) == 0:
+        #         self._help_text = "click a tag to filter"
+        #     else:
+        #         self._help_text = "click more tags to filter more"
 
     def _invalidate_element(self, d, parent=None):
         d.invalid = True
