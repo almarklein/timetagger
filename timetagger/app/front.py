@@ -1455,6 +1455,7 @@ class RecordsWidget(Widget):
         self._interaction_mode = 0
         self._last_pointer_down_event = None
 
+        self._arrow_state = 0, 0  # last_timestamp, last_alpha
         self._last_scale_scroll = 0
         self._last_trans_scroll = 0
         self._pointer_pos = {}
@@ -1497,6 +1498,8 @@ class RecordsWidget(Widget):
         ctx.fillStyle = COLORS.panel_bg
         ctx.fillRect(x3, y1, x4 - x3, y2 - y1)
 
+        self._draw_arrow(ctx, x1, y1, x2, y2, x3, x4)
+
         self._help_text = ""
 
         self._draw_ticks(ctx, x3, y1, x4, y2)
@@ -1520,6 +1523,41 @@ class RecordsWidget(Widget):
             ctx.font = (FONT.size * 0.9) + "px " + FONT.default
             ctx.fillStyle = COLORS.prim2_clr
             ctx.fillText(text2, 10, 90)
+
+    def _draw_arrow(self, ctx, x1, y1, x2, y2, x3, x4):
+        """Draw arrow to indicate that the timeline can be dragged.
+        To avoid sudden appearance we animate fade-in and out.
+        """
+
+        min_alpha = 0.0
+        max_alpha = 0.1
+        animation_speed_in_seconds = 0.5
+
+        # Register empty tooltip so we can detect mouse over
+        hover = self._canvas.register_tooltip(x3, y1, x4, y2, "")
+        show_arrow = hover or self._interaction_mode
+
+        # Determine arrow alpha
+        now = self._canvas.now()
+        delta_t = (now - self._arrow_state[0]) if self._arrow_state[0] else 0.001
+        delta_a = delta_t * (max_alpha - min_alpha) / animation_speed_in_seconds
+        if show_arrow:
+            new_alpha = min(max_alpha, self._arrow_state[1] + delta_a)
+        else:
+            new_alpha = max(min_alpha, self._arrow_state[1] - delta_a)
+        if new_alpha != self._arrow_state[1]:
+            self.update()
+            self._arrow_state = now, new_alpha
+        else:
+            self._arrow_state = 0, new_alpha  # mark zero time
+
+        # Draw arrow
+        if new_alpha and (x2 - x4) > 20:
+            ctx.font = ((x2 - x4) * 0.9) + "px FontAwesome"
+            ctx.textAlign = "center"
+            ctx.textBaseline = "middle"
+            ctx.fillStyle = "rgba(128,128,128," + new_alpha + ")"
+            ctx.fillText("\uf338", (x2 + x4) / 2, (y1 + y2) / 2)
 
     def _draw_edge(self, ctx, x1, y1, x2, y2):
         def drawstrokerect(lw):
@@ -3214,13 +3252,21 @@ class AnalyticsWidget(Widget):
                 {"button": True, "action": "chosecolor:" + unit.tagz},
             )
             tt_text = "Color for " + unit.tagz + "\n(Click to change color)"
-            self._canvas.register_tooltip(
+            hover = self._canvas.register_tooltip(
                 x2,
                 y2,
                 ex,
                 y3,
                 tt_text,
             )
+            if hover:
+                ctx.beginPath()
+                ctx.arc(x2 + rnb, y3 - rnb - 0.6, rnb, 0.5 * PI, 1.0 * PI)
+                ctx.arc(x2 + rnb, y2 + rnb - 0.6, rnb, 1.0 * PI, 1.5 * PI)
+                ctx.lineTo(ex, y2)
+                ctx.lineTo(ex, y3)
+                ctx.closePath()
+                ctx.stroke()
 
         # Draw edge
         ctx.stroke(path)
