@@ -1921,12 +1921,64 @@ class RecordsWidget(Widget):
             ry1 = grid_round(ry1)
             ry2 = grid_round(ry2)
 
+        # Define inset and outset bump (for running records)
+        inset, outset = 0, 0
+        if record.t1 == record.t2:
+            inset, outset = 0, 16
+
         # Define roundness and how much each slab moves outward
         rn = RECORD_ROUNDNESS
         rnb = COLORBAND_ROUNDNESS
         rne = min(min(0.5 * (ry2 - ry1), rn), rnb)  # for in timeline
 
         timeline_only = ry2 < y1 or ry1 > y2
+
+        # Make the timeline-part clickable - the pick region is increased if needed
+        ry1_, ry2_ = ry1, ry2
+        if ry2 - ry1 < 16:
+            ry1_, ry2_ = 0.5 * (ry1 + ry2) - 8, 0.5 * (ry1 + ry2) + 8
+        self._picker.register(
+            x2, ry1_, x3, ry2_, {"recordrect": True, "region": 0, "record": record}
+        )
+        tt_text = tags.join(" ") + "\n(click to make draggable)"
+        hover_timeline = self._canvas.register_tooltip(
+            x2, ry1, x3, ry2 + outset, tt_text, "mouse"
+        )
+
+        # Make description part clickable - the pick region is increased if needed
+        if not timeline_only:
+            d = {
+                "button": True,
+                "action": "editrecord",
+                "help": "",
+                "key": record.key,
+            }
+            self._picker.register(x5, ty1, x6, ty2, d)
+            tt_text = tags.join(" ") + "\n(Click to edit)"
+            hover_description = self._canvas.register_tooltip(x5, ty1, x6, ty2, tt_text)
+
+        # Cast a shadow if hovering
+        if hover_timeline and self._selected_record is None:
+            ctx.beginPath()
+            ctx.arc(x2 + rne, ry2 - rne, rne, 0.5 * PI, 1.0 * PI)
+            ctx.arc(x2 + rne, ry1 + rne, rne, 1.0 * PI, 1.5 * PI)
+            ctx.lineTo(x3, 0.5 * (ry1 + ry2))
+            ctx.closePath()
+            ctx.shadowBlur = 6
+            ctx.shadowColor = "rgba(0, 0, 0, 0.8)"  # COLORS.button_shadow
+            ctx.fill()
+            ctx.shadowBlur = 0
+        elif hover_description:
+            ctx.beginPath()
+            ctx.arc(x5 + rne, ty2 - rne, rne, 0.5 * PI, 1.0 * PI)
+            ctx.arc(x5 + rne, ty1 + rne, rne, 1.0 * PI, 1.5 * PI)
+            ctx.arc(x6 - rne, ty1 + rne, rne, 1.5 * PI, 2.0 * PI)
+            ctx.arc(x6 - rne, ty2 - rne, rne, 2.0 * PI, 2.5 * PI)
+            ctx.closePath()
+            ctx.shadowBlur = 5
+            ctx.shadowColor = COLORS.button_shadow
+            ctx.fill()
+            ctx.shadowBlur = 0
 
         # Draw record representation
         path = utils.RoundedPath()
@@ -1981,10 +2033,8 @@ class RecordsWidget(Widget):
         ctx.stroke(path)
 
         # Running records have a small outset
-        inset, outset = 0, 0
-        if record.t1 == record.t2:
+        if outset:
             x1f, x2f = x2 + (x3 - x2) / 3, x3 - (x3 - x2) / 3
-            inset, outset = 0, 16
             ctx.beginPath()
             ctx.moveTo(x2f, ry2 - inset)
             ctx.arc(x2f - rn, ry2 + outset - rn, rn, 0.0 * PI, 0.5 * PI)
@@ -2010,17 +2060,6 @@ class RecordsWidget(Widget):
             ctx.textAlign = "center"
             ctx.fillStyle = COLORS.record_edge
             ctx.fillText("+", 0.5 * (x2 + x3), 0.5 * (ry1 + ry2))
-
-        # Make the timeline-part clickable - the pick region is increased if needed
-        ry1_, ry2_ = ry1, ry2
-        if ry2 - ry1 < 16:
-            ry1_, ry2_ = 0.5 * (ry1 + ry2) - 8, 0.5 * (ry1 + ry2) + 8
-        self._picker.register(
-            x2, ry1_, x3, ry2_, {"recordrect": True, "region": 0, "record": record}
-        )
-
-        tt_text = tags.join(" ") + "\n(click to make draggable)"
-        self._canvas.register_tooltip(x2, ry1, x3, ry2 + outset, tt_text, "mouse")
 
         # The rest is for the description part
         if timeline_only:
@@ -2076,17 +2115,6 @@ class RecordsWidget(Widget):
                 else:
                     ctx.fillText("…", x, text_ypos, max_x - x)
                 x = new_x
-
-        # Make description part clickable - the pick region is increased if needed
-        d = {
-            "button": True,
-            "action": "editrecord",
-            "help": "",
-            "key": record.key,
-        }
-        self._picker.register(x5, ty1, x6, ty2, d)
-        tt_text = tags.join(" ") + "\n(Click to edit)"
-        self._canvas.register_tooltip(x5, ty1, x6, ty2, tt_text)
 
     def _draw_selected_record_extras(
         self, ctx, record, t1, x1, x4, x6, y0, y1, y2, npixels, nsecs, yy
