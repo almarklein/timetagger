@@ -1473,6 +1473,9 @@ class RecordsWidget(Widget):
             x3, x4 = 0, width
             height = max(200, 0.33 * (y2 - y1))
             y3, y4 = (y1 + y2) / 2 - height / 2, (y1 + y2) / 2 + height / 2
+            self._picker.register(
+                x3, y3, x4, y4, {"button": True, "action": "showrecords"}
+            )
             hover = self._canvas.register_tooltip(x3, y3, x4, y4, "")
             ctx.beginPath()
             ctx.moveTo(x3, y3)
@@ -1487,9 +1490,6 @@ class RecordsWidget(Widget):
             ctx.font = FONT.size + "px " + FONT.default
             for i, c in enumerate("Records"):
                 ctx.fillText(c, (x3 + x4) / 2, (y3 + y4) / 2 + (i - 3) * 18)
-            self._picker.register(
-                x3, y3, x4, y4, {"button": True, "action": "showrecords"}
-            )
             return
 
         x3 = self._canvas.grid_round(x1 + 64)
@@ -2771,6 +2771,9 @@ class AnalyticsWidget(Widget):
             x3, x4 = self._canvas.w - width, self._canvas.w
             height = max(220, 0.33 * (y2 - y1))
             y3, y4 = (y1 + y2) / 2 - height / 2, (y1 + y2) / 2 + height / 2
+            self._picker.register(
+                x3, y3, x4, y4, {"button": True, "action": "showanalytics"}
+            )
             hover = self._canvas.register_tooltip(x3, y3, x4, y4, "")
             ctx.beginPath()
             ctx.moveTo(x4, y3)
@@ -2785,9 +2788,6 @@ class AnalyticsWidget(Widget):
             ctx.font = FONT.size + "px " + FONT.default
             for i, c in enumerate("Overview"):
                 ctx.fillText(c, (x3 + x4) / 2, (y3 + y4) / 2 + (i - 4) * 18)
-            self._picker.register(
-                x3, y3, x4, y4, {"button": True, "action": "showanalytics"}
-            )
             return
 
         self._help_text = ""
