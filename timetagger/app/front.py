@@ -314,8 +314,13 @@ SCALES = [
     ("6h", "5m", 8.5 * 3600, ""),  # Kind of the default view
     ("12h", "1h", 15 * 3600, ""),
     ("1D", "1h", 3 * 86400, "Day"),
-    ("1W", "1D", 2 * 7 * 86400, "Week"),  # step with 1D, 1W steps is awkward
-    ("1M", "4D", 5.3 * 7 * 86400, "Month"),  # 1M steps bit awkward, but what else?
+    ("1W", "1D", 2 * 7 * 86400, "Week"),
+    (
+        "1M",
+        "4D",
+        5.3 * 7 * 86400,
+        "Month",
+    ),  # day-steps is too many, week steps awkward ...
     ("7W", "1W", 10 * 7 * 86400, "7x7"),
     ("3M", "1M", 200 * 86400, "Quarter"),
     ("1Y", "1M", 550 * 86400, "Year"),  # step per quarter of month?
@@ -340,8 +345,8 @@ INTERVALS = [
     ("12h", "1h", "hh", 43200),
     ("1D", "3h", "DD", 86400),
     ("2D", "6h", "DD", 172_800),
-    ("5D", "1D", "DM", 432_000),
-    ("10D", "1D", "DM", 864_000),
+    ("4D", "1D", "DM", 345_600),
+    ("8D", "1D", "DM", 691200),
     # Below numbers are estimates, but that is fine;
     # they are only used to estimate the space between ticks
     ("1M", "5D", "MM", 2_592_000),  # days are a bit weird, ah well ...
@@ -532,6 +537,16 @@ class TimeRange:
         # For the winter- to summer-time transition there is a missing hour,
         # which is handled just fine.
         check_summertime_transition = "h" in delta or "m" in delta
+
+        # Special threatment for week zoom-levels, since days align to day-of-month.
+        # When this is a week-view (range and res both include "W") we floor to
+        # week boundaries, and make sure that the delta is 7D.
+        for i in range(len(SCALES)):
+            ran, res, max_nsecs, _ = SCALES[i]
+            if nsecs < max_nsecs:
+                break
+        if ran.indexOf("W") >= 0 and res.indexOf("W") >= 0:
+            delta = "1W"
 
         # Define ticks
         ticks = []
