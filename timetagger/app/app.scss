@@ -48,17 +48,18 @@ body.darkmode .dialog.verticalmenu {
     text-decoration: none;
     background: rgba(127, 127, 127, 0.1);
 }
-.verticalmenu .grid5 {
+.verticalmenu .grid2c, .verticalmenu .grid5 {
     display: grid;
-    grid-template-columns: auto auto auto auto auto;
     grid-gap: 0;
     margin: 0;
     justify-items: stretch;
     align-items: stretch;
 }
-.verticalmenu .grid5 > * {
+.verticalmenu .grid2c > *, .verticalmenu .grid5 > *{
     text-align: center;
 }
+.verticalmenu .grid2c { grid-template-columns: 1fr auto auto 1fr; }
+.verticalmenu .grid5 { grid-template-columns: auto auto auto auto auto; }
 .dialog.verticalmenu .menu {
     display: flex;
     justify-content: space-between;
@@ -69,6 +70,14 @@ body.darkmode .dialog.verticalmenu {
     display: inline-block;
     flex: 1 1 auto;
     text-align: center;
+}
+
+span.keyhint {
+    border: 1px solid #ccc;
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-size: 90%;
+    color: #ccc;
 }
 
 /**************** Tooltip ****************/
