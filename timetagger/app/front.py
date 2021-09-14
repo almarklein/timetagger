@@ -307,21 +307,22 @@ class TimeTaggerCanvas(BaseCanvas):
 
 # The available scales to view the time at, and the corresponding step sizes
 SCALES = [
-    ("5m", "1m"),
-    ("20m", "1m"),
-    ("1h", "5m"),
-    ("3h", "5m"),
-    ("6h", "5m"),  # Kind of the default view
-    ("12h", "1h"),
-    ("1D", "1h"),
-    ("1W", "1D"),  # step with 1D, 1W steps is awkward
-    ("1M", "1D"),  # 1M steps bit awkward, but what else?
-    ("3M", "1M"),
-    ("1Y", "1M"),  # step per quarter of month?
-    ("2Y", "1M"),
-    ("5Y", "1Y"),
-    ("10Y", "1Y"),
-    ("20Y", "1Y"),
+    ("5m", "1m", 8 * 60, ""),
+    ("20m", "1m", 35 * 60, ""),
+    ("1h", "5m", 1.8 * 3600, ""),
+    ("3h", "5m", 3.6 * 3600, ""),
+    ("6h", "5m", 8.5 * 3600, ""),  # Kind of the default view
+    ("12h", "1h", 15 * 3600, ""),
+    ("1D", "1h", 3 * 86400, "Day"),
+    ("1W", "1D", 2 * 7 * 86400, "Week"),  # step with 1D, 1W steps is awkward
+    ("1M", "4D", 5.3 * 7 * 86400, "Month"),  # 1M steps bit awkward, but what else?
+    ("7W", "1W", 10 * 7 * 86400, "7x7"),
+    ("3M", "1M", 200 * 86400, "Quarter"),
+    ("1Y", "1M", 550 * 86400, "Year"),  # step per quarter of month?
+    ("2Y", "1M", 1280 * 86400, ""),
+    ("5Y", "1Y", 2737 * 86400, ""),
+    ("10Y", "1Y", 5475 * 86400, ""),
+    ("20Y", "1Y", 999999999999, ""),
 ]
 
 # List of intervals for tick marks. The last element is the number of seconds
@@ -463,7 +464,7 @@ class TimeRange:
         snap range (or next/previous).
         """
         t1, t2, scale_index = self._get_snap_range(rel_scale)
-        ran, res = SCALES[scale_index]
+        ran, res, _, _ = SCALES[scale_index]
         nsecs_full = t2 - t1
         nsecs_step = dt.add(t1, res) - t1
         return nsecs_step, nsecs_full
@@ -474,19 +475,15 @@ class TimeRange:
         nsecs = t2 - t1
 
         # First determine nearest scale
-        min_dist = 1e18
         for i in range(len(SCALES)):
-            ran, res = SCALES[i]
-            t3 = dt.add(t1, ran)
-            dist = Math.abs(1 - nsecs / (t3 - t1))
-            if dist > min_dist:
+            ran, res, max_nsecs, _ = SCALES[i]
+            if nsecs < max_nsecs:
                 break
-            min_dist = dist
 
         # Select scale
-        scale_index = i - 1 + scalestep
+        scale_index = i + scalestep
         scale_index = max(0, min(len(SCALES) - 1, scale_index))
-        ran, res = SCALES[scale_index]
+        ran, res, _, _ = SCALES[scale_index]
 
         # Round
         t5 = 0.5 * (t1 + t2)  # center
@@ -596,19 +593,15 @@ class TimeRange:
         # nsecs to a small very slow, because a lot of stats will be drawn.
         t1, t2 = self.get_range()
         nsecs = t2 - t1
-        if nsecs > 3 * 300 * 86400:
-            stat_period = "1Y", "year"
-        elif nsecs > 5 * 30 * 86400:
-            stat_period = "3M", "quarter"
-        elif nsecs > 2.6 * 20 * 86400:
-            stat_period = "1M", "month"
-        elif nsecs >= 10 * 86400:
-            stat_period = "1W", "week"
-        elif nsecs > 4.1 * 1 * 86400:
-            stat_period = "1D", "day"
-        else:
-            stat_period = None, ""  # Don't draw stats, but records!
-        return stat_period
+
+        if nsecs < 3 * 86400:
+            return None, ""  # Don't draw stats, but records!
+
+        for i in range(len(SCALES)):
+            ran, res, max_nsecs, name = SCALES[i]
+            if name and nsecs < max_nsecs:
+                break
+        return res, name
 
     def get_context_header(self):
         """Get the text to provide context for the current range."""
@@ -1196,59 +1189,28 @@ class TopWidget(Widget):
         nsecs = t2 - t1
         now = self._canvas.now()
 
-        # Get the "sensible" scale that is closest to the current scale
+        # Select closest scale
+        for i in range(len(SCALES)):
+            ran, res, max_nsecs, _ = SCALES[i]
+            if nsecs < max_nsecs:
+                break
+        i = min(len(SCALES) - 1, i)
+
+        zoom_in_scale = SCALES[max(0, i - 1)][0]
+        zoom_out_scale = SCALES[min(len(SCALES) - 1, i + 1)][0]
+
+        # Overload for "sensible" scales
+        now_scale = SCALES[i][0]
         if nsecs < 3 * 86400:
             now_scale = "1D"
-        elif nsecs < 14 * 86400:
-            now_scale = "1W"
-        elif nsecs <= 45 * 86400:
-            now_scale = "1M"
-        elif nsecs <= 180 * 86400:
-            now_scale = "3M"
-        else:
+        elif nsecs > 180 * 86400:
             now_scale = "1Y"
 
         # Are we currently on one of the reference scales?
         now_clr = COLORS.button_text
-        if len(now_scale):
-            t1_now = dt.floor(now, now_scale)
-            if t1 == t1_now and t2 == dt.add(t1_now, now_scale):
-                now_clr = COLORS.button_text_disabled
-
-        # Get where we should zoom in to
-        # Use a margin for summer-winter transitions and leap days/secs.
-        factor = 1.05
-        if nsecs <= 86400 * factor:
-            zoom_in_scale = "-1"
-        elif nsecs <= 7 * 86400 * factor:
-            zoom_in_scale = "1D"
-        elif nsecs <= 31 * 86400 * factor:
-            zoom_in_scale = "1W"
-        elif nsecs <= 92 * 86400 * factor:
-            zoom_in_scale = "1M"
-        elif nsecs <= 365 * 86400 * factor:
-            zoom_in_scale = "3M"
-        elif nsecs <= 2 * 365 * 86400 * factor:
-            zoom_in_scale = "1Y"
-        else:
-            zoom_in_scale = "-1"
-
-        # Get where we should zoom out to.
-        factor = 1 / 1.05
-        if nsecs < 6 * 3600:
-            zoom_out_scale = "+1"
-        elif nsecs < 86400 * factor:
-            zoom_out_scale = "1D"
-        elif nsecs < 7 * 86400 * factor:
-            zoom_out_scale = "1W"
-        elif nsecs < 28 * 86400 * factor:
-            zoom_out_scale = "1M"
-        elif nsecs < 90 * 86400 * factor:  # min #days in 3 consecutive months
-            zoom_out_scale = "3M"
-        elif nsecs < 365 * 86400 * factor:
-            zoom_out_scale = "1Y"
-        else:
-            zoom_out_scale = "+1"
+        t1_now = dt.floor(now, now_scale)
+        if t1 == t1_now and t2 == dt.add(t1_now, now_scale):
+            now_clr = COLORS.button_text_disabled
 
         # Store for later
         self._current_scale["now"] = now_scale
