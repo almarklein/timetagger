@@ -490,10 +490,17 @@ class TimeSelectionDialog(BaseDialog):
 
         # Generate preamble
         html = f"""
+            <div class='grid2c'>
+                <div></div>
+                <a><i class='fas'>\uf010</i> Zoom out <span class='keyhint'>←</span></a>
+                <a><i class='fas'>\uf00e</i> Zoom in <span class='keyhint'>→</span></a>
+                <div></div>
+            </div>
+            <div style='min-height: 6px;'></div>
             <div class='grid5'>
-                <a>today [d]</a>
-                <a>this week [w]</a>
-                <a>this month [m]</a>
+                <a>today <span class='keyhint'>d</span></a>
+                <a>this week <span class='keyhint'>w</span></a>
+                <a>this month <span class='keyhint'>m</span></a>
                 <a>this quarter</a>
                 <a>this year</a>
                 <a>yesterday</a>
@@ -502,7 +509,7 @@ class TimeSelectionDialog(BaseDialog):
                 <a>last quarter</a>
                 <a>last year</a>
             </div>
-            <div style='min-height: 8px;'></div>
+            <div style='min-height: 10px;'></div>
             <div class='menu'>
                 <div style='flex: 0.5 0.5 auto; text-align: right;'>From:&nbsp;&nbsp;</div>
                 <input type="date" step="1" />
@@ -514,11 +521,19 @@ class TimeSelectionDialog(BaseDialog):
         """
 
         self.maindiv.innerHTML = html
-        presets = self.maindiv.children[0]
-        form = self.maindiv.children[2]
+        quicknav = self.maindiv.children[0]
+        presets = self.maindiv.children[2]
+        form = self.maindiv.children[4]
 
         self._t1_input = form.children[1]
         self._t2_input = form.children[3]
+
+        quicknav.children[1].onclick = lambda e: self._apply_quicknav(
+            e.target.innerText
+        )
+        quicknav.children[2].onclick = lambda e: self._apply_quicknav(
+            e.target.innerText
+        )
 
         for i in range(presets.children.length):
             but = presets.children[i]
@@ -531,6 +546,15 @@ class TimeSelectionDialog(BaseDialog):
 
         self.maindiv.classList.add("verticalmenu")
         super().open(None)
+
+    def _apply_quicknav(self, text):
+        scalestep = +1 if "out" in text.lower() else -1
+        t1, t2 = self._canvas.range.get_snap_range(scalestep)
+
+        self._t1_input.value = dt.time2localstr(t1).split(" ")[0]
+        self._t2_input.value = dt.time2localstr(t2).split(" ")[0]
+
+        self._canvas.range.animate_range(t1, t2)
 
     def _apply_preset(self, text):
         text = text.lower()
