@@ -1985,10 +1985,10 @@ class RecordsWidget(Widget):
             ctx.shadowBlur = 0
         elif hover_description:
             ctx.beginPath()
-            ctx.arc(x5 + rne, ty2 - rne, rne, 0.5 * PI, 1.0 * PI)
-            ctx.arc(x5 + rne, ty1 + rne, rne, 1.0 * PI, 1.5 * PI)
-            ctx.arc(x6 - rne, ty1 + rne, rne, 1.5 * PI, 2.0 * PI)
-            ctx.arc(x6 - rne, ty2 - rne, rne, 2.0 * PI, 2.5 * PI)
+            ctx.arc(x5 + rn, ty2 - rn, rn, 0.5 * PI, 1.0 * PI)
+            ctx.arc(x5 + rn, ty1 + rn, rn, 1.0 * PI, 1.5 * PI)
+            ctx.arc(x6 - rn, ty1 + rn, rn, 1.5 * PI, 2.0 * PI)
+            ctx.arc(x6 - rn, ty2 - rn, rn, 2.0 * PI, 2.5 * PI)
             ctx.closePath()
             ctx.shadowBlur = 5
             ctx.shadowColor = COLORS.button_shadow
