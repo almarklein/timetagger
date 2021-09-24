@@ -528,12 +528,8 @@ class TimeSelectionDialog(BaseDialog):
         self._t1_input = form.children[1]
         self._t2_input = form.children[3]
 
-        quicknav.children[1].onclick = lambda e: self._apply_quicknav(
-            e.target.innerText
-        )
-        quicknav.children[2].onclick = lambda e: self._apply_quicknav(
-            e.target.innerText
-        )
+        quicknav.children[1].onclick = lambda e: self._apply_quicknav("out")
+        quicknav.children[2].onclick = lambda e: self._apply_quicknav("in")
 
         for i in range(presets.children.length):
             but = presets.children[i]
