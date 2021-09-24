@@ -824,7 +824,7 @@ class BaseCanvas:
         Returns whether the mouse hovers here now.
         """
         rect = [x1, y1, x2, y2]
-        hash = str(rect)
+        hash = str([int(x1), int(y1), int(x2), int(y2)])
         ob = {"rect": rect, "text": text, "positioning": positioning, "hash": hash}
         self._tooltips.register(x1, y1, x2, y2, ob)
         return self._pointer_hover == ob.hash
