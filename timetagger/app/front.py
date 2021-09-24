@@ -313,15 +313,10 @@ SCALES = [
     ("3h", "5m", 3.6 * 3600, ""),
     ("6h", "5m", 8.5 * 3600, ""),  # Kind of the default view
     ("12h", "1h", 15 * 3600, ""),
-    ("1D", "1h", 3 * 86400, "Day"),
-    ("1W", "1D", 2 * 7 * 86400, "Week"),
-    (
-        "1M",
-        "4D",
-        5.3 * 7 * 86400,
-        "Month",
-    ),  # day-steps is too many, week steps awkward ...
-    ("7W", "1W", 10 * 7 * 86400, "7x7"),
+    ("1D", "1h", 2 * 86400, "Day"),
+    ("1W", "1D", 1.5 * 7 * 86400, "Week"),
+    ("3W", "1W", 3.5 * 7 * 86400, "3x7"),
+    ("1M", "1M", 5.3 * 7 * 86400, "Month"),  # all step sizes are awkward here :)
     ("3M", "1M", 200 * 86400, "Quarter"),
     ("1Y", "1M", 550 * 86400, "Year"),  # step per quarter of month?
     ("2Y", "1M", 1280 * 86400, ""),
@@ -609,7 +604,7 @@ class TimeRange:
         t1, t2 = self.get_range()
         nsecs = t2 - t1
 
-        if nsecs < 3 * 86400:
+        if nsecs < 2 * 86400:
             return None, ""  # Don't draw stats, but records!
 
         for i in range(len(SCALES)):
