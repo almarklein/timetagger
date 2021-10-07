@@ -306,6 +306,7 @@ class TimeTaggerCanvas(BaseCanvas):
 
 
 # The available scales to view the time at, and the corresponding step sizes
+# Search for "Special scale" to see where we have special cases.
 SCALES = [
     ("5m", "1m", 8 * 60, ""),
     ("20m", "1m", 35 * 60, ""),
@@ -314,9 +315,10 @@ SCALES = [
     ("6h", "5m", 8.5 * 3600, ""),  # Kind of the default view
     ("12h", "1h", 15 * 3600, ""),
     ("1D", "1h", 2 * 86400, "Day"),
-    ("1W", "1D", 1.5 * 7 * 86400, "Week"),
-    ("3W", "1W", 3.5 * 7 * 86400, "3x7"),
-    ("1M", "1M", 5.3 * 7 * 86400, "Month"),  # all step sizes are awkward here :)
+    ("1W", "1D", 1.7 * 7 * 86400, "Week"),
+    # ("3W", "1W", 3.5 * 7 * 86400, "3x7"),
+    ("1M", "1M", 5 * 7 * 86400, "Month"),  # all step sizes are awkward here :)
+    ("7W", "1W", 9 * 7 * 86400, "7x7"),
     ("3M", "1M", 200 * 86400, "Quarter"),
     ("1Y", "1M", 550 * 86400, "Year"),  # step per quarter of month?
     ("2Y", "1M", 1280 * 86400, ""),
@@ -456,15 +458,14 @@ class TimeRange:
 
     def get_snap_range(self, scalestep=0):
         """Get the scale-aligned range that is closest to the current target range."""
-        t3, t4, scale_index = self._get_snap_range(scalestep)
+        t3, t4, _ = self._get_snap_range(scalestep)
         return t3, t4
 
     def get_snap_seconds(self, rel_scale=0):
         """Get the nsecs for one step and the total range for the nearest
         snap range (or next/previous).
         """
-        t1, t2, scale_index = self._get_snap_range(rel_scale)
-        ran, res, _, _ = SCALES[scale_index]
+        t1, t2, res = self._get_snap_range(rel_scale)
         nsecs_full = t2 - t1
         nsecs_step = dt.add(t1, res) - t1
         return nsecs_step, nsecs_full
@@ -490,7 +491,7 @@ class TimeRange:
         t3 = 0.5 * (t5 + dt.add(t5, "-" + ran))  # unrounded t3
         t3 = dt.round(t3, res)
         t4 = dt.add(t3, ran)
-        return t3, t4, scale_index
+        return t3, t4, res
 
     def get_ticks(self, npixels):
         """Get the major and minor tick positions,
@@ -533,7 +534,7 @@ class TimeRange:
         # which is handled just fine.
         check_summertime_transition = "h" in delta or "m" in delta
 
-        # Special threatment for week zoom-levels, since days align to day-of-month.
+        # Special scale for week zoom-levels, since days align to day-of-month.
         # When this is a week-view (range and res both include "W") we floor to
         # week boundaries, and make sure that the delta is 7D.
         for i in range(len(SCALES)):
@@ -542,6 +543,7 @@ class TimeRange:
                 break
         if ran.indexOf("W") >= 0 and res.indexOf("W") >= 0:
             delta = "1W"
+            minor_delta = "1W"
 
         # Define ticks
         ticks = []
@@ -611,6 +613,15 @@ class TimeRange:
             ran, res, max_nsecs, name = SCALES[i]
             if name and nsecs < max_nsecs:
                 break
+
+        # Special scale for the month level. There is no sensible res
+        # for this level. The step-size is also 1M because nothing else
+        # aligns. But we want the visible/clickable sections in the
+        # record stats to be weeks (days is too many, months does not
+        # allow zooming in).
+        if ran == "1M":
+            res = "1W"
+
         return res, name
 
     def get_context_header(self):
@@ -1644,16 +1655,14 @@ class RecordsWidget(Widget):
         ctx.stroke()
 
         # Draw snap feedback
-        if False:
-            t1_snap, t2_snap = self._canvas.range.get_snap_range()
-            y1_snap = (t1_snap - t1) * npixels / nsecs  # can be negative!
-            y2_snap = (t2_snap - t1) * npixels / nsecs
-            # diff = abs(y1_snap) + abs(y2_snap - npixels)
-            # w = max(1, min(5, diff**0.5)) # feels "jerky"
-            w = 0 if (t1_snap == t1 and t2_snap == t2) else 3
-            if w > 0:
-                ctx.fillStyle = COLORS.tick_stripe2
-                ctx.fillRect(x2 + 2, y1 + y1_snap, w, y2_snap - y1_snap)
+        t1_snap, t2_snap = self._canvas.range.get_snap_range()
+        y1_snap = y1 + (t1_snap - t1) * npixels / nsecs  # can be negative!
+        y2_snap = y1 + (t2_snap - t1) * npixels / nsecs
+        ctx.fillStyle = "rgba(127,127,127,0.2)"
+        if y1_snap > y1:
+            ctx.fillRect(x1, y1, x2 - x1, y1_snap - y1)
+        if y2_snap < y2:
+            ctx.fillRect(x1, y2_snap, x2 - x1, y2 - y2_snap)
 
     def _draw_record_area(self, ctx, x1, x2, x3, y1, y2):
 
