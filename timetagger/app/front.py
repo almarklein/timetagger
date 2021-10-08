@@ -155,6 +155,7 @@ class TimeTaggerCanvas(BaseCanvas):
         self.export_dialog = dialogs.ExportDialog(self)
         self.import_dialog = dialogs.ImportDialog(self)
         self.pomodoro_dialog = dialogs.PomodoroDialog(self)
+        self.targets_dialog = dialogs.TargetsDialog(self)
 
         # The order here is also the draw-order. Records must come after analytics.
         self.widgets = {
@@ -3267,9 +3268,12 @@ class AnalyticsWidget(Widget):
             if len(self.selected_tags):
                 tx = unit.x2 + 11
                 texts.push([" ←  back to all ", "select:", "Full overview"])
+                if len(self.selected_tags) > 0:
+                    action = "chosetargets:" + self.selected_tags.join(" ")
+                    texts.push(["fas-\uf140", action, "Set targets"])
                 if len(self.selected_tags) == 1:
                     action = "chosecolor:" + self.selected_tags[0]
-                    texts.push(["fas-\uf53f", action, "Select a diferent color"])
+                    texts.push(["fas-\uf53f", action, "Select a different color"])
             else:
                 ctx.textAlign = "right"
                 ctx.fillText(duration, x_ref_duration, ty)
@@ -3351,6 +3355,9 @@ class AnalyticsWidget(Widget):
                         self._canvas.tag_color_dialog.open(tags[0], self.update)
                     elif len(tags) > 1:
                         self._canvas.tag_color_selection_dialog.open(tags, self.update)
+                elif picked.action.startswith("chosetargets:"):
+                    _, _, tagz = picked.action.partition(":")
+                    self._canvas.targets_dialog.open(tagz, self.update)
                 self.update()
 
 

@@ -1994,6 +1994,90 @@ class TagManageDialog(BaseDialog):
         self._canvas.record_dialog.open("Edit", record, self._show_records)
 
 
+class TargetsDialog(BaseDialog):
+    """Dialog for tag targets."""
+
+    def open(self, tagz, callback=None):
+
+        # Put in deterministic order
+        tags = tagz.split(" ")
+        tags.sort()
+        self._tagz = tagz = tags.join(" ")
+
+        self.maindiv.innerHTML = f"""
+            <h1><i class='fas'>\uf140</i>&nbsp;&nbsp;Target for {tagz}
+                <button type='button'><i class='fas'>\uf00d</i></button>
+            </h1>
+            <div>
+                <input type='number' min=1 value=1 style='width:5em;' />
+                <span style='padding: 0 1em;'>hours per</span>
+                <select>
+                    <option value='none'>No target</option>
+                    <option value='day'>Day</option>
+                    <option value='week'>Week</option>
+                    <option value='month'>Month</option>
+                    <option value='year'>Year</option>
+                </select>
+            </div>
+            <div style='margin-top:2em;'></div>
+            <div style='display: flex;justify-content: flex-end;'>
+                <button type='button' class='actionbutton'><i class='fas'>\uf00d</i>&nbsp;&nbsp;Cancel</button>
+                <button type='button' class='actionbutton submit'><i class='fas'>\uf00c</i>&nbsp;&nbsp;Apply</button>
+            </div>
+            """
+
+        close_but = self.maindiv.children[0].children[-1]
+        (
+            _,  # h1
+            formdiv,
+            _,  # gap
+            buttons,
+        ) = self.maindiv.children
+
+        # Expand formdiv
+        self._hour_input, _, self._period_select = formdiv.children
+
+        # Connect things up
+        close_but.onclick = self.close
+        buttons.children[0].onclick = self.close
+        buttons.children[1].onclick = self.submit
+
+        super().open(callback)
+        self._load_current()
+
+    def _load_current(self):
+        item = window.store.settings.get_by_key("tag_targets")
+        targets = (None if item is None else item.value) or {}
+        target = targets.get(self._tagz, None)
+        if target is None:
+            self._hour_input.value = 1
+            self._period_select.value = "none"
+        else:
+            self._hour_input.value = target.hours or 1
+            self._period_select.value = target.period or "none"
+
+    def submit(self):
+
+        target = {}
+        target.hours = float(self._hour_input.value)
+        target.period = self._period_select.value
+
+        # Load all targets
+        item = window.store.settings.get_by_key("tag_targets")
+        targets = (None if item is None else item.value) or {}
+
+        # Add/remove this target
+        if target.hours > 0 and target.period and target.period != "none":
+            targets[self._tagz] = target
+        else:
+            targets.pop(self._tagz)
+
+        # Push
+        item = window.store.settings.create("tag_targets", targets)
+        window.store.settings.put(item)
+        self.close()
+
+
 class ReportDialog(BaseDialog):
     """A dialog that shows a report of records, and allows exporting."""
 
