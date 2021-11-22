@@ -2822,6 +2822,7 @@ class AnalyticsWidget(Widget):
         # Get stats for the current time range
         t1, t2 = self._canvas.range.get_range()
         stats = window.store.records.get_stats(t1, t2)
+        self._hours_in_range = int((t2 - t1) / 3600 + 0.499)
 
         # Get per-tag info, for tooltips
         self._time_per_tag = {}
@@ -2928,6 +2929,11 @@ class AnalyticsWidget(Widget):
         self._maxlevel = max(1, level - 1)
         if self._maxlevel == 1 and len(self._level_counts) <= 1:
             self._maxlevel = 0
+
+        # Determine targets
+        item = window.store.settings.get_by_key("tag_targets")
+        targets = (None if item is None else item.value) or {}
+        self._current_target = targets.get(self.selected_tags, None)
 
         # Set _npixels_each (number of pixels per bar)
         n = 0
@@ -3045,6 +3051,11 @@ class AnalyticsWidget(Widget):
         elif d.is_selected == 2:
             d.target_xoffset -= 10
 
+        # Get native height
+        d.native_height = self._npixels_each
+        if self.selected_tags.length and d.level == 1:
+            d.native_height += 0.5 * self._npixels_each
+
         # Recurse to subs
         cum_target_height = 0
         cum_target_inset = 0
@@ -3053,7 +3064,7 @@ class AnalyticsWidget(Widget):
             cum_target_height += sub.target_height
             cum_target_inset += sub.target_inset
 
-        cum_target_height += self._npixels_each
+        cum_target_height += d.native_height
         cum_target_inset += d.target_inset
 
         # Set our own target height
@@ -3093,7 +3104,7 @@ class AnalyticsWidget(Widget):
             d.height = height_limit
 
         # Recurse to subs
-        height_left = max(0, d.height - self._npixels_each)
+        height_left = max(0, d.height - d.native_height)
         for sub in d.subs:
             self._resolve_real_inset_and_height(sub, height_left)
             height_left = max(0, height_left - sub.height)
@@ -3139,7 +3150,7 @@ class AnalyticsWidget(Widget):
         d.y3 = d.y4 + inset / 4
 
         # Recurse to subs
-        y = d.y2 + min(d.height, self._npixels_each)
+        y = d.y2 + min(d.height, d.native_height)
         for sub in d.subs:
             self._resolve_positions(sub, d.x2, d.x3, y)
             y = sub.y4 + margin
@@ -3282,14 +3293,51 @@ class AnalyticsWidget(Widget):
                 else:
                     texts.push(["Total"])
         else:
+            # Draw duration
             ctx.textAlign = "right"
             ctx.fillText(duration, x_ref_duration, ty)
-            if len(self.selected_tags) and unit.level == 1:
-                texts.push(["Total of"])
             if duration_sec:
                 ctx.textAlign = "left"
                 ctx.fillStyle = COLORS.prim2_clr
                 ctx.fillText(duration_sec, x_ref_duration + 1, ty)
+            # If this is a selection, draw target info
+            if len(self.selected_tags) and unit.level == 1:
+                texts.push(["Total of"])
+                # Show target info
+                ctx.textAlign = "left"
+                ctx.fillStyle = COLORS.prim2_clr
+                target_info_y = ty + 0.5 * npixels
+                if self._current_target is None:
+                    ctx.fillText("No target set", tx, target_info_y)
+                else:
+                    period = self._current_target.period
+                    m = {"day": 24, "week": 168, "month": 720, "year": 8760}
+                    divisor = m.get(period, 0)
+                    if divisor == 0:
+                        ctx.fillText("No target", tx, target_info_y)
+                    else:
+                        factor = self._hours_in_range / divisor
+                        done_this_period = unit.cum_t
+                        target_this_period = 3600 * self._current_target.hours * factor
+                        perc = 100 * done_this_period / target_this_period
+                        if 0.93 < factor < 1.034:
+                            ctx.fillText(
+                                f"{period} target at {perc:0.0f}%", tx, target_info_y
+                            )
+                            left = target_this_period - done_this_period
+                            left_s = dt.duration_string(abs(left), False)
+                            left_prefix = "left" if left >= 0 else "over"
+                            ctx.textAlign = "right"
+                            ctx.fillText(
+                                f"{left_prefix}: {left_s}",
+                                x_ref_duration,
+                                target_info_y,
+                            )
+                        else:
+                            ctx.fillText(
+                                f"{period} target at ~ {perc:0.0f}%", tx, target_info_y
+                            )
+            # Collect texts for tags
             tags = [tag for tag in unit.subtagz.split(" ")]
             for tag in tags:
                 if tag in self.selected_tags:
