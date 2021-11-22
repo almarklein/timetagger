@@ -2933,7 +2933,9 @@ class AnalyticsWidget(Widget):
         # Determine targets
         item = window.store.settings.get_by_key("tag_targets")
         targets = (None if item is None else item.value) or {}
-        self._current_target = targets.get(self.selected_tags, None)
+        self._current_target = targets.get(
+            self.selected_tags, {"period": "none", "hours": 0}
+        )
 
         # Set _npixels_each (number of pixels per bar)
         n = 0
@@ -3307,36 +3309,29 @@ class AnalyticsWidget(Widget):
                 ctx.textAlign = "left"
                 ctx.fillStyle = COLORS.prim2_clr
                 target_info_y = ty + 0.5 * npixels
-                if self._current_target is None:
-                    ctx.fillText("No target set", tx, target_info_y)
+                period = self._current_target.period
+                m = {"day": 24, "week": 168, "month": 720, "year": 8760}
+                divisor = m.get(period, 0)
+                if divisor == 0:
+                    ctx.fillText("No target", tx, target_info_y)
                 else:
-                    period = self._current_target.period
-                    m = {"day": 24, "week": 168, "month": 720, "year": 8760}
-                    divisor = m.get(period, 0)
-                    if divisor == 0:
-                        ctx.fillText("No target", tx, target_info_y)
-                    else:
-                        factor = self._hours_in_range / divisor
-                        done_this_period = unit.cum_t
-                        target_this_period = 3600 * self._current_target.hours * factor
-                        perc = 100 * done_this_period / target_this_period
-                        if 0.93 < factor < 1.034:
-                            ctx.fillText(
-                                f"{period} target at {perc:0.0f}%", tx, target_info_y
-                            )
-                            left = target_this_period - done_this_period
-                            left_s = dt.duration_string(abs(left), False)
-                            left_prefix = "left" if left >= 0 else "over"
-                            ctx.textAlign = "right"
-                            ctx.fillText(
-                                f"{left_prefix}: {left_s}",
-                                x_ref_duration,
-                                target_info_y,
-                            )
-                        else:
-                            ctx.fillText(
-                                f"{period} target at ~ {perc:0.0f}%", tx, target_info_y
-                            )
+                    factor = self._hours_in_range / divisor
+                    done_this_period = unit.cum_t
+                    target_this_period = 3600 * self._current_target.hours * factor
+                    perc = 100 * done_this_period / target_this_period
+                    prefix = "" if 0.93 < factor < 1.034 else "~ "
+                    ctx.fillText(
+                        f"{period} target at {prefix}{perc:0.0f}%", tx, target_info_y
+                    )
+                    left = target_this_period - done_this_period
+                    left_s = dt.duration_string(abs(left), False)
+                    left_prefix = "left" if left >= 0 else "over"
+                    ctx.textAlign = "right"
+                    ctx.fillText(
+                        f"{left_prefix}: {prefix}{left_s}",
+                        x_ref_duration,
+                        target_info_y,
+                    )
             # Collect texts for tags
             tags = [tag for tag in unit.subtagz.split(" ")]
             for tag in tags:
