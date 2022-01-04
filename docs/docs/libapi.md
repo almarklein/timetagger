@@ -1,6 +1,12 @@
 # TimeTagger library reference
 
 
+## Configuration
+
+::: timetagger.config
+    :docstring:
+
+
 ## Utils
 
 ::: timetagger.server.user2filename

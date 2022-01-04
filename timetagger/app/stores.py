@@ -66,7 +66,6 @@ if this_is_js():  # pragma: no cover
     def to_jsonable(x):
         return x
 
-
 else:
     from random import random
     from . import dt
