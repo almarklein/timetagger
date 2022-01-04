@@ -9,8 +9,10 @@ from base64 import urlsafe_b64encode, urlsafe_b64decode
 
 import jwt
 
+from .. import config
 
-ROOT_TT_DIR = os.path.expanduser("~/_timetagger")
+
+ROOT_TT_DIR = os.path.expanduser(config.datadir)
 ROOT_USER_DIR = os.path.join(ROOT_TT_DIR, "users")
 if not os.path.isdir(ROOT_USER_DIR):
     os.makedirs(ROOT_USER_DIR)

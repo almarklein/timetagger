@@ -6,7 +6,7 @@ class Config:
     """Object that holds config values.
 
     * `bind (str)`: the address and port to bind on. Default "0.0.0.0:80".
-    * `datadir (str)`: the directory to store data. Default "~/_timetagger/".
+    * `datadir (str)`: the directory to store data. Default "~/_timetagger".
 
     The values can be configured using CLI arguments and environment variables.
     For CLI arguments, the following formats are supported:
@@ -23,7 +23,7 @@ class Config:
 
     _ITEMS = [
         ("bind", str, "0.0.0.0:80"),
-        ("datadir", str, "~/_timetagger/"),
+        ("datadir", str, "~/_timetagger"),
     ]
     __slots__ = [name for name, _, _ in _ITEMS]
 
