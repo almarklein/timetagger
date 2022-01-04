@@ -39,6 +39,18 @@ def test_config():
     set_config([], {"timetagger_bind": "localhost:8080"})
     assert config.bind == default_bind
 
+    # Test integer conv - disabled because all our config values are str
+    # set_config([], {})
+    # assert config.test == 3
+    # set_config(["--test=42"], {})
+    # assert config.test == 42
+    # set_config([], {"TIMETAGGER_TEST": "7"})
+    # assert config.test == 7
+    # with raises(RuntimeError):
+    #     set_config(["--test=notanumber"], {})
+    # with raises(RuntimeError):
+    #     set_config([], {"TIMETAGGER_TEST": "notanumber"})
+
     # Reset to normal (using sys.argv and os.environ)
     set_config()
 
