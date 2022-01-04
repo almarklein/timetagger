@@ -7,6 +7,7 @@ class Config:
 
     * `bind (str)`: the address and port to bind on. Default "0.0.0.0:80".
     * `datadir (str)`: the directory to store data. Default "~/_timetagger".
+      The user db's are stored in `datadir/users`.
     * `log_level (str)`: the log level for timetagger and asgineer
       (not the asgi server). Default "info".
 
