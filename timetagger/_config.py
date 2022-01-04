@@ -7,6 +7,8 @@ class Config:
 
     * `bind (str)`: the address and port to bind on. Default "0.0.0.0:80".
     * `datadir (str)`: the directory to store data. Default "~/_timetagger".
+    * `log_level (str)`: the log level for timetagger and asgineer
+      (not the asgi server). Default "info".
 
     The values can be configured using CLI arguments and environment variables.
     For CLI arguments, the following formats are supported:
@@ -24,6 +26,7 @@ class Config:
     _ITEMS = [
         ("bind", str, "0.0.0.0:80"),
         ("datadir", str, "~/_timetagger"),
+        ("log_level", str, "info"),
     ]
     __slots__ = [name for name, _, _ in _ITEMS]
 
