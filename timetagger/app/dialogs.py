@@ -2099,7 +2099,7 @@ class ReportDialog(BaseDialog):
         if self._tags:
             filtertext = self._tags.join(" ")
         else:
-            filtertext = "all (no tags selected)"
+            filtertext = "<small>(select tags in the overview panel to filter by them)</small>"
         self._copybuttext = "Copy table"
         html = f"""
             <h1><i class='fas'>\uf15c</i>&nbsp;&nbsp;Report
