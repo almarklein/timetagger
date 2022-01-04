@@ -115,7 +115,7 @@ body.darkmode .tooltipdiv {
 
 .dialog {
     box-sizing: border-box;
-    outline: none;
+    outline: 1px solid rgba(127, 127, 127, 0.4);
     background: $sec2_clr;
     border: 6px solid $prim1_clr;
     position: absolute;
@@ -171,7 +171,9 @@ body.darkmode .tooltipdiv {
     top: 0;
     margin: 0;
     margin-bottom: 10px;
-    padding-bottom: 0;
+    padding-bottom: 6px;
+    padding-left: 6px;
+    padding-right: 1px;
     line-height: 150%;
     font-size: 1.2em;
     background: $prim1_clr;
@@ -229,11 +231,11 @@ body.darkmode .tooltipdiv {
 .dialog h1 button {
     font-size: 100%;
     color: $sec1_clr;
-    padding: 3px 0.5em 5px 0.5em;  /* Note: match with h1 padding-bottom */
+    /*padding: 3px 0.5em 5px 0.5em;  /* Note: match with h1 padding-bottom */
+    padding: .16em 0.5em .1em 0.5em;
     background: rgba(255, 255, 255, 0.1);
     border-radius: 2px;
     border: 1px solid $sec2_clr;
-    border-bottom: 0;
     border-left: 0;
     float: right;
     min-width: 2.5em;
