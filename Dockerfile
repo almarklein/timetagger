@@ -15,7 +15,7 @@
 # mypaas.maxmem = 256m
 
 
-FROM python:3.8-slim-buster
+FROM python:3.10-slim-buster
 
 # Install dependencies (including optional ones that make uvicorn faster)
 RUN pip --no-cache-dir install pip --upgrade && pip --no-cache-dir install \
