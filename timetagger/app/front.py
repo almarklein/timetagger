@@ -748,13 +748,16 @@ class Widget:
         # Measure texts
         widths = []
         fonts = []
+        fontsize = int(0.5 * h)
+        if given_w:
+            fontsize = min(fontsize, int(0.6 * given_w))
         for i in range(len(texts)):
             text = texts[i]
             if text.startswith("fas-"):
                 text = text[4:]
-                font = int(0.5 * h) + "px FontAwesome"
+                font = fontsize + "px FontAwesome"
             else:
-                font = int(0.5 * h) + "px " + opt.font
+                font = fontsize + "px " + opt.font
             ctx.font = font
             width = ctx.measureText(text).width
             texts[i] = text
@@ -924,14 +927,18 @@ class TopWidget(Widget):
         # Draw some more inside dark banner
         self._draw_header_text(ctx, 60, y1, x2 - 60, y2 - 5)
 
+        now_scale, now_clr = self._get_now_scale()
+        if now_scale != "1D":
+            now_clr = COLORS.button_text
+
         # Draw buttons below the dark banner
         # We go from the center to the sides
         xc = 0.5 * (x1 + x2)
 
         # Draw arrows
-        ha = 0.6 * h
+        ha = 0.7 * h
         yc = y3 + h / 2
-        dx = self._draw_button(
+        updown_w = self._draw_button(
             ctx,
             xc,
             yc - 1.5,
@@ -942,7 +949,7 @@ class TopWidget(Widget):
             "Step backward [↑/pageUp]",
             {"ref": "bottomcenter"},
         )
-        dx = self._draw_button(
+        updown_w = self._draw_button(
             ctx,
             xc,
             yc + 1.5,
@@ -956,9 +963,24 @@ class TopWidget(Widget):
 
         # -- move to the left
 
-        x = xc - dx / 2 - 3
+        x = xc - updown_w / 2 - 3
 
-        now_scale, now_clr = self._get_now_scale()
+        zoom_w = self._draw_button(
+            ctx,
+            x,
+            y3,
+            ha,
+            h,
+            "fas-\uf010",
+            "nav_zoom_" + self._current_scale["out"],
+            "Zoom out [←]",
+            {"ref": "ropright"},
+        )
+        x -= zoom_w + 5
+
+        nav_width = ha
+        x -= nav_width + 3 + 5  # tiny extra margin between nav button groups
+
         today_w = self._draw_button(
             ctx,
             x,
@@ -966,9 +988,21 @@ class TopWidget(Widget):
             None,
             h,
             "Today",
-            "nav_snap_now" + now_scale,
-            "Snap to now [Home]",
+            "nav_snap_now1D",  # "nav_snap_now" + now_scale,
+            "Snap to now [d]",  # "Snap to now [Home]",
             {"ref": "topright", "color": now_clr, "font": FONT.condensed},
+        )
+
+        self._draw_button(
+            ctx,
+            x + nav_width + 3,
+            y3,
+            nav_width,
+            h,
+            "fas-\uf0d7",  # ["fas-\uf073", "fas-\uf0d7"],
+            "nav_menu",
+            "Select time range [t]",
+            {"ref": "topright"},
         )
 
         x -= today_w + margin
@@ -977,19 +1011,20 @@ class TopWidget(Widget):
 
         # -- move to the right
 
-        x = xc + dx / 2 + 3
+        x = xc + updown_w / 2 + 3
 
-        x += self._draw_button(
+        zoom_w = self._draw_button(
             ctx,
             x,
             y3,
-            today_w,
+            ha,
             h,
-            ["fas-\uf073", "fas-\uf0d7"],
-            "nav_menu",
-            "Select time range [t]",
-            {"ref": "topleft"},
+            "fas-\uf00e",
+            "nav_zoom_" + self._current_scale["in"],
+            "Zoom in [→]",
+            {"ref": "ropleft"},
         )
+        x += zoom_w
 
         x += margin
 
@@ -1205,7 +1240,7 @@ class TopWidget(Widget):
 
         return x0 - x
 
-    def _get_now_scale(self, ctx):
+    def _get_now_scale(self):
 
         t1, t2 = self._canvas.range.get_range()  # get_snap_range()
         nsecs = t2 - t1

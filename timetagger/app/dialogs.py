@@ -489,12 +489,7 @@ class TimeSelectionDialog(BaseDialog):
 
         # Generate preamble
         html = f"""
-            <div class='grid2c'>
-                <div></div>
-                <a><i class='fas'>\uf010</i> Zoom out <span class='keyhint'>←</span></a>
-                <a><i class='fas'>\uf00e</i> Zoom in <span class='keyhint'>→</span></a>
-                <div></div>
-            </div>
+            <div></div>
             <div style='min-height: 6px;'></div>
             <div class='grid5'>
                 <a>today <span class='keyhint'>d</span></a>
@@ -520,15 +515,15 @@ class TimeSelectionDialog(BaseDialog):
         """
 
         self.maindiv.innerHTML = html
-        quicknav = self.maindiv.children[0]
         presets = self.maindiv.children[2]
         form = self.maindiv.children[4]
 
         self._t1_input = form.children[1]
         self._t2_input = form.children[3]
 
-        quicknav.children[1].onclick = lambda e: self._apply_quicknav("out")
-        quicknav.children[2].onclick = lambda e: self._apply_quicknav("in")
+        # quicknav = self.maindiv.children[0]
+        # quicknav.children[1].onclick = lambda e: self._apply_quicknav("out")
+        # quicknav.children[2].onclick = lambda e: self._apply_quicknav("in")
 
         for i in range(presets.children.length):
             but = presets.children[i]
