@@ -9,6 +9,7 @@ from timetagger.app.utils import (
     convert_text_to_valid_tag,
     get_tags_and_parts_from_string,
     get_better_tag_order_from_stats,
+    timestr2tuple,
 )
 
 
@@ -190,6 +191,67 @@ def test_get_better_tag_order_from_stats():
         "#client1 #admin",
         "#client3 #code",
     ]
+
+
+def test_timestr2tuple():
+    assert timestr2tuple("") == (None, None, None)
+    assert timestr2tuple("0") == (0, 0, 0)
+
+    # With colons
+    assert timestr2tuple("12") == (12, 0, 0)
+    assert timestr2tuple("12:34") == (12, 34, 0)
+    assert timestr2tuple("12:34:56") == (12, 34, 56)
+
+    # With spaces
+    assert timestr2tuple("12") == (12, 0, 0)
+    assert timestr2tuple("12 34") == (12, 34, 0)
+    assert timestr2tuple("12 34 56") == (12, 34, 56)
+
+    # With suffixes
+    assert timestr2tuple("12h") == (12, 0, 0)
+    assert timestr2tuple("12h 34m") == (12, 34, 0)
+    assert timestr2tuple("12h 34m 56s") == (12, 34, 56)
+
+    # With suffixes, special cases
+    assert timestr2tuple("34m") == (0, 34, 0)
+    assert timestr2tuple("12h 56s") == (12, 0, 56)
+
+    # Concatinated
+    assert timestr2tuple("12") == (12, 0, 0)
+    assert timestr2tuple("1234") == (12, 34, 0)
+    assert timestr2tuple("123456") == (12, 34, 56)
+
+    # Stuff beyond secs is ignored
+    assert timestr2tuple("12:34:56:42") == (12, 34, 56)
+    assert timestr2tuple("12 34 56 42") == (12, 34, 56)
+    assert timestr2tuple("12345642") == (12, 34, 56)
+
+    # Non numeric are ignored
+    assert timestr2tuple("foo 12") == (12, 0, 0)
+    assert timestr2tuple("foo 12 bar 34") == (12, 34, 0)
+    assert timestr2tuple("12 34 spam 56 eggs") == (12, 34, 56)
+
+    # AM
+    assert timestr2tuple("4:34 am") == (4, 34, 0)
+    assert timestr2tuple("4 34 AM") == (4, 34, 0)
+    assert timestr2tuple("4 34m am") == (4, 34, 0)
+    assert timestr2tuple("0434 AM") == (4, 34, 0)
+
+    # PM
+    assert timestr2tuple("4:34 pm") == (16, 34, 0)
+    assert timestr2tuple("4 34 PM") == (16, 34, 0)
+    assert timestr2tuple("4h 34m pm") == (16, 34, 0)
+    assert timestr2tuple("0434 PM") == (16, 34, 0)
+
+    # AM-PM special cases
+    assert timestr2tuple("12am") == (0, 0, 0)
+    assert timestr2tuple("12:10 am") == (0, 10, 0)
+    assert timestr2tuple("1am") == (1, 0, 0)
+    assert timestr2tuple("11:50 am") == (11, 50, 0)
+    assert timestr2tuple("12pm") == (12, 00, 0)
+    assert timestr2tuple("12:10 pm") == (12, 10, 0)
+    assert timestr2tuple("1pm") == (13, 0, 0)
+    assert timestr2tuple("11:50 pm") == (23, 50, 0)
 
 
 if __name__ == "__main__":

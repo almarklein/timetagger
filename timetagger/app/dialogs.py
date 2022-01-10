@@ -10,7 +10,6 @@ from pscript.stubs import (
     Math,
     isFinite,
     Date,
-    isNaN,
     Audio,
     Notification,
 )
@@ -490,12 +489,7 @@ class TimeSelectionDialog(BaseDialog):
 
         # Generate preamble
         html = f"""
-            <div class='grid2c'>
-                <div></div>
-                <a><i class='fas'>\uf010</i> Zoom out <span class='keyhint'>←</span></a>
-                <a><i class='fas'>\uf00e</i> Zoom in <span class='keyhint'>→</span></a>
-                <div></div>
-            </div>
+            <div></div>
             <div style='min-height: 6px;'></div>
             <div class='grid5'>
                 <a>today <span class='keyhint'>d</span></a>
@@ -521,15 +515,15 @@ class TimeSelectionDialog(BaseDialog):
         """
 
         self.maindiv.innerHTML = html
-        quicknav = self.maindiv.children[0]
         presets = self.maindiv.children[2]
         form = self.maindiv.children[4]
 
         self._t1_input = form.children[1]
         self._t2_input = form.children[3]
 
-        quicknav.children[1].onclick = lambda e: self._apply_quicknav("out")
-        quicknav.children[2].onclick = lambda e: self._apply_quicknav("in")
+        # quicknav = self.maindiv.children[0]
+        # quicknav.children[1].onclick = lambda e: self._apply_quicknav("out")
+        # quicknav.children[2].onclick = lambda e: self._apply_quicknav("in")
 
         for i in range(presets.children.length):
             but = presets.children[i]
@@ -711,9 +705,11 @@ class StartStopEdit:
         self.time1less.onclick = lambda: self.onchanged("time1less")
         self.time2more.onclick = lambda: self.onchanged("time2more")
         self.time2less.onclick = lambda: self.onchanged("time2less")
+        self.time1input.oninput = lambda: self.onchanged("time1fast")
+        self.time2input.oninput = lambda: self.onchanged("time2fast")
 
         self.reset(t1, t2, True)
-        self._timer_handle = window.setInterval(self._update_duration, 200)
+        self._timer_handle = window.setInterval(lambda: self._update_duration(), 200)
 
     def close(self):
         window.clearInterval(self._timer_handle)
@@ -722,8 +718,8 @@ class StartStopEdit:
         if self.initialmode in ("start", "new"):
             # Get sensible earlier time
             t2 = dt.now()
-            t1 = t2 - 5 * 3600
-            records = window.store.records.get_records(t1, t2).values()
+            secs_earlier = 8 * 3600  # 8 hours
+            records = window.store.records.get_records(t2 - secs_earlier, t2).values()
             records.sort(key=lambda r: r.t2)
             if len(records) > 0:
                 t1 = records[-1].t2  # start time == last records stop time
@@ -786,8 +782,8 @@ class StartStopEdit:
         for i in range(8, 12):
             show_subnode(i, not self.radio_startnow.checked)
 
-    def _update_duration(self):
-        if self.t1 == self.t2:
+    def _update_duration(self, force=False):
+        if force or self.t1 == self.t2:
             t = dt.now() - self.t1
             self.durationinput.value = (
                 f"{t//3600:.0f}h {(t//60)%60:02.0f}m {t%60:02.0f}s"
@@ -804,38 +800,15 @@ class StartStopEdit:
         else:
             return 0  # more than 100 days ... fall back to zero?
 
-    def _timestr2tuple(self, s):
-        s = RawJS('s.split(" ").join("") + ":"')  # remove whitespace
-        s = RawJS('s.replace(":", "h").replace(":", "m").replace(":", "s")')
-        s = RawJS(
-            's.replace("h", "h ").replace("m", "m ").replace("s", "s ").replace(":", ": ")'
-        )
-        hh = mm = ss = 0
-        for part in s.split(" "):
-            if len(part) > 1:
-                if part.endsWith("h"):
-                    hh = int(part[:-1])
-                elif part.endsWith("m"):
-                    mm = int(part[:-1])
-                    if isNaN(mm):
-                        mm = 0
-                elif part.endsWith("s"):
-                    ss = int(part[:-1])
-                    if isNaN(ss):
-                        ss = 0
-        if isNaN(hh) or isNaN(mm) or isNaN(ss):
-            return None, None, None
-        return hh, mm, ss
-
-    def _get_time(self, what):
+    def _get_time(self, what, fallback=True):
         node = self[what + "input"]
         hh = mm = ss = None
         if node.value:
-            hh, mm, ss = self._timestr2tuple(node.value)
-        if hh is None:
+            hh, mm, ss = utils.timestr2tuple(node.value)
+        if hh is None and fallback:
             if what == "time2":
                 self.days2 = self.ori_days2  # rest along with time2
-            hh, mm, ss = self._timestr2tuple(self["ori_" + what])
+            hh, mm, ss = utils.timestr2tuple(self["ori_" + what])
         return hh, mm, ss
 
     def render(self):
@@ -887,7 +860,11 @@ class StartStopEdit:
         now = dt.now()
 
         # Get node
-        if action.endsWith("more") or action.endsWith("less"):
+        if (
+            action.endsWith("more")
+            or action.endsWith("less")
+            or action.endswith("fast")
+        ):
             what = action[:-4]
         else:
             what = action
@@ -933,8 +910,11 @@ class StartStopEdit:
 
         elif what == "time1":
             # Changing time1 -> update t1, keep t2 in check
-            hh, mm, ss = self._get_time("time1")
-            if action.endsWith("more"):
+            allow_fallback = not action.endsWith("fast")
+            hh, mm, ss = self._get_time("time1", allow_fallback)
+            if hh is None:
+                return
+            elif action.endsWith("more"):
                 mm, ss = mm + 5, 0
             elif action.endsWith("less"):
                 mm, ss = mm - 5, 0
@@ -947,8 +927,11 @@ class StartStopEdit:
 
         elif what == "time2":
             # Changing time2 -> update t2, keep t1 and t2 in check
-            hh, mm, ss = self._get_time("time2")
-            if action.endsWith("more"):
+            allow_fallback = not action.endsWith("fast")
+            hh, mm, ss = self._get_time("time2", allow_fallback)
+            if hh is None:
+                return
+            elif action.endsWith("more"):
                 mm, ss = mm + 5, 0
             elif action.endsWith("less"):
                 mm, ss = mm - 5, 0
@@ -976,9 +959,12 @@ class StartStopEdit:
             else:
                 self.t2 = self.t1 + duration
 
-        # Invoke callback and rerender
-        window.setTimeout(self.callback, 1)
-        return self.render()
+        if action.endswith("fast"):
+            self._update_duration(True)
+        else:
+            # Invoke callback and rerender
+            window.setTimeout(self.callback, 1)
+            return self.render()
 
 
 class RecordDialog(BaseDialog):
@@ -1984,6 +1970,15 @@ class TagManageDialog(BaseDialog):
             record.ds = "".join(new_parts)
             window.store.records.put(record)
 
+        # Also update colors
+        if len(search_tags) == 1 and len(replacement_tags) == 1:
+            tag1, tag2 = search_tags[0], replacement_tags[0]
+            cur_color = window.store.settings.get_color_for_tag(tag1)
+            default_color = window.store.settings.get_color_for_tag("#notanactualtag")
+            window.store.settings.set_color_for_tag(tag1, "")
+            if cur_color != default_color:
+                window.store.settings.set_color_for_tag(tag2, cur_color)
+
         self._records_node.innerHTML = ""
         self._show_records()
         self._records_uptodate = False
@@ -2099,7 +2094,9 @@ class ReportDialog(BaseDialog):
         if self._tags:
             filtertext = self._tags.join(" ")
         else:
-            filtertext = "all (no tags selected)"
+            filtertext = (
+                "<small>(select tags in the overview panel to filter by them)</small>"
+            )
         self._copybuttext = "Copy table"
         html = f"""
             <h1><i class='fas'>\uf15c</i>&nbsp;&nbsp;Report
