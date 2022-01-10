@@ -2,11 +2,12 @@
 
 ## Purpose of this agreement
 
-The code of the TimeTagger library is licensed under the GPL-3.0. This license (among other things) requires any larger work that uses TimeTagger to be released under the same license. Nevertheless, as the copyright owner of the code, I can use the same code for https://timetagger.app, which also includes proprietary code, or sublicense the code, if I want.
+I love open source! But to protect a 3d party from commercially exploiting TimeTagger, it is licensed under the GPL-3.0. This license (among other things) requires any larger work that uses TimeTagger to be released under the same license.
 
-However, if you make a contribution to TimeTagger, you are the copyright owner of that contribution, and I would not be allowed to use your contribution in ways other than GPL-3.0 dictates. This means I would not be able to run https://timetagger.app.
+Copyright counts stronger than a license. Therefore, as the copyright owner, I can use the same code for https://timetagger.app, which also includes proprietary code, or sublicense the code, if I want. However, if *you* make a contribution to TimeTagger, you are the copyright owner of that contribution. Subsequently, I would not be allowed to use your contribution in ways other than GPL-3.0 dictates, which means I would not be able to run https://timetagger.app.
 
-With this agreement you can still use your contribution in any way you like (as you still own the copyright), but you grant me (Almar Klein) the right to use your contribution for any purpose too.
+This agreement fixes that. With it, you grant me (Almar Klein) the right to use your contribution for any purpose, just like you can use your contribution in any way you like. To be clear, this agreement does not constrain your rights to use your contribution in any way.
+
 
 ## The legal part
 

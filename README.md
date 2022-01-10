@@ -58,11 +58,19 @@ pip uninstall timetagger
 
 After installation, copy and execute  `python run.py` to get started.
 
-## License
+## Copright and license
 
-This code is subject to the GPL-3.0 License. Contributors must agree to the
+As usual, copyright applies to whomever made a particular contribution in this repository,
+which can be inspected via e.g. git blame. The owner of the copyright (i.e. the author)
+is free to use their code in any way.
+
+This code is also subject to the GPL-3.0 License, to protect it from being used
+commercially by other parties.
+
+Contributors must agree to the
 [Contributor License Agreement](https://github.com/almarklein/timetagger/blob/main/CLA.md)
-to grant the right to use contributions at e.g. the TimeTagger.app service.
+to grant me (Almar) the right to use their contributions at e.g. the TimeTagger.app service.
+By making a contribution to this project, you agree to this CLA.
 
 
 ## Developers
