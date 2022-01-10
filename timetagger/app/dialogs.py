@@ -1970,6 +1970,15 @@ class TagManageDialog(BaseDialog):
             record.ds = "".join(new_parts)
             window.store.records.put(record)
 
+        # Also update colors
+        if len(search_tags) == 1 and len(replacement_tags) == 1:
+            tag1, tag2 = search_tags[0], replacement_tags[0]
+            cur_color = window.store.settings.get_color_for_tag(tag1)
+            default_color = window.store.settings.get_color_for_tag("#notanactualtag")
+            window.store.settings.set_color_for_tag(tag1, "")
+            if cur_color != default_color:
+                window.store.settings.set_color_for_tag(tag2, cur_color)
+
         self._records_node.innerHTML = ""
         self._show_records()
         self._records_uptodate = False
