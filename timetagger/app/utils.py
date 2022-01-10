@@ -347,6 +347,66 @@ def order_stats_by_duration_and_name(items):
     items.sort(sortfunc)
 
 
+def timestr2tuple(text):
+    PSCRIPT_OVERLOAD = False  # noqa
+    # Cases to support
+    #
+
+    # Determine format
+    text = text.strip().lower()
+    format = "24h"
+    if len(text) >= 3 and text[-1] == "m":
+        if text[-2] == "p":
+            format = "pm"
+            text = text[:-2].rstrip()
+        elif text[-2] == "a":
+            format = "am"
+            text = text[:-2].rstrip()
+
+    values = {"h": "0", "m": "0", "s": "0", "_": ""}
+    nextmap = {"h": "m", "m": "s", "s": "_", "_": "_"}
+
+    pending = ""
+    next_natural_target = "h"
+    parse_count = 0
+    for c in text + " ":
+        if c in " :;,hms":
+            if pending:
+                target = c if c in "hms" else next_natural_target
+                next_natural_target = nextmap[target]
+                values[target] = pending
+                parse_count += 1
+            pending = ""
+        elif c in "0123456789":
+            if pending is not None:
+                pending += c
+        else:
+            pending = None
+
+    if parse_count == 0:
+        return None, None, None
+
+    # Turn 1345 into 13:45
+    if parse_count == 1:
+        if len(values["h"]) > 2:
+            values["m"] = values["h"][2:]
+            values["h"] = values["h"][:2]
+        if len(values["m"]) > 2:
+            values["s"] = values["m"][2:4]
+            values["m"] = values["m"][:2]
+
+    # Get numbers
+    h, m, s = int(values["h"]), int(values["m"]), int(values["s"])
+
+    # Handle am and pm notation
+    if format == "am" and h == 12:
+        h = 0
+    elif format == "pm" and h < 12:
+        h += 12
+
+    return h, m, s
+
+
 def positions_mean_and_std(positions):
     """Calculate the mean and std for a list of positions."""
     PSCRIPT_OVERLOAD = False  # noqa
