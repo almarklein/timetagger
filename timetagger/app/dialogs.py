@@ -718,8 +718,8 @@ class StartStopEdit:
         if self.initialmode in ("start", "new"):
             # Get sensible earlier time
             t2 = dt.now()
-            t1 = t2 - 5 * 3600
-            records = window.store.records.get_records(t1, t2).values()
+            secs_earlier = 8 * 3600  # 8 hours
+            records = window.store.records.get_records(t2 - secs_earlier, t2).values()
             records.sort(key=lambda r: r.t2)
             if len(records) > 0:
                 t1 = records[-1].t2  # start time == last records stop time
