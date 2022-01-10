@@ -1782,10 +1782,15 @@ class TagManageDialog(BaseDialog):
             <a href="https://timetagger.app/articles/tags/#manage" target='new'>this article</a> for details.<br><br>
             </p>
             <div class='formlayout'>
+                <div>Search mode:</div>
+                <div>
+                    <label style='user-select:none;'><input type='radio' name='searchmode' /> tags</label>
+                    <label style='user-select:none;'><input type='radio' name='searchmode' /> plain text</label>
+                </div>
                 <div>Tags:</div>
-                <input type='text' placeholder='Tags to search for' spellcheck='false' />
+                <input type='text' spellcheck='false' />
                 <div>Replacement:</div>
-                <input type='text' placeholder='Replacement tags' spellcheck='false' />
+                <input type='text' spellcheck='false' />
                 <div></div>
                 <button type='button'>Find records</button>
                 <div></div>
@@ -1805,13 +1810,20 @@ class TagManageDialog(BaseDialog):
         self._records_node = self.maindiv.children[-1]
 
         formdiv = self.maindiv.children[2]
-        self._tagname1 = formdiv.children[1]
-        self._tagname2 = formdiv.children[3]
-        self._button_find = formdiv.children[5]
-        self._button_replace = formdiv.children[7]
-        self._button_replace_comfirm = formdiv.children[9]
-        self._taghelp = formdiv.children[11]
+        self._radionode = formdiv.children[1]
+        self._search_header = formdiv.children[2]
+        self._radio_mode_tags = self._radionode.children[0].children[0]
+        self._radio_mode_text = self._radionode.children[1].children[0]
+        self._tagname1 = formdiv.children[3]
+        self._tagname2 = formdiv.children[5]
+        self._button_find = formdiv.children[7]
+        self._button_replace = formdiv.children[9]
+        self._button_replace_comfirm = formdiv.children[11]
+        self._taghelp = formdiv.children[13]
 
+        self._radio_mode_tags.setAttribute("checked", True)
+        self._radio_mode_tags.onclick = self._on_mode_change
+        self._radio_mode_text.onclick = self._on_mode_change
         self._tagname1.oninput = self._check_name1
         self._tagname2.oninput = self._check_names
         self._tagname1.onchange = self._fix_name1
@@ -1833,6 +1845,7 @@ class TagManageDialog(BaseDialog):
         self._records = []
 
         super().open(None)
+        self._on_mode_change()
         if utils.looks_like_desktop():
             self._tagname1.focus()
 
@@ -1841,32 +1854,50 @@ class TagManageDialog(BaseDialog):
         self._records_uptodate = False
         super().close()
 
+    def _on_mode_change(self):
+        self._tagname2.value = ""
+        if self._radio_mode_tags.checked:
+            self._search_header.innerText = "Tags:"
+            self._tagname1.placeholder = "One or more tags to search for"
+            self._tagname2.placeholder = "Replacement tag(s)"
+        else:
+            self._search_header.innerText = "Search:"
+            self._tagname1.placeholder = "Text to search for"
+            self._tagname2.placeholder = "Replacement text"
+        self._check_name1()
+
     def _check_name1(self):
         self._records_uptodate = False
         self._check_names()
 
     def _check_names(self):
 
-        name1 = self._tagname1.value
-        name2 = self._tagname2.value
-        tags1, _ = utils.get_tags_and_parts_from_string(name1)
-        tags2, _ = utils.get_tags_and_parts_from_string(name2)
+        text1 = self._tagname1.value
+        text2 = self._tagname2.value
 
         err = ""
         ok1 = ok2 = False
 
-        if not name1:
-            pass
-        elif not tags1:
-            err += "Tags needs to start with '#'. "
-        else:
-            ok1 = True
+        if self._radio_mode_tags.checked:
+            tags1, _ = utils.get_tags_and_parts_from_string(text1)
+            tags2, _ = utils.get_tags_and_parts_from_string(text2)
 
-        if not name2:
-            ok2 = True  # remove is ok
-        elif not tags2:
-            err += "Tags needs to start with '#'. "
+            if not text1 or text1 == "#":
+                pass
+            elif not tags1:
+                err += "Tags need to start with '#'. "
+            else:
+                ok1 = True
+
+            if not text2:
+                ok2 = True  # remove is ok
+            elif not tags2:
+                err += "Tags needs to start with '#'. "
+            else:
+                ok2 = True
         else:
+            if text1:
+                ok1 = True
             ok2 = True
 
         self._button_find.disabled = not ok1
@@ -1876,12 +1907,18 @@ class TagManageDialog(BaseDialog):
         self._taghelp.innerHTML = "<i>" + err + "</i>"
 
     def _fix_name1(self):
-        tags1, _ = utils.get_tags_and_parts_from_string(self._tagname1.value)
-        self._tagname1.value = " ".join(tags1)
+        if self._radio_mode_tags.checked:
+            tags1, _ = utils.get_tags_and_parts_from_string(self._tagname1.value)
+            self._tagname1.value = " ".join(tags1)
+        else:
+            self._tagname1.value = self._tagname1.value.strip().lower()
 
     def _fix_name2(self):
-        tags2, _ = utils.get_tags_and_parts_from_string(self._tagname2.value)
-        self._tagname2.value = " ".join(tags2)
+        if self._radio_mode_tags.checked:
+            tags2, _ = utils.get_tags_and_parts_from_string(self._tagname2.value)
+            self._tagname2.value = " ".join(tags2)
+        else:
+            self._tagname2.value = self._tagname2.value.strip()  # not lower!
 
     def _on_key1(self, e):
         key = e.key.lower()
@@ -1894,23 +1931,35 @@ class TagManageDialog(BaseDialog):
             self._replace_all()
 
     def _find_records(self):
-        search_tags, _ = utils.get_tags_and_parts_from_string(self._tagname1.value)
-        # Early exit?
-        if not search_tags:
-            self._records_node.innerHTML = "Nothing found."
-            return
-        # Get list of records
         records = []
-        for record in window.store.records.get_dump():
-            tags = window.store.records.tags_from_record(record)  # include #untagged
-            all_ok = True
-            for tag in search_tags:
-                if tag not in tags:
-                    all_ok = False
-            if all_ok:
-                records.push([record.t1, record.key])
-        records.sort(key=lambda x: x[0])
 
+        if self._radio_mode_tags.checked:
+            search_tags, _ = utils.get_tags_and_parts_from_string(self._tagname1.value)
+            # Early exit?
+            if not search_tags:
+                self._records_node.innerHTML = "Nothing found."
+                return
+            # Get list of records
+            for record in window.store.records.get_dump():
+                tags = window.store.records.tags_from_record(record)  # also #untagged
+                all_ok = True
+                for tag in search_tags:
+                    if tag not in tags:
+                        all_ok = False
+                if all_ok:
+                    records.push([record.t1, record.key])
+        else:
+            search_text = self._tagname1.value
+            # Early exit?
+            if not search_text:
+                self._records_node.innerHTML = "Nothing found."
+                return
+            # Get list of records
+            for record in window.store.records.get_dump():
+                if search_text in record.ds.lower():
+                    records.push([record.t1, record.key])
+
+        records.sort(key=lambda x: x[0])
         self._records = [x[1] for x in records]
         self._records_uptodate = True
         self._show_records()
@@ -1937,47 +1986,79 @@ class TagManageDialog(BaseDialog):
         self._records_node.innerHTML = "<br />\n".join(lines)
 
     def _replace_all(self):
-        replacement_tags, _ = utils.get_tags_and_parts_from_string(self._tagname2.value)
-        n = len(self._records)
-        if replacement_tags:
-            text = f"Confirm replacing tags in {n} records"
+        if self._radio_mode_tags.checked:
+            replacement_tags, _ = utils.get_tags_and_parts_from_string(
+                self._tagname2.value
+            )
+            n = len(self._records)
+            if replacement_tags:
+                text = f"Confirm replacing tags in {n} records"
+            else:
+                text = f"Confirm removing tags in {n} records"
         else:
-            text = f"Confirm removing tags in {n} records"
+            n = len(self._records)
+            text = f"Confirm updating the description in {n} records"
+
         self._button_replace_comfirm.innerText = text
         self._button_replace_comfirm.disabled = False
         self._button_replace_comfirm.style.visibility = "visible"
 
     def _really_replace_all(self):
-        search_tags, _ = utils.get_tags_and_parts_from_string(self._tagname1.value)
-        replacement_tags, _ = utils.get_tags_and_parts_from_string(self._tagname2.value)
 
-        for key in self._records:
-            record = window.store.records.get_by_key(key)
-            _, parts = utils.get_tags_and_parts_from_string(record.ds)
-            # Get updated parts
-            new_parts = []
-            replacement_made = False
-            for part in parts:
-                if part.startswith("#") and (
-                    part in search_tags or part in replacement_tags
-                ):
-                    if not replacement_made:
-                        replacement_made = True
-                        new_parts.push(" ".join(replacement_tags))
-                else:
-                    new_parts.push(part)
-            # Submit
-            record.ds = "".join(new_parts)
-            window.store.records.put(record)
+        if self._radio_mode_tags.checked:
 
-        # Also update colors
-        if len(search_tags) == 1 and len(replacement_tags) == 1:
-            tag1, tag2 = search_tags[0], replacement_tags[0]
-            cur_color = window.store.settings.get_color_for_tag(tag1)
-            default_color = window.store.settings.get_color_for_tag("#notanactualtag")
-            window.store.settings.set_color_for_tag(tag1, "")
-            if cur_color != default_color:
-                window.store.settings.set_color_for_tag(tag2, cur_color)
+            search_tags, _ = utils.get_tags_and_parts_from_string(self._tagname1.value)
+            replacement_tags, _ = utils.get_tags_and_parts_from_string(
+                self._tagname2.value
+            )
+
+            for key in self._records:
+                record = window.store.records.get_by_key(key)
+                _, parts = utils.get_tags_and_parts_from_string(record.ds)
+                # Get updated parts
+                new_parts = []
+                replacement_made = False
+                for part in parts:
+                    if part.startswith("#") and (
+                        part in search_tags or part in replacement_tags
+                    ):
+                        if not replacement_made:
+                            replacement_made = True
+                            new_parts.push(" ".join(replacement_tags))
+                    else:
+                        new_parts.push(part)
+                # Submit
+                record.ds = "".join(new_parts)
+                window.store.records.put(record)
+
+            # Also update colors
+            if len(search_tags) == 1 and len(replacement_tags) == 1:
+                tag1, tag2 = search_tags[0], replacement_tags[0]
+                cur_color = window.store.settings.get_color_for_tag(tag1)
+                default_color = window.store.settings.get_color_for_tag(
+                    "#notanactualtag"
+                )
+                window.store.settings.set_color_for_tag(tag1, "")
+                if cur_color != default_color:
+                    window.store.settings.set_color_for_tag(tag2, cur_color)
+
+        else:
+            search_text = self._tagname1.value.strip().toLowerCase()
+            replacement_text = self._tagname2.value.strip()
+
+            for key in self._records:
+                record = window.store.records.get_by_key(key)
+                ds_lower = record.ds.toLowerCase()
+                pos = len(ds_lower)
+                while pos >= 0:
+                    pos = ds_lower.lastIndexOf(search_text, pos)
+                    if pos < 0:
+                        break
+                    pre = record.ds[:pos]
+                    post = record.ds[pos + len(search_text) :]
+                    record.ds = pre + replacement_text + post
+                    pos -= 1
+                window.store.records.put(record)
 
         self._records_node.innerHTML = ""
         self._show_records()
