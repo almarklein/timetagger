@@ -783,11 +783,15 @@ class StartStopEdit:
             show_subnode(i, not self.radio_startnow.checked)
 
     def _update_duration(self, force=False):
-        if force or self.t1 == self.t2:
+        is_running = self.ori_t1 == self.ori_t2
+        if not (force or is_running):
+            return
+
+        if is_running:
             t = dt.now() - self.t1
-            self.durationinput.value = (
-                f"{t//3600:.0f}h {(t//60)%60:02.0f}m {t%60:02.0f}s"
-            )
+        else:
+            t = self.t2 - self.t1
+        self.durationinput.value = f"{t//3600:.0f}h {(t//60)%60:02.0f}m {t%60:02.0f}s"
 
     def _days_between_dates(self, d1, d2):
         year1, month1, day1 = d1.split("-")
@@ -866,8 +870,10 @@ class StartStopEdit:
             or action.endswith("fast")
         ):
             what = action[:-4]
+            option = action[-4:]
         else:
             what = action
+            option = ""
         node = self[what + "input"]
         if not node:
             return
@@ -910,38 +916,44 @@ class StartStopEdit:
 
         elif what == "time1":
             # Changing time1 -> update t1, keep t2 in check
-            allow_fallback = not action.endsWith("fast")
-            hh, mm, ss = self._get_time("time1", allow_fallback)
-            if hh is None:
-                return
-            elif action.endsWith("more"):
-                mm, ss = mm + 5, 0
-            elif action.endsWith("less"):
-                mm, ss = mm - 5, 0
-            d1 = window.Date(year1, month1 - 1, day1, hh, mm, ss)
-            self.t1 = dt.to_time_int(d1)
-            if self.ori_t1 == self.ori_t2:
-                self.t2 = self.t1 = min(self.t1, now)
-            elif self.t1 >= self.t2:
-                self.t2 = self.t1 + 1
+            if option == "fast":
+                hh, mm, ss = self._get_time("time1", False)
+                if hh is not None:
+                    d1 = window.Date(year1, month1 - 1, day1, hh, mm, ss)
+                    self.t1 = dt.to_time_int(d1)
+            else:
+                hh, mm, ss = self._get_time("time1")
+                if option == "more":
+                    mm, ss = mm + 5, 0
+                elif option == "less":
+                    mm, ss = mm - 5, 0
+                d1 = window.Date(year1, month1 - 1, day1, hh, mm, ss)
+                self.t1 = dt.to_time_int(d1)
+                if self.ori_t1 == self.ori_t2:
+                    self.t2 = self.t1 = min(self.t1, now)
+                elif self.t1 >= self.t2:
+                    self.t2 = self.t1 + 1
 
         elif what == "time2":
             # Changing time2 -> update t2, keep t1 and t2 in check
-            allow_fallback = not action.endsWith("fast")
-            hh, mm, ss = self._get_time("time2", allow_fallback)
-            if hh is None:
-                return
-            elif action.endsWith("more"):
-                mm, ss = mm + 5, 0
-            elif action.endsWith("less"):
-                mm, ss = mm - 5, 0
-            d2 = window.Date(year2, month2 - 1, day2, hh, mm, ss)
-            self.t2 = dt.to_time_int(d2)
-            if self.ori_t1 == self.ori_t2:
-                self.t2 = self.t1
-            elif self.t2 <= self.t1:
-                self.t1 = self.t2
-                self.t2 = self.t1 + 1
+            if option == "fast":
+                hh, mm, ss = self._get_time("time2", False)
+                if hh is not None:
+                    d2 = window.Date(year2, month2 - 1, day2, hh, mm, ss)
+                    self.t2 = dt.to_time_int(d2)
+            else:
+                hh, mm, ss = self._get_time("time2")
+                if option == "more":
+                    mm, ss = mm + 5, 0
+                elif option == "less":
+                    mm, ss = mm - 5, 0
+                d2 = window.Date(year2, month2 - 1, day2, hh, mm, ss)
+                self.t2 = dt.to_time_int(d2)
+                if self.ori_t1 == self.ori_t2:
+                    self.t2 = self.t1
+                elif self.t2 <= self.t1:
+                    self.t1 = self.t2
+                    self.t2 = self.t1 + 1
 
         elif what == "duration":
             # Changing duration -> update t2, but keep it in check

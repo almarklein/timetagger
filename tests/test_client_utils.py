@@ -253,6 +253,9 @@ def test_timestr2tuple():
     assert timestr2tuple("1pm") == (13, 0, 0)
     assert timestr2tuple("11:50 pm") == (23, 50, 0)
 
+    # Out of range
+    assert timestr2tuple("30") == (24, 0, 0)
+
 
 if __name__ == "__main__":
     run_tests(globals())

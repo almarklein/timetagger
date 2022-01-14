@@ -404,7 +404,7 @@ def timestr2tuple(text):
     elif format == "pm" and h < 12:
         h += 12
 
-    return h, m, s
+    return min(h, 23), min(m, 59), min(s, 59)
 
 
 def positions_mean_and_std(positions):
