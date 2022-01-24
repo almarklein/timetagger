@@ -935,52 +935,61 @@ class TopWidget(Widget):
         # We go from the center to the sides
         xc = 0.5 * (x1 + x2)
 
+        # Move a bit to the right on smaller screens
+        avail_width = x2 - x1
+        xc += max(0, 600 - avail_width) * 0.18
+
         # Draw arrows
         ha = 0.7 * h
         yc = y3 + h / 2
-        updown_w = self._draw_button(
-            ctx,
-            xc,
-            yc - 1.5,
-            h,
-            ha,
-            "fas-\uf077",
-            "nav_backward",
-            "Step backward [↑/pageUp]",
-            {"ref": "bottomcenter"},
-        )
-        updown_w = self._draw_button(
-            ctx,
-            xc,
-            yc + 1.5,
-            h,
-            ha,
-            "fas-\uf078",
-            "nav_forward",
-            "Step forward [↓/pageDown]",
-            {"ref": "topcenter"},
-        )
+        updown_w = 0
+        if avail_width > 330:
+            updown_w = self._draw_button(
+                ctx,
+                xc,
+                yc - 1.5,
+                h,
+                ha,
+                "fas-\uf077",
+                "nav_backward",
+                "Step backward [↑/pageUp]",
+                {"ref": "bottomcenter"},
+            )
+            updown_w = self._draw_button(
+                ctx,
+                xc,
+                yc + 1.5,
+                h,
+                ha,
+                "fas-\uf078",
+                "nav_forward",
+                "Step forward [↓/pageDown]",
+                {"ref": "topcenter"},
+            )
 
         # -- move to the left
 
         x = xc - updown_w / 2 - 3
 
-        zoom_w = self._draw_button(
-            ctx,
-            x,
-            y3,
-            ha,
-            h,
-            "fas-\uf010",
-            "nav_zoom_" + self._current_scale["out"],
-            "Zoom out [←]",
-            {"ref": "ropright"},
-        )
-        x -= zoom_w + 5
+        zoom_w = 0
+        if avail_width > 400:
+            zoom_w = self._draw_button(
+                ctx,
+                x,
+                y3,
+                ha,
+                h,
+                "fas-\uf010",
+                "nav_zoom_" + self._current_scale["out"],
+                "Zoom out [←]",
+                {"ref": "ropright"},
+            )
+            x -= zoom_w + 5
 
         nav_width = ha
         x -= nav_width + 3 + 5  # tiny extra margin between nav button groups
 
+        today_w = 0
         today_w = self._draw_button(
             ctx,
             x,
@@ -1013,20 +1022,19 @@ class TopWidget(Widget):
 
         x = xc + updown_w / 2 + 3
 
-        zoom_w = self._draw_button(
-            ctx,
-            x,
-            y3,
-            ha,
-            h,
-            "fas-\uf00e",
-            "nav_zoom_" + self._current_scale["in"],
-            "Zoom in [→]",
-            {"ref": "ropleft"},
-        )
-        x += zoom_w
-
-        x += margin
+        if avail_width > 400:
+            zoom_w = self._draw_button(
+                ctx,
+                x,
+                y3,
+                ha,
+                h,
+                "fas-\uf00e",
+                "nav_zoom_" + self._current_scale["in"],
+                "Zoom in [→]",
+                {"ref": "ropleft"},
+            )
+        x += zoom_w + margin
 
         x += self._draw_button(
             ctx,
