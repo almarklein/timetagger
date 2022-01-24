@@ -497,7 +497,7 @@ class TimeSelectionDialog(BaseDialog):
                 <a>this month <span class='keyhint'>m</span></a>
                 <a>this quarter</a>
                 <a>this year</a>
-                <a>yesterday</a>
+                <a>yester<wbr>day</a>
                 <a>last week</a>
                 <a>last month</a>
                 <a>last quarter</a>
