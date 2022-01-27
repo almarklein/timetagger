@@ -19,6 +19,7 @@ if this_is_js():
     tools = window.tools
     dt = window.dt
     utils = window.utils
+    stores = window.stores
 
 # A stack of dialogs
 stack = []
@@ -1034,7 +1035,7 @@ class RecordDialog(BaseDialog):
         # Unpack so we have all the components
         (
             h1,  # Dialog title
-            _,  # Description header
+            self._ds_header,
             self._ds_container,
             self._preset_container,
             self._tags_div,
@@ -1178,6 +1179,16 @@ class RecordDialog(BaseDialog):
         self._mark_as_edited()
         self._autocomp_init()
         self._show_tags_from_ds()
+        # If the str is too long, limit it
+        if len(self._ds_input.value) >= stores.STR_MAX:
+            self._ds_input.value = self._ds_input.value.slice(0, stores.STR_MAX)
+            if "max" not in self._ds_header.innerHTML:
+                self._ds_header.innerHTML += (
+                    f" <small>(max {stores.STR_MAX-1} chars)</small>"
+                )
+            self._ds_input.style.setProperty("outline", "dashed 2px red")
+            reset = lambda: self._ds_input.style.setProperty("outline", "")
+            window.setTimeout(reset, 2000)
 
     def show_preset_tags(self, e):
         # Prevent that the click will hide the autocomp
