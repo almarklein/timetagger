@@ -1708,11 +1708,11 @@ class TagPresetsDialog(BaseDialog):
         self._input_element.ondragexit = self._on_drop_stop
         self._input_element.ondragover = self._on_drop_over
         self._input_element.ondrop = self._on_drop
-        self._input_element.oninput = self._on_input
+        self._input_element.oninput = self._on_edit
+        self._input_element.onchange = self._on_edit
 
         self._analysis_out = self.maindiv.children[-2]
 
-        self._description_div = self.maindiv.children[1]
         self._apply_but = self.maindiv.children[2]
         self._apply_but.onclick = self.do_apply
 
@@ -1752,19 +1752,19 @@ class TagPresetsDialog(BaseDialog):
                     self._analysis_out.innerHTML = f"Read from <u>{file.name}</u>"
                     break  # only process first one
 
-    def _on_input(self):
-        # If the str is too long, limit it
-        if len(self._input_element.value) >= stores.STR_MAX:
-            self._input_element.value = self._input_element.value.slice(
-                0, stores.STR_MAX
-            )
-            if "max" not in self._description_div.innerHTML:
-                self._description_div.innerHTML += (
-                    f"<b>Max {stores.STR_MAX-1} chars.</b>"
-                )
+    def _on_edit(self):
+        # This length estimate is only correct if the tags are formatted
+        # correctly, i.e. no whitespace or non-tag words. The actual
+        # length can only really be obtained by collecting all tags
+        # from the text and stringifying it with json, but that would
+        # be too slow to do on each key press (there can be MANY lines).
+        # We take the normal length, plus 2 per line for quotes, and 4 for braces.
+        length_est = self._input_element.value.length
+        length_est += self._input_element.value.count("\n") * 2 + 4
+        if length_est >= stores.JSON_MAX:
             self._input_element.style.setProperty("outline", "dashed 2px red")
-            reset = lambda: self._input_element.style.setProperty("outline", "")
-            window.setTimeout(reset, 2000)
+        else:
+            self._input_element.style.setProperty("outline", "")
 
     def _load_current(self):
         item = window.store.settings.get_by_key("tag_presets")
@@ -1790,6 +1790,15 @@ class TagPresetsDialog(BaseDialog):
                 line = tags.join(" ")
                 if line:
                     lines2.append(line)
+
+        # Check size
+        length = JSON.stringify(lines2).length
+        if length >= stores.JSON_MAX:
+            self._input_element.style.setProperty("outline", "dashed 2px red")
+            self._analysis_out.innerHTML = (
+                f"Sorry, used {length} of max {stores.JSON_MAX-1} chars."
+            )
+            return
 
         # Save
         item = window.store.settings.create("tag_presets", lines2)

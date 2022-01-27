@@ -137,7 +137,7 @@ SETTING_SPEC = dict(key=to_str, mt=to_int, value=to_jsonable)
 SETTING_REQ = ["key", "mt", "value"]
 
 STR_MAX = 256
-
+JSON_MAX = 8192
 
 # ----- END COMMON PART (don't change this comment)
 
