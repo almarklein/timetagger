@@ -2238,8 +2238,8 @@ class ReportDialog(BaseDialog):
                                         <option value='none'>none</option>
                                         <option value='tagz'>tags</option>
                                         <option value='date'>date</option>
-                                        <option value='tagz+date'>tags then date</option>
-                                        <option value='date+tagz'>date then tags</option>
+                                        <option value='tagz/date'>tags then date</option>
+                                        <option value='date/tagz'>date then tags</option>
                                      </select>
                 <div>Format:</div> <label><input type='checkbox' /> Hours in decimals</label>
                 <div>Details:</div> <label><input type='checkbox' checked /> Show records</label>
@@ -2272,8 +2272,9 @@ class ReportDialog(BaseDialog):
         close_but.onclick = self.close
         self._date_range.innerText = t1_date + "  -  " + t2_date
         #
-        self._grouping_select.value = "tagz"
-        self._grouping_select.onchange = self._update_table
+        grouping = window.localsettings.get("report_grouping", "date")
+        self._grouping_select.value = grouping
+        self._grouping_select.onchange = self._on_grouping_changed
         self._hourdecimals_but.oninput = self._update_table
         self._showrecords_but.oninput = self._update_table
         #
@@ -2283,6 +2284,10 @@ class ReportDialog(BaseDialog):
 
         window.setTimeout(self._update_table)
         super().open(None)
+
+    def _on_grouping_changed(self):
+        window.localsettings.set("report_grouping", self._grouping_select.value)
+        self._update_table()
 
     def _update_table(self):
         t1_date = self._t1_date
@@ -2370,7 +2375,7 @@ class ReportDialog(BaseDialog):
                 group.t += record.t2 - record.t1
             group_list = groups.values()
 
-        elif group_method == "tagz+date":
+        elif group_method == "tagz/date":
             groups = {}
             for obj in statobjects:
                 groups[obj.tagz] = {}
@@ -2398,7 +2403,7 @@ class ReportDialog(BaseDialog):
                     if group.t:
                         group_list.append(group)
 
-        elif group_method == "date+tagz":
+        elif group_method == "date/tagz":
             groups = {}
             for i in range(len(records)):
                 record = records[i]
