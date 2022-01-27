@@ -2234,6 +2234,13 @@ class ReportDialog(BaseDialog):
             <div class='formlayout'>
                 <div>Tags:</div> <div>{filtertext}</div>
                 <div>Date range:</div> <div></div>
+                <div>Grouping:</div> <select>
+                                        <option value='none'>none</option>
+                                        <option value='tagz'>tags</option>
+                                        <option value='date'>date</option>
+                                        <option value='tagz/date'>tags / date</option>
+                                        <option value='date/tagz'>date / tags</option>
+                                     </select>
                 <div>Format:</div> <label><input type='checkbox' /> Hours in decimals</label>
                 <div>Details:</div> <label><input type='checkbox' checked /> Show records</label>
                 <button type='button'><i class='fas'>\uf328</i>&nbsp;&nbsp;{self._copybuttext}</button>
@@ -2253,17 +2260,21 @@ class ReportDialog(BaseDialog):
 
         # filter text = form.children[1]
         self._date_range = form.children[3]
-        self._hourdecimals_but = form.children[5].children[0]  # inside label
-        self._showrecords_but = form.children[7].children[0]  # inside label
-        self._copy_but = form.children[8]
-        self._savecsv_but = form.children[10]
-        self._savepdf_but = form.children[12]
+        self._grouping_select = form.children[5]
+        self._hourdecimals_but = form.children[7].children[0]  # inside label
+        self._showrecords_but = form.children[9].children[0]  # inside label
+        self._copy_but = form.children[10]
+        self._savecsv_but = form.children[12]
+        self._savepdf_but = form.children[14]
 
         # Connect input elements
         close_but = self.maindiv.children[0].children[-1]
         close_but.onclick = self.close
         self._date_range.innerText = t1_date + "  -  " + t2_date
         #
+        grouping = window.localsettings.get("report_grouping", "date")
+        self._grouping_select.value = grouping
+        self._grouping_select.onchange = self._on_grouping_changed
         self._hourdecimals_but.oninput = self._update_table
         self._showrecords_but.oninput = self._update_table
         #
@@ -2273,6 +2284,10 @@ class ReportDialog(BaseDialog):
 
         window.setTimeout(self._update_table)
         super().open(None)
+
+    def _on_grouping_changed(self):
+        window.localsettings.set("report_grouping", self._grouping_select.value)
+        self._update_table()
 
     def _update_table(self):
         t1_date = self._t1_date
@@ -2318,23 +2333,108 @@ class ReportDialog(BaseDialog):
         # Get better names
         name_map = utils.get_better_tag_order_from_stats(stats, self._tags, True)
 
-        # Create list of pairs of stat-name, stat-key, and sort
+        # Create list of pairs of stat-name, stat-key, and sort.
+        # Thid is the reference order for tagz.
         statobjects = []
         for tagz1, tagz2 in name_map.items():
             statobjects.append({"oritagz": tagz1, "tagz": tagz2, "t": stats[tagz1]})
         utils.order_stats_by_duration_and_name(statobjects)
 
-        # Collect per tag combi, filter if necessary
-        records_per_tagz = {}
-        for tagz in name_map.keys():
-            records_per_tagz[tagz] = []
-        for i in range(len(records)):
-            record = records[i]
-            tags = window.store.records.tags_from_record(record)
-            tagz = tags.join(" ")
-            # if all([tag in tags for tag in self._tags]):
-            if tagz in records_per_tagz:
-                records_per_tagz[tagz].append(record)
+        # Get how to group the records
+        group_method = self._grouping_select.value
+
+        # Perform grouping ...
+        if group_method == "tagz":
+            groups = {}
+            for obj in statobjects:
+                groups[obj.tagz] = {"title": obj.tagz, "t": 0, "records": []}
+            for i in range(len(records)):
+                record = records[i]
+                tagz1 = window.store.records.tags_from_record(record).join(" ")
+                if tagz1 not in name_map:
+                    continue
+                tagz2 = name_map[tagz1]
+                group = groups[tagz2]
+                group.records.append(record)
+                group.t += record.t2 - record.t1
+            group_list = groups.values()
+
+        elif group_method == "date":
+            groups = {}
+            for i in range(len(records)):
+                record = records[i]
+                tagz1 = window.store.records.tags_from_record(record).join(" ")
+                if tagz1 not in name_map:
+                    continue
+                date = dt.time2localstr(record.t1).split(" ")[0]
+                if date not in groups:
+                    tdate = "-".join(reversed(date.split("-")))
+                    groups[date] = {"title": tdate, "t": 0, "records": []}
+                group = groups[date]
+                group.records.append(record)
+                group.t += record.t2 - record.t1
+            group_list = groups.values()
+
+        elif group_method == "tagz/date":
+            groups = {}
+            for obj in statobjects:
+                groups[obj.tagz] = {}
+            for i in range(len(records)):
+                record = records[i]
+                tagz1 = window.store.records.tags_from_record(record).join(" ")
+                if tagz1 not in name_map:
+                    continue
+                tagz2 = name_map[tagz1]
+                date = dt.time2localstr(record.t1).split(" ")[0]
+                subgroups = groups[tagz2]
+                if date not in subgroups:
+                    tdate = "-".join(reversed(date.split("-")))
+                    subgroups[date] = {
+                        "title": tagz2 + " / " + tdate,
+                        "t": 0,
+                        "records": [],
+                    }
+                group = subgroups[date]
+                group.records.append(record)
+                group.t += record.t2 - record.t1
+            group_list = []
+            for subgroups in groups.values():
+                for group in subgroups.values():
+                    if group.t:
+                        group_list.append(group)
+
+        elif group_method == "date/tagz":
+            groups = {}
+            for i in range(len(records)):
+                record = records[i]
+                tagz1 = window.store.records.tags_from_record(record).join(" ")
+                if tagz1 not in name_map:
+                    continue
+                tagz2 = name_map[tagz1]
+                date = dt.time2localstr(record.t1).split(" ")[0]
+                if date not in groups:
+                    subgroups = {}
+                    for obj in statobjects:
+                        tdate = "-".join(reversed(date.split("-")))
+                        subgroups[obj.tagz] = {
+                            "title": tdate + " / " + obj.tagz,
+                            "t": 0,
+                            "records": [],
+                        }
+                    groups[date] = subgroups
+                subgroups = groups[date]
+                group = subgroups[tagz2]
+                group.records.append(record)
+                group.t += record.t2 - record.t1
+            group_list = []
+            for subgroups in groups.values():
+                for group in subgroups.values():
+                    if group.t:
+                        group_list.append(group)
+
+        else:
+            group = {"title": "hidden", "t": 0, "records": records}
+            group_list = [group]
 
         # Generate rows
         rows = []
@@ -2345,17 +2445,18 @@ class ReportDialog(BaseDialog):
             total += stats[tagz]
         rows.append(["head", duration2str(total), "Total", 0])
 
-        for statobject in statobjects:
+        for group in group_list:
             # Add row for total of this tag combi
-            duration = duration2str(statobject.t)
+            duration = duration2str(group.t)
             pad = 1
             if showrecords:
                 rows.append(["blank"])
-            rows.append(["head", duration, statobject.tagz, pad])
+            if group.title != "hidden":
+                rows.append(["head", duration, group.title, pad])
 
             # Add row for each record
             if showrecords:
-                records = records_per_tagz[statobject.oritagz]
+                records = group.records
                 for i in range(len(records)):
                     record = records[i]
                     sd1, st1 = dt.time2localstr(record.t1).split(" ")
