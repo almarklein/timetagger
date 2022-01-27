@@ -2238,8 +2238,8 @@ class ReportDialog(BaseDialog):
                                         <option value='none'>none</option>
                                         <option value='tagz'>tags</option>
                                         <option value='date'>date</option>
-                                        <option value='tagz/date'>tags then date</option>
-                                        <option value='date/tagz'>date then tags</option>
+                                        <option value='tagz/date'>tags / date</option>
+                                        <option value='date/tagz'>date / tags</option>
                                      </select>
                 <div>Format:</div> <label><input type='checkbox' /> Hours in decimals</label>
                 <div>Details:</div> <label><input type='checkbox' checked /> Show records</label>
