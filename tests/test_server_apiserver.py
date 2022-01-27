@@ -252,7 +252,7 @@ def test_settings():
         # Try adding settings with too long fields
         settings = [
             dict(key="p" * 256, mt=100, value=42),
-            dict(key="pref10", mt=100, value="x" * 256),
+            dict(key="pref10", mt=100, value="x" * 8192),
         ]
         r = p.put(
             "http://localhost/api/v2/settings",
