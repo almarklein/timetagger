@@ -349,8 +349,13 @@ def order_stats_by_duration_and_name(items):
 
 def timestr2tuple(text):
     PSCRIPT_OVERLOAD = False  # noqa
-    # Cases to support
-    #
+    # Cases to support:
+    # hh:mm:ss
+    # hh mm ss
+    # hh mm
+    # xxh xxm xxs
+    # hhmmss
+    # hhmm
 
     # Determine format
     text = text.strip().lower()
@@ -387,7 +392,7 @@ def timestr2tuple(text):
         return None, None, None
 
     # Turn 1345 into 13:45
-    if parse_count == 1:
+    if parse_count == 1 and not text[-1] in ":;,hms":
         if len(values["h"]) > 2:
             values["m"] = values["h"][2:]
             values["h"] = values["h"][:2]
@@ -404,7 +409,10 @@ def timestr2tuple(text):
     elif format == "pm" and h < 12:
         h += 12
 
-    return min(h, 23), min(m, 59), min(s, 59)
+    # We could protect user from accidentally typing 100 hours or so.
+    # But being able to write 62m and durations of 24h+ also matter. See #129.
+    # return min(h, 23), min(m, 59), min(s, 59)
+    return h, m, s
 
 
 def positions_mean_and_std(positions):
