@@ -254,9 +254,18 @@ def test_timestr2tuple():
     assert timestr2tuple("11:50 pm") == (23, 50, 0)
 
     # Out of range
-    assert timestr2tuple("30") == (23, 0, 0)
-    assert timestr2tuple("13:60") == (13, 59, 0)
-    assert timestr2tuple("13:24:60") == (13, 24, 59)
+    # assert timestr2tuple("30") == (23, 0, 0)
+    # assert timestr2tuple("13:60") == (13, 59, 0)
+    # assert timestr2tuple("13:24:60") == (13, 24, 59)
+    assert timestr2tuple("30") == (30, 0, 0)
+    assert timestr2tuple("13:60") == (13, 60, 0)
+    assert timestr2tuple("13:24:60") == (13, 24, 60)
+
+    assert timestr2tuple("132") == (13, 2, 0)
+    assert timestr2tuple("132:") == (132, 0, 0)
+    assert timestr2tuple("132h") == (132, 0, 0)
+    assert timestr2tuple("132m") == (0, 132, 0)
+    assert timestr2tuple("132s") == (0, 0, 132)
 
 
 if __name__ == "__main__":
