@@ -732,15 +732,12 @@ class BaseCanvas:
     def _on_js_touch_event(self, e):
         e.preventDefault()
         ev = create_pointer_event(self.node, e)
-        ev.type = (
-            "touch_"
-            + {
-                "start": "down",
-                "move": "move",
-                "end": "up",
-                "cancel": "up",
-            }.get(e.type[5:])
-        )
+        ev.type = "touch_" + {
+            "start": "down",
+            "move": "move",
+            "end": "up",
+            "cancel": "up",
+        }.get(e.type[5:])
         self.on_pointer(ev)
 
     def _on_js_resize_event(self):

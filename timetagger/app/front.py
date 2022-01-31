@@ -440,8 +440,8 @@ class TimeRange:
             nsecs_old = t2_old - t1_old
             nsecs_new = t2_new - t1_new
             x = Math.log(2 + nsecs_old) / Math.log(2 + nsecs_new)
-            x = x ** 2  # Otherwise higher scaler animate slower
-            f = f ** x
+            x = x**2  # Otherwise higher scaler animate slower
+            f = f**x
             # Linear animation, or slower towards the end?
             # f = f ** 2
             self._t1 = f * t1_old + (1 - f) * t1_new
