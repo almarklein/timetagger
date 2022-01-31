@@ -1360,7 +1360,10 @@ class TopWidget(Widget):
             self._handle_button_press("nav_menu")
         #
         elif e.key.lower() == "s":
-            self._handle_button_press("record_start")
+            if e.shiftKey:
+                self._handle_button_press("record_resume")
+            else:
+                self._handle_button_press("record_start")
         elif e.key.lower() == "x":
             self._handle_button_press("record_stopall")
         elif e.key.lower() == "r":
@@ -1397,6 +1400,18 @@ class TopWidget(Widget):
             elif action == "record_new":
                 record = window.store.records.create(now - 1800, now)
                 self._canvas.record_dialog.open("New", record, self.update)
+            elif action == "record_resume":
+                record = window.store.records.create(now, now)
+                records = window.store.records.get_running_records()
+                if not records:
+                    records = window.store.records.get_records(
+                        now - 7 * 86400, now
+                    ).values()
+                    records.sort(key=lambda r: r.t2)
+                if records:
+                    prev_record = records[-1]
+                    record.ds = prev_record.ds
+                self._canvas.record_dialog.open("Start", record, self.update)
             elif action == "record_stop":
                 records = window.store.records.get_running_records()
                 if len(records) > 0:
