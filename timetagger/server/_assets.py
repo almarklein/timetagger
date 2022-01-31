@@ -79,7 +79,7 @@ def md2html(text, template):
             lines[i] = line
     text = "\n".join(lines)
     # Turn md into html and store
-    main = markdown.markdown(text, extensions=[])
+    main = markdown.markdown(text, extensions=["fenced_code"])
 
     if isinstance(template, str):
         template = jinja2.Template(template)

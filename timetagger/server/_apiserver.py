@@ -390,7 +390,7 @@ async def put_settings(request, auth_info, db):
 async def _push_items(request, auth_info, db, what):
 
     # Download items
-    items = await request.get_json(10 * 2 ** 20)  # 10 MiB limit
+    items = await request.get_json(10 * 2**20)  # 10 MiB limit
     if not isinstance(items, list):
         raise TypeError(f"List of {what} must be a list")
 

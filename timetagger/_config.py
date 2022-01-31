@@ -14,8 +14,8 @@ class Config:
     The values can be configured using CLI arguments and environment variables.
     For CLI arguments, the following formats are supported:
     ```
-    python timetagger_script.py --datadir=~/timedata
-    python timetagger_script.py --datadir ~/timedata
+    python run.py --datadir=~/timedata
+    python run.py --datadir ~/timedata
     ```
 
     For environment variable, the key is uppercase and prefixed:
