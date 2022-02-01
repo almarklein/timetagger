@@ -36,5 +36,7 @@ You can do whatever you want when you run things locally. When you host it
 on the web, you should take care of authentication, and make sure that you
 comply to the TimeTagger license (GPLv3).
 
+Also check [this article](https://timetagger.app/articles/selfhost/) about setting up TimeTagger.
+
 If you're interested in including TimeTagger into a larger product,
 contact [me](https://almarklein.org) for information about an OEM license.
