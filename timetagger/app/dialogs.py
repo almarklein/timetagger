@@ -720,9 +720,12 @@ class StartStopEdit:
             # Get sensible earlier time
             t2 = dt.now()
             secs_earlier = 8 * 3600  # 8 hours
+            running = records = window.store.records.get_running_records()
             records = window.store.records.get_records(t2 - secs_earlier, t2).values()
-            records.sort(key=lambda r: r.t2)
-            if len(records) > 0:
+            if running:
+                t1 = t2 - 300  # 5 min earlier
+            elif len(records) > 0:
+                records.sort(key=lambda r: r.t2)
                 t1 = records[-1].t2  # start time == last records stop time
                 t1 = min(t1, t2 - 1)
             else:
@@ -1488,11 +1491,12 @@ class RecordDialog(BaseDialog):
         window.store.records.put(record)
         self.close(record)
 
-    def _stop_all_running_records(self):
+    def _stop_all_running_records(self, t2=None):
         records = window.store.records.get_running_records()
-        now = dt.now()
+        if t2 is None:
+            t2 = dt.now()
         for record in records:
-            record.t2 = max(record.t1 + 10, now)
+            record.t2 = max(record.t1 + 10, t2)
             window.store.records.put(record)
 
     def submit(self):
@@ -1507,7 +1511,7 @@ class RecordDialog(BaseDialog):
             self._record.pop("ds", None)
         # Prevent multiple timers at once
         if self._record.t1 == self._record.t2:
-            self._stop_all_running_records()
+            self._stop_all_running_records(self._record.t1)
         # Apply
         window.store.records.put(self._record)
         super().submit(self._record)
