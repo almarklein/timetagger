@@ -1016,9 +1016,7 @@ class RecordDialog(BaseDialog):
             </div>
             <div class='container' style='min-height:5px;'>
                 <button type='button' style='float:right; font-size:85%; margin-top:-4px;'>
-                    <i class='fas'>\uf044</i></button>
-                <button type='button' style='float:right; font-size:85%; margin-top:-4px;'>
-                    <b>˅</b> Presets</button>
+                    Presets <i class='fas'>\uf044</i></button>
             </div>
             <div></div>
             <div style='color:#777;'></div>
@@ -1052,7 +1050,7 @@ class RecordDialog(BaseDialog):
         #
         self._ds_input = self._ds_container.children[0]
         self._autocomp_div = self._ds_container.children[1]
-        self._preset_button = self._preset_container.children[1]
+        # self._preset_button = self._preset_container.children[1]
         self._preset_edit = self._preset_container.children[0]
         self._title_div = h1.children[1]
         self._cancel_but1 = self.maindiv.children[0].children[-1]
@@ -1101,7 +1099,7 @@ class RecordDialog(BaseDialog):
         self._resume_but.onclick = self.resume_record
         self._ds_input.oninput = self._on_user_edit
         self._ds_input.onchange = self._on_user_edit_done
-        self._preset_button.onclick = self.show_preset_tags
+        # self._preset_button.onclick = self.show_preset_tags
         self._preset_edit.onclick = lambda: self._canvas.tag_preset_dialog.open()
         self._delete_but1.onclick = self._delete1
         self._delete_but2.onclick = self._delete2
@@ -1218,7 +1216,7 @@ class RecordDialog(BaseDialog):
         # Prevent that the click will hide the autocomp
         if e and e.stopPropagation:
             e.stopPropagation()
-        # Collect suggestions
+        # Collect recent suggestions
         suggestions = []
         now = dt.now()
         for tag, tag_t2 in self._suggested_tags_recent:
@@ -1243,13 +1241,41 @@ class RecordDialog(BaseDialog):
             self._autocomp_clear()
             return
         elif tag_to_be == "#":
-            return self.show_recent_tags()  # Delegate
+            return self.show_preset_tags()  # Delegate
 
         # Obtain suggestions
         now = dt.now()
         needle = tag_to_be[1:]  # the tag without the '#'
         matches1 = []
         matches2 = []
+        # Suggestions from presets
+        for preset in self._get_suggested_tags_presets():
+            html = preset + "<span class='meta'>preset<span>"
+            i = preset.indexOf(needle)
+            if i > 0:
+                if preset[i - 1] == "#":
+                    # A tag in the preset startswith the needle
+                    html = (
+                        preset[: i - 1]
+                        + "<b>"
+                        + tag_to_be
+                        + "</b>"
+                        + preset[i + needle.length :]
+                    )
+                    html += "<span class='meta'>preset<span>"
+                    matches1.push((preset, html))
+                elif needle.length >= 2:
+                    # The preset contains the needle, and the needle is more than 1 char
+                    html = (
+                        preset[:i]
+                        + "<b>"
+                        + needle
+                        + "</b>"
+                        + preset[i + needle.length :]
+                    )
+                    html += "<span class='meta'>preset<span>"
+                    matches2.push((preset, html))
+        # Suggestions from recent tags
         for tag, tag_t2 in self._suggested_tags_all:
             i = tag.indexOf(needle)
             if i > 0:
@@ -1285,12 +1311,12 @@ class RecordDialog(BaseDialog):
         self._autocomp_div.appendChild(item)
         # Add suggestions
         self._suggested_tags_in_autocomp = []
-        for tag, html in suggestions:
-            self._suggested_tags_in_autocomp.push(tag)
+        for text, html in suggestions:  # text is a tag or a preset
+            self._suggested_tags_in_autocomp.push(text)
             item = document.createElement("div")
             item.classList.add("tag-suggestion")
             item.innerHTML = html
-            onclick = f'window._record_dialog_autocomp_finish("{tag}");'
+            onclick = f'window._record_dialog_autocomp_finish("{text}");'
             item.setAttribute("onclick", onclick)
             self._autocomp_div.appendChild(item)
         # Show
@@ -1324,14 +1350,14 @@ class RecordDialog(BaseDialog):
         self._autocomp_div.hidden = True
         self._autocomp_div.innerHTML = ""
 
-    def _autocomp_finish(self, tag):
+    def _autocomp_finish(self, text):
         self._autocomp_clear()
-        if tag:
+        if text:
             # Compose new description and cursor pos
             val, i1, i2 = self._autocomp_state
-            new_val = val[:i1] + tag + val[i2:]
-            i3 = max(0, i1) + len(tag)
-            # Add a space if the tag is added to the end
+            new_val = val[:i1] + text + val[i2:]
+            i3 = max(0, i1) + len(text)
+            # Add a space if the text is added to the end
             if len(val[i2:].strip()) == 0:
                 new_val = new_val.rstrip() + " "
                 i3 = new_val.length
