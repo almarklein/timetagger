@@ -1050,7 +1050,6 @@ class RecordDialog(BaseDialog):
         #
         self._ds_input = self._ds_container.children[0]
         self._autocomp_div = self._ds_container.children[1]
-        # self._preset_button = self._preset_container.children[1]
         self._preset_edit = self._preset_container.children[0]
         self._title_div = h1.children[1]
         self._cancel_but1 = self.maindiv.children[0].children[-1]
@@ -1099,7 +1098,6 @@ class RecordDialog(BaseDialog):
         self._resume_but.onclick = self.resume_record
         self._ds_input.oninput = self._on_user_edit
         self._ds_input.onchange = self._on_user_edit_done
-        # self._preset_button.onclick = self.show_preset_tags
         self._preset_edit.onclick = lambda: self._canvas.tag_preset_dialog.open()
         self._delete_but1.onclick = self._delete1
         self._delete_but2.onclick = self._delete2
