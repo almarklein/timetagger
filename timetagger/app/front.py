@@ -1493,6 +1493,7 @@ class RecordsWidget(Widget):
 
         # Stuff related to interaction
         self._interaction_mode = 0
+        self._dragging_new_record = 0
         self._last_pointer_down_event = None
 
         self._arrow_state = 0, 0  # last_timestamp, last_alpha
@@ -1536,8 +1537,12 @@ class RecordsWidget(Widget):
         x4 = self._canvas.grid_round(x3 + 50)
 
         # Draw background of "active region"
-        ctx.fillStyle = COLORS.panel_bg
+        if self._dragging_new_record:
+            ctx.fillStyle = COLORS.background1
+        else:
+            ctx.fillStyle = COLORS.panel_bg
         ctx.fillRect(x3, y1, x4 - x3, y2 - y1)
+        self._timeline_bounds = x3, x4, y1, y2
 
         # Draw animated arrow indicator
         self._draw_arrow(ctx, x1, y1, x2, y2, x3, x4)
@@ -1550,6 +1555,14 @@ class RecordsWidget(Widget):
         ctx.clearRect(0, 0, x2, y1 - 33)
         self._draw_top_and_bottom_cover(ctx, x1, x3, x4, x2, y1 - 50, y1, 0.333)
         self._draw_top_and_bottom_cover(ctx, x1, x3, x4, x2, y2, self._canvas.h, -0.02)
+
+        # Draw drag-text
+        if self._dragging_new_record:
+            ctx.textAlign = "left"
+            ctx.textBaseline = "bottom"
+            ctx.font = 1.2 * FONT.size + "px " + FONT.default
+            ctx.fillStyle = COLORS.prim2_clr
+            ctx.fillText("⬋ drag here to create new record", x4, y1 - 2)
 
         # Draw title text
         if self._canvas.w > 700:
@@ -1980,6 +1993,8 @@ class RecordsWidget(Widget):
         if len(selected_tags):
             if not all([tag in tags for tag in selected_tags]):
                 tags_selected = False
+        if self._dragging_new_record:
+            tags_selected = False
 
         # # Determine wheter this record is selected in the timeline
         # selected_in_timeline = False
@@ -2458,6 +2473,13 @@ class RecordsWidget(Widget):
 
         x, y = ev.pos[0], ev.pos[1]
 
+        on_timeline = (
+            x > self._timeline_bounds[0]
+            and x < self._timeline_bounds[1]
+            and y > self._timeline_bounds[2]
+            and y < self._timeline_bounds[3]
+        )
+
         # Get range in time and pixels
         t1, t2 = self._canvas.range.get_range()
         _, y1, _, y2 = self.rect
@@ -2466,6 +2488,24 @@ class RecordsWidget(Widget):
 
         # Get current pos
         t = t1 + (y - y1) * nsecs / npixels
+
+        # Handle new record creation via dragging.
+        # This mode takes over all other behavior.
+        if self._dragging_new_record:
+            if "down" in ev.type:
+                if on_timeline:
+                    self._dragging_new_record = 2
+                    self._last_pointer_down_event = ev
+                else:
+                    self._dragging_new_record = 0
+            elif "up" in ev.type:
+                self._dragging_new_record = 0
+                downx, downy = self._last_pointer_down_event.pos
+                tb = t1 + (downy - y1) * nsecs / npixels
+                record = window.store.records.create(min(t, tb), max(t, tb))
+                self._canvas.record_dialog.open("New", record, self.update)
+            self.update()
+            return
 
         # Determine when to transition from one mode to another
         last_interaction_mode = self._interaction_mode
@@ -2500,7 +2540,13 @@ class RecordsWidget(Widget):
         # Things that only trigger if we did not move the mouse too much
         if last_interaction_mode == 1 and "up" in ev.type:
             picked = self._picker.pick(x, y)
-            if picked is not None:
+            if picked is None:
+                # Initiate create-via-drag?
+                if on_timeline:
+                    self._dragging_new_record = 1
+                    self.update()
+                    return
+            else:
                 if picked.statrect:
                     # A stat rectangle
                     self._canvas.range.animate_range(picked.t1, picked.t2)
