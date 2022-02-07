@@ -1486,7 +1486,8 @@ class RecordDialog(BaseDialog):
     def _get_suggested_tags_presets(self):
         """Get suggested tags based on the presets."""
         item = window.store.settings.get_by_key("tag_presets")
-        return (None if item is None else item.value) or []
+        presets = (None if item is None else item.value) or []
+        return [preset for preset in presets if preset]
 
     def _delete1(self):
         self._delete_but2.style.display = "block"
@@ -1795,12 +1796,11 @@ class TagPresetsDialog(BaseDialog):
         for line in lines1:
             line = line.strip()
             if line:
-                tags, _ = utils.get_tags_and_parts_from_string(to_str(line))
+                tags, _ = utils.get_tags_and_parts_from_string(to_str(line), False)
                 for tag in tags:
                     found_tags[tag] = tag
                 line = tags.join(" ")
-                if line:
-                    lines2.append(line)
+            lines2.append(line)
 
         # Check size
         length = JSON.stringify(lines2).length

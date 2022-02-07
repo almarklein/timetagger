@@ -159,7 +159,7 @@ def convert_text_to_valid_tag(s):
     return tag_name
 
 
-def get_tags_and_parts_from_string(s=""):
+def get_tags_and_parts_from_string(s="", sorted=True):
     """Given a string, return a sorted list of tags, and a list of text parts
     that can be concatenated into the (nearly) original string.
 
@@ -211,7 +211,8 @@ def get_tags_and_parts_from_string(s=""):
     tags = tags.values()
     if not this_is_js():
         tags = list(tags)
-    tags.sort()
+    if sorted:
+        tags.sort()
     return tags, parts
 
 
