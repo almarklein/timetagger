@@ -1266,9 +1266,7 @@ class TopWidget(Widget):
 
         # Overload for "sensible" scales
         now_scale = SCALES[i][0]
-        if nsecs < 3 * 86400:
-            now_scale = "1D"
-        elif nsecs > 180 * 86400:
+        if nsecs > 180 * 86400:
             now_scale = "1Y"
 
         # Are we currently on one of the reference scales?
@@ -1347,7 +1345,7 @@ class TopWidget(Widget):
             self._handle_button_press("nav_zoom_" + self._current_scale["out"])
         elif e.key.lower() == "arrowright":
             self._handle_button_press("nav_zoom_" + self._current_scale["in"])
-        elif e.key.lower() == "home" or e.key.lower() == "end":
+        elif e.key.lower() == "n" or e.key.lower() == "home" or e.key.lower() == "end":
             self._handle_button_press("nav_snap_now" + self._current_scale["now"])
         #
         elif e.key.lower() == "d":
