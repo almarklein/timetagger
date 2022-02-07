@@ -1191,33 +1191,16 @@ class RecordDialog(BaseDialog):
             reset = lambda: self._ds_input.style.setProperty("outline", "")
             window.setTimeout(reset, 2000)
 
-    def show_preset_tags(self, e):
+    def show_preset_and_recent_tags(self, e):
         # Prevent that the click will hide the autocomp
         if e and e.stopPropagation:
             e.stopPropagation()
-        # Get list of preset strings
-        presets = self._get_suggested_tags_presets()
-        # Produce suggestions
         suggestions = []
-        for preset in presets:
+        # Collect presets
+        for preset in self._get_suggested_tags_presets():
             html = preset + "<span class='meta'>preset<span>"
             suggestions.push((preset, html))
-        # Show
-        val = self._ds_input.value.rstrip()
-        if val:
-            val += " "
-        if suggestions:
-            self._autocomp_state = self._get_autocomp_state()
-            self._autocomp_show("Tag presets:", suggestions)
-        else:
-            self._autocomp_show("No presets defined ...", [])
-
-    def show_recent_tags(self, e):
-        # Prevent that the click will hide the autocomp
-        if e and e.stopPropagation:
-            e.stopPropagation()
-        # Collect recent suggestions
-        suggestions = []
+        # Collect recents
         now = dt.now()
         for tag, tag_t2 in self._suggested_tags_recent:
             date = max(0, int((now - tag_t2) / 86400))
@@ -1227,9 +1210,9 @@ class RecordDialog(BaseDialog):
         # Show
         if suggestions:
             self._autocomp_state = self._get_autocomp_state()
-            self._autocomp_show("Recent tags:", suggestions)
+            self._autocomp_show("Presets & recent tags:", suggestions)
         else:
-            self._autocomp_show("No recent tags ...", suggestions)
+            self._autocomp_show("No presets or recent tags ...", [])
 
     def _autocomp_init(self):
         """Show tag suggestions in the autocompletion dialog."""
@@ -1241,7 +1224,7 @@ class RecordDialog(BaseDialog):
             self._autocomp_clear()
             return
         elif tag_to_be == "#":
-            return self.show_preset_tags()  # Delegate
+            return self.show_preset_and_recent_tags()  # Delegate
 
         # Obtain suggestions
         now = dt.now()
@@ -1298,7 +1281,7 @@ class RecordDialog(BaseDialog):
         # Show
         if suggestions:
             self._autocomp_state = val, i1, i2
-            self._autocomp_show("Matching tags:", suggestions)
+            self._autocomp_show("Matching presets / tags:", suggestions)
         else:
             self._autocomp_clear()
 
