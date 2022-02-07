@@ -2366,7 +2366,7 @@ class ReportDialog(BaseDialog):
                     continue
                 tagz2 = name_map[tagz1]
                 group = groups[tagz2]
-                group.records.append(record)
+                group.records.push(record)
                 group.t += record.t2 - record.t1
             group_list = groups.values()
 
@@ -2382,7 +2382,7 @@ class ReportDialog(BaseDialog):
                     tdate = "-".join(reversed(date.split("-")))
                     groups[date] = {"title": tdate, "t": 0, "records": []}
                 group = groups[date]
-                group.records.append(record)
+                group.records.push(record)
                 group.t += record.t2 - record.t1
             group_list = groups.values()
 
@@ -2406,13 +2406,13 @@ class ReportDialog(BaseDialog):
                         "records": [],
                     }
                 group = subgroups[date]
-                group.records.append(record)
+                group.records.push(record)
                 group.t += record.t2 - record.t1
             group_list = []
             for subgroups in groups.values():
                 for group in subgroups.values():
                     if group.t:
-                        group_list.append(group)
+                        group_list.push(group)
 
         elif group_method == "date/tagz":
             groups = {}
@@ -2435,17 +2435,23 @@ class ReportDialog(BaseDialog):
                     groups[date] = subgroups
                 subgroups = groups[date]
                 group = subgroups[tagz2]
-                group.records.append(record)
+                group.records.push(record)
                 group.t += record.t2 - record.t1
             group_list = []
             for subgroups in groups.values():
                 for group in subgroups.values():
                     if group.t:
-                        group_list.append(group)
+                        group_list.push(group)
 
         else:
-            group = {"title": "hidden", "t": 0, "records": records}
+            group = {"title": "hidden", "t": 0, "records": []}
             group_list = [group]
+            for i in range(len(records)):
+                record = records[i]
+                tagz1 = window.store.records.tags_from_record(record).join(" ")
+                if tagz1 not in name_map:
+                    continue
+                group.records.push(record)
 
         # Generate rows
         rows = []
