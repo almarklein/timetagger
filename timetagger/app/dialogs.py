@@ -3165,7 +3165,7 @@ class SettingsDialog(BaseDialog):
             "Enter": "Submit dialog",
             "Escape": "Close dialog",
             "_nav": "<b>Navigation</b>",
-            "N/Home/End": "Snap to now (on current time-scale)",
+            "N/Home/End": "Snap to now",
             "D": "Select today",
             "W": "Select this week",
             "M": "Select this month",
