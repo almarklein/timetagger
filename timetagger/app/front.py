@@ -244,15 +244,16 @@ class TimeTaggerCanvas(BaseCanvas):
         # ctx.fillRect(0, 0, self.w, self.h)
 
         # Draw icon in bottom right
-        iconw = 192 if self.w >= 400 else 96
-        iconh = iconw / 6
-        ctx.drawImage(
-            window.document.getElementById("ttlogo_tg"),
-            self.w - iconw - 5,
-            self.h - iconh - 5,
-            iconw,
-            iconh,
-        )
+        if self.w >= 800:
+            iconw = 192 if self.w >= 400 else 96
+            iconh = iconw / 6
+            ctx.drawImage(
+                window.document.getElementById("ttlogo_tg"),
+                self.w - iconw - 5,
+                self.h - iconh - 5,
+                iconw,
+                iconh,
+            )
 
         # Determine if we are logged in and all is right (e.g. token not expired)
         cantuse = None
@@ -3049,17 +3050,9 @@ class AnalyticsWidget(Widget):
         self._level_counts = []  # list of [selected_bars, unselected_bars]
         self._resolve_t(root, 0)
 
-        # Determine root inset, based on total time. But asymptotically limit it.
-        # This is based on the "softlimit" function.
-        one_pixel_in_secs = 30 * 60
-        npixels = root.cum_t / one_pixel_in_secs
-        avail_inset = 80
-        root_target_inset = -avail_inset * (Math.exp(-npixels / avail_inset) - 1)
-        root_target_inset *= min(80, ((x2 - x1) / 6)) / 80  # responsive
-        npixels_each_min_max = 40, 60
-
         # Determine max level and derive more props
-        avail_height = (y2 - y1) - (avail_inset / 4) * 2
+        npixels_each_min_max = 40, 60
+        avail_height = (y2 - y1) - 4
         n_max = avail_height / npixels_each_min_max[0]
         n = 0
         for level in range(len(self._level_counts)):
@@ -3071,6 +3064,8 @@ class AnalyticsWidget(Widget):
         self._maxlevel = max(1, level - 1)
         if self._maxlevel == 1 and len(self._level_counts) <= 1:
             self._maxlevel = 0
+        if self._maxlevel > 1:
+            avail_height -= 20  # Need extra space for target info
 
         # Determine targets
         item = window.store.settings.get_by_key("tag_targets")
@@ -3089,6 +3084,7 @@ class AnalyticsWidget(Widget):
         self._npixels_each = self._slowly_update_value(self._npixels_each, npixels_each)
 
         # Three resolve passes: target inset and height, real inset and height, positioning
+        root_target_inset = 10  # stub value, but need > 0 for things to function
         self._max_cum_offset = 0
         self._resolve_target_inset_and_height(root, root_target_inset, root.cum_t)
         self._resolve_real_inset_and_height(root, None)
@@ -3234,10 +3230,10 @@ class AnalyticsWidget(Widget):
         """Calculate the real height, inset and cum_offset, limiting as needed."""
         PSCRIPT_OVERLOAD = False  # noqa
 
-        # Set actual height, inset, xoffset
+        # Set actual height, xoffset, inset is a historic thing that's disabled now
         d.height = self._slowly_update_value(d.height, d.target_height)
-        d.inset = self._slowly_update_value(d.inset, d.target_inset)
         d.xoffset = self._slowly_update_value(d.xoffset, d.target_xoffset)
+        d.inset = 0  # self._slowly_update_value(d.inset, d.target_inset)
 
         # Set cum_offset for base
         if d.level == 0:
