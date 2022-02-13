@@ -80,6 +80,8 @@ async def api_handler(request, path):
         return 200, {}, "See https://timetagger.readthedocs.io"
     elif path == "webtoken_for_localhost":
         return await webtoken_for_localhost(request)
+    elif path == "webtoken_from_proxy":
+        return await webtoken_from_proxy(request)
 
     # Authenticate and get user db
     try:
@@ -104,6 +106,27 @@ async def webtoken_for_localhost(request):
 
     # Return the webtoken for the default user
     token = await get_webtoken_unsafe("defaultuser")
+    return 200, {}, dict(token=token)
+
+
+async def webtoken_from_proxy(request):
+    """An authentication handler that provides a webtoken when the
+    user proxy header is set. See `get_webtoken_unsafe()` for details.
+    """
+
+    # TODO: Establish that we can trust the proxy
+    """
+    if request.host not in ("localhost", "127.0.0.1"):
+        return 403, {}, "forbidden: must be on localhost"
+    """
+
+    # Check if the x-remote-user header exists
+    user = request.headers.get("x-remote-user", "")
+    if not user:
+        return 403, {}, "forbidden: no proxy user provided"
+
+    # Return the webtoken for the proxy user
+    token = await get_webtoken_unsafe(user)
     return 200, {}, dict(token=token)
 
 
