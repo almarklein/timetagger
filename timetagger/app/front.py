@@ -3328,8 +3328,8 @@ class AnalyticsWidget(Widget):
             ctx.strokeStyle = COLORS.panel_edge
             ctx.fillStyle = COLORS.panel_bg
         elif is_running:
-            y2 += 0.2
-            ctx.lineWidth = 2.2
+            y2 += 0.4
+            ctx.lineWidth = 2.3
             ctx.strokeStyle = COLORS.record_edge
             ctx.fillStyle = COLORS.record_bg
         else:
