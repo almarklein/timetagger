@@ -260,7 +260,7 @@ class TimeTaggerCanvas(BaseCanvas):
         if window.store.get_auth:
             auth = window.store.get_auth()
             if not auth:
-                cantuse = "You are loged out."
+                cantuse = "You are logged out."
             elif auth.cantuse:
                 cantuse = auth.cantuse
 
