@@ -100,9 +100,10 @@ main .content {
     top: 0px; bottom: 0; left: 0; right: 0;
     padding: 1em; margin: 0;  /* override centering for static position */
 }
-@media screen and (min-width: 1024px) { main .content {
-    left: calc(50% - 512px); right: calc(50% - 512px); width: 1024px;
+@media screen and (min-width: 1000px) { main .content {
+    left: calc(25% - 250px); right: calc(25% - 250px); width: calc(500px + 50%);
 }}
+
 
 /**************** Base styling ****************/
 
