@@ -1209,7 +1209,7 @@ class RecordDialog(BaseDialog):
             e.stopPropagation()
         self.show_presets_and_recents(False, True)
 
-    def show_presets_and_recents(self, presets=True, recents=True):
+    def show_presets_and_recents(self, presets=True, recents=True, hint=""):
         suggestions = []
         types = []
         # Collect presets
@@ -1232,7 +1232,7 @@ class RecordDialog(BaseDialog):
             self._autocomp_clear()
         elif suggestions:
             self._autocomp_state = self._get_autocomp_state()
-            self._autocomp_show(types.join(" & ") + ":", suggestions)
+            self._autocomp_show(types.join(" & ") + hint + ":", suggestions)
         else:
             self._autocomp_show("No " + types.join(" or ") + " ...", [])
 
@@ -1245,57 +1245,70 @@ class RecordDialog(BaseDialog):
         if not tag_to_be:
             self._autocomp_clear()
             return
-        elif tag_to_be == "#":
-            return self.show_presets_and_recents()  # Delegate
+
+        # We show presets if using double hashtags
+        show_presets = i1 > 0 and val[i1 - 1] == "#"
+
+        if tag_to_be == "#":
+            if show_presets:
+                return self.show_presets_and_recents(True, False, "")
+            else:
+                return self.show_presets_and_recents(
+                    False, True, " (type '##' for presets)"
+                )
 
         # Obtain suggestions
         now = dt.now()
         needle = tag_to_be[1:]  # the tag without the '#'
         matches1 = []
         matches2 = []
-        # Suggestions from presets
-        for preset in self._get_suggested_tags_presets():
-            html = preset + "<span class='meta'>preset<span>"
-            i = preset.indexOf(needle)
-            if i > 0:
-                if preset[i - 1] == "#":
-                    # A tag in the preset startswith the needle
-                    html = (
-                        preset[: i - 1]
-                        + "<b>"
-                        + tag_to_be
-                        + "</b>"
-                        + preset[i + needle.length :]
-                    )
-                    html += "<span class='meta'>preset<span>"
-                    matches1.push((preset, html))
-                elif needle.length >= 2:
-                    # The preset contains the needle, and the needle is more than 1 char
-                    html = (
-                        preset[:i]
-                        + "<b>"
-                        + needle
-                        + "</b>"
-                        + preset[i + needle.length :]
-                    )
-                    html += "<span class='meta'>preset<span>"
-                    matches2.push((preset, html))
-        # Suggestions from recent tags
-        for tag, tag_t2 in self._suggested_tags_all:
-            i = tag.indexOf(needle)
-            if i > 0:
-                date = max(0, int((now - tag_t2) / 86400))
-                date = {0: "today", 1: "yesterday"}.get(date, date + " days ago")
-                if i == 1:
-                    # The tag startswith the needle
-                    html = "<b>" + tag_to_be + "</b>" + tag[tag_to_be.length :]
-                    html += "<span class='meta'>last used " + date + "<span>"
-                    matches1.push((tag, html))
-                elif needle.length >= 2:
-                    # The tag contains the needle, and the needle is more than 1 char
-                    html = tag[:i] + "<b>" + needle + "</b>" + tag[i + needle.length :]
-                    html += "<span class='meta'>last used " + date + "<span>"
-                    matches2.push((tag, html))
+        if show_presets:
+            # Suggestions from presets
+            for preset in self._get_suggested_tags_presets():
+                html = preset + "<span class='meta'>preset<span>"
+                i = preset.indexOf(needle)
+                if i > 0:
+                    if preset[i - 1] == "#":
+                        # A tag in the preset startswith the needle
+                        html = (
+                            preset[: i - 1]
+                            + "<b>"
+                            + tag_to_be
+                            + "</b>"
+                            + preset[i + needle.length :]
+                        )
+                        html += "<span class='meta'>preset<span>"
+                        matches1.push((preset, html))
+                    elif needle.length >= 2:
+                        # The preset contains the needle, and the needle is more than 1 char
+                        html = (
+                            preset[:i]
+                            + "<b>"
+                            + needle
+                            + "</b>"
+                            + preset[i + needle.length :]
+                        )
+                        html += "<span class='meta'>preset<span>"
+                        matches2.push((preset, html))
+        else:
+            # Suggestions from recent tags
+            for tag, tag_t2 in self._suggested_tags_all:
+                i = tag.indexOf(needle)
+                if i > 0:
+                    date = max(0, int((now - tag_t2) / 86400))
+                    date = {0: "today", 1: "yesterday"}.get(date, date + " days ago")
+                    if i == 1:
+                        # The tag startswith the needle
+                        html = "<b>" + tag_to_be + "</b>" + tag[tag_to_be.length :]
+                        html += "<span class='meta'>last used " + date + "<span>"
+                        matches1.push((tag, html))
+                    elif needle.length >= 2:
+                        # The tag contains the needle, and the needle is more than 1 char
+                        html = (
+                            tag[:i] + "<b>" + needle + "</b>" + tag[i + needle.length :]
+                        )
+                        html += "<span class='meta'>last used " + date + "<span>"
+                        matches2.push((tag, html))
 
         suggestions = matches1
         suggestions.extend(matches2)
@@ -1303,7 +1316,10 @@ class RecordDialog(BaseDialog):
         # Show
         if suggestions:
             self._autocomp_state = val, i1, i2
-            self._autocomp_show("Matching presets / tags:", suggestions)
+            if show_presets:
+                self._autocomp_show("Matching presets:", suggestions)
+            else:
+                self._autocomp_show("Matching recents:", suggestions)
         else:
             self._autocomp_clear()
 
@@ -1358,10 +1374,13 @@ class RecordDialog(BaseDialog):
     def _autocomp_finish(self, text):
         self._autocomp_clear()
         if text:
+            n_removed = 0
             # Compose new description and cursor pos
             val, i1, i2 = self._autocomp_state
-            new_val = val[:i1] + text + val[i2:]
-            i3 = max(0, i1) + len(text)
+            pre = val[:i1].rstrip("#")
+            n_removed += len(val[:i1]) - len(pre)
+            new_val = pre + text + val[i2:]
+            i3 = max(0, i1) - n_removed + len(text)
             # Add a space if the text is added to the end
             if len(val[i2:].strip()) == 0:
                 new_val = new_val.rstrip() + " "
