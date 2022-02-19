@@ -260,7 +260,7 @@ class TimeTaggerCanvas(BaseCanvas):
         if window.store.get_auth:
             auth = window.store.get_auth()
             if not auth:
-                cantuse = "You are loged out."
+                cantuse = "You are logged out."
             elif auth.cantuse:
                 cantuse = auth.cantuse
 
@@ -737,7 +737,7 @@ class Widget:
             "color": COLORS.button_text,
             "padding": 7,
             "space": 5,
-            "body": True,
+            "body": COLORS.button_bg,
         }
         opt.update(options)
 
@@ -803,7 +803,7 @@ class Widget:
         # Draw button body and its shadow
         rn = BUTTON_ROUNDNESS
         if opt.body:
-            ctx.fillStyle = COLORS.button_bg
+            ctx.fillStyle = opt.body
             for i in range(2):
                 dy = 2 if i == 0 else 0
                 ctx.beginPath()
@@ -1195,7 +1195,7 @@ class TopWidget(Widget):
                 "fas-\uf04d",
                 "record_stopall",
                 stop_tt,
-                {"ref": "topright", "font": FONT.condensed},
+                {"ref": "topright", "font": FONT.condensed, "color": COLORS.acc_clr},
             )
             x -= dx + 3
             dx = self._draw_button(
@@ -2032,8 +2032,10 @@ class RecordsWidget(Widget):
 
         # Define inset and outset bump (for running records)
         inset, outset = 0, 0
+        is_running = False
         if record.t1 == record.t2:
             inset, outset = 0, 16
+            is_running = True
 
         # Define roundness and how much each slab moves outward
         rn = RECORD_ROUNDNESS
@@ -2110,7 +2112,7 @@ class RecordsWidget(Widget):
         ctx.fill(path)
 
         ctx.strokeStyle = COLORS.record_edge
-        ctx.lineWidth = 1.2
+        ctx.lineWidth = 2.0 if is_running else 1.2
 
         # Draw coloured edge
         tagz = tags.join(" ")
@@ -2142,7 +2144,7 @@ class RecordsWidget(Widget):
         ctx.stroke(path)
 
         # Running records have a small outset
-        if outset:
+        if is_running:
             x1f, x2f = x2 + (x3 - x2) / 3, x3 - (x3 - x2) / 3
             ctx.beginPath()
             ctx.moveTo(x2f, ry2 - inset)
@@ -3309,25 +3311,37 @@ class AnalyticsWidget(Widget):
         if is_root:
             y3 += 8
 
+        # Get whether the current tag combi corresponds to the currently running record
+        is_running = False
+        if t1 < self._canvas.now() < t2:
+            for record in window.store.records.get_running_records():
+                if window.store.records.tags_from_record(record).join(" ") == unit.tagz:
+                    is_running = True
+
         # Roundness
         rn = min(ANALYSIS_ROUNDNESS, npixels / 2)
         rnb = min(COLORBAND_ROUNDNESS, npixels / 2)
 
         # Draw front
+        if is_root:
+            ctx.lineWidth = 3
+            ctx.strokeStyle = COLORS.panel_edge
+            ctx.fillStyle = COLORS.panel_bg
+        elif is_running:
+            y2 += 0.4
+            ctx.lineWidth = 2.3
+            ctx.strokeStyle = COLORS.record_edge
+            ctx.fillStyle = COLORS.record_bg
+        else:
+            ctx.lineWidth = 1.2
+            ctx.strokeStyle = COLORS.record_edge
+            ctx.fillStyle = COLORS.record_bg
         path = window.Path2D()
         path.arc(x3 - rn, y2 + rn, rn, 1.5 * PI, 2.0 * PI)
         path.arc(x3 - rn, y3 - rn, rn, 0.0 * PI, 0.5 * PI)
         path.arc(x2 + rnb, y3 - rnb, rnb, 0.5 * PI, 1.0 * PI)
         path.arc(x2 + rnb, y2 + rnb, rnb, 1.0 * PI, 1.5 * PI)
         path.closePath()
-        if is_root:
-            ctx.lineWidth = 3
-            ctx.strokeStyle = COLORS.panel_edge
-            ctx.fillStyle = COLORS.panel_bg
-        else:
-            ctx.lineWidth = 1.2
-            ctx.strokeStyle = COLORS.record_edge
-            ctx.fillStyle = COLORS.record_bg
         ctx.fill(path)
 
         # Draw more, or are we (dis)appearing?
@@ -3393,12 +3407,7 @@ class AnalyticsWidget(Widget):
         ctx.stroke(path)
 
         # Get duration text
-        show_secs = False
-        if t1 < self._canvas.now() < t2:
-            for record in window.store.records.get_running_records():
-                if window.store.records.tags_from_record(record).join(" ") == unit.tagz:
-                    show_secs = True
-        if show_secs:
+        if is_running:
             duration, _, duration_sec = dt.duration_string(unit.cum_t, True).rpartition(
                 ":"
             )
