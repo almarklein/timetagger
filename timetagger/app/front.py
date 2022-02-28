@@ -94,6 +94,7 @@ def set_colors():
         COLORS.button_text_disabled = COLORS.prim2_clr
 
         COLORS.record_bg = "#FAFAFA"
+        COLORS.record_bg_running = "#F9F2E1"
         COLORS.record_text = COLORS.prim1_clr
         COLORS.record_edge = COLORS.panel_edge
 
@@ -116,6 +117,7 @@ def set_colors():
         COLORS.button_text_disabled = "#7F838B"
 
         COLORS.record_bg = "#32373E"
+        COLORS.record_bg_running = "#3B3935"
         COLORS.record_text = "#A4B0B8"
         COLORS.record_edge = "#4B4B4B"
 
@@ -2113,11 +2115,11 @@ class RecordsWidget(Widget):
             path.addVertex(x5, ty2, 4)
             path.addVertex(x4, ry2, 4)
         path = path.toPath2D()
-        ctx.fillStyle = COLORS.record_bg
+        ctx.fillStyle = COLORS.record_bg_running if is_running else COLORS.record_bg
         ctx.fill(path)
 
         ctx.strokeStyle = COLORS.record_edge
-        ctx.lineWidth = 2.0 if is_running else 1.2
+        ctx.lineWidth = 1.2
 
         # Draw coloured edge
         tagz = tags.join(" ")
