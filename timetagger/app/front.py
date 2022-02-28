@@ -83,16 +83,19 @@ def set_colors():
         COLORS.top_bg = COLORS.prim1_clr
 
         COLORS.panel_bg = COLORS.sec1_clr
-        COLORS.panel_edge = COLORS.prim1_clr
+        COLORS.panel_edge = "#BEBFBD"
 
-        COLORS.button_bg = "#fff"
-        COLORS.button_shadow = "rgba(0, 0, 0, 0.4)"
+        COLORS.button_bg = "#FFFFFF"
+        COLORS.button_tag_bg = "#FFFFFF"
+        COLORS.button_shadow = "rgba(0, 0, 0, 0.5)"
+
         COLORS.button_text = COLORS.prim1_clr
+        COLORS.button_tag_text = COLORS.prim1_clr
         COLORS.button_text_disabled = COLORS.prim2_clr
 
-        COLORS.record_bg = "#fafafa"
+        COLORS.record_bg = "#FAFAFA"
         COLORS.record_text = COLORS.prim1_clr
-        COLORS.record_edge = COLORS.prim1_clr
+        COLORS.record_edge = COLORS.panel_edge
 
         window.document.body.classList.remove("darkmode")
 
@@ -102,19 +105,21 @@ def set_colors():
         COLORS.top_bg = COLORS.prim1_clr
 
         COLORS.panel_bg = COLORS.prim1_clr
-        COLORS.panel_edge = "#000"
+        COLORS.panel_edge = "#0A1419"
 
-        COLORS.button_bg = "#bbb"  # COLORS.prim2_clr
-        COLORS.button_shadow = "rgba(0, 0, 0, 0.4)"
-        COLORS.button_text = COLORS.prim1_clr
-        COLORS.button_text_disabled = "#888"
+        COLORS.button_bg = "#32373F"
+        COLORS.button_tag_bg = "#222A32"
+        COLORS.button_shadow = "rgba(0, 0, 0, 0.8)"
 
-        COLORS.record_bg = "rgb(50, 55, 62)"
-        COLORS.record_text = "rgb(170, 170, 170)"
-        COLORS.record_edge = "rgb(75, 75, 75)"
+        COLORS.button_text = "#A4B0B8"
+        COLORS.button_tag_text = "#A4B0B8"
+        COLORS.button_text_disabled = "#7F838B"
+
+        COLORS.record_bg = "#32373E"
+        COLORS.record_text = "#A4B0B8"
+        COLORS.record_edge = "#4B4B4B"
 
         window.document.body.classList.add("darkmode")
-        # window.document.body.style.background = "rgb(0, 0, 0)"
 
 
 def draw_tag(ctx, tag, x, y):
@@ -948,7 +953,7 @@ class TopWidget(Widget):
             updown_w = self._draw_button(
                 ctx,
                 xc,
-                yc - 1.5,
+                yc - 2.5,
                 h,
                 ha,
                 "fas-\uf077",
@@ -959,7 +964,7 @@ class TopWidget(Widget):
             updown_w = self._draw_button(
                 ctx,
                 xc,
-                yc + 1.5,
+                yc + 2.5,
                 h,
                 ha,
                 "fas-\uf078",
@@ -3498,7 +3503,8 @@ class AnalyticsWidget(Widget):
             if action and text.startswith("#"):
                 opt = {
                     "ref": "leftmiddle",
-                    "color": COLORS.button_text,
+                    "color": COLORS.button_tag_text,
+                    "body": COLORS.button_tag_bg,
                     # "padding": 0,
                 }
                 dx = self._draw_button(ctx, tx, ty, None, 30, text, action, tt, opt)
