@@ -1011,7 +1011,7 @@ class RecordDialog(BaseDialog):
             </h1>
             <h2><i class='fas'>\uf305</i>&nbsp;&nbsp;Description</h2>
             <div class='container' style='position: relative;'>
-                <input type='text' style='width:100%;' spellcheck='false' />
+                <input type='text' style='width:100%;' spellcheck='true' />
                 <div class='tag-suggestions-autocomp'></div>
             </div>
             <div class='container' style='min-height:5px;'>
