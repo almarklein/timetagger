@@ -77,7 +77,7 @@ By making a contribution to this project, you agree to this CLA.
 
 Additional developer dependencies:
 ```
-pip install invoke black flake8 pytest requests
+pip install invoke black flake8 pytest pytest-cov requests
 ```
 
 * `invoke -l` to see available invoke tasks
