@@ -83,11 +83,11 @@ def set_colors():
         COLORS.top_bg = COLORS.prim1_clr
 
         COLORS.panel_bg = COLORS.sec1_clr
-        COLORS.panel_edge = "#BEBFBD"
+        COLORS.panel_edge = COLORS.prim1_clr
 
         COLORS.button_bg = "#FFFFFF"
         COLORS.button_tag_bg = "#FFFFFF"
-        COLORS.button_shadow = "rgba(0, 0, 0, 0.5)"
+        COLORS.button_shadow = "rgba(0, 0, 0, 0.45)"
 
         COLORS.button_text = COLORS.prim1_clr
         COLORS.button_tag_text = COLORS.prim1_clr
@@ -2133,7 +2133,7 @@ class RecordsWidget(Widget):
             ctx.fillRect(ex, ry1, ew, ry2 - ry1)
 
         # Set back bg color, and draw the record edge
-        ctx.fillStyle = COLORS.record_bg
+        ctx.fillStyle = COLORS.record_bg_running if is_running else COLORS.record_bg
         ctx.stroke(path)
 
         # Running records have a small outset
@@ -2226,6 +2226,7 @@ class RecordsWidget(Widget):
         PSCRIPT_OVERLOAD = False  # noqa
 
         grid_round = self._canvas.grid_round
+        is_running = record.t1 == record.t2
 
         # Add another x
         x2 = x1 + 8
@@ -2274,7 +2275,7 @@ class RecordsWidget(Widget):
             ctx.arc(x1f + rn, ry1 - outset + rn, rn, 1.0 * PI, 1.5 * PI)
             ctx.arc(x2f - rn, ry1 - outset + rn, rn, 1.5 * PI, 2.0 * PI)
             ctx.lineTo(x2f, ry1 + inset)
-            ctx.fillStyle = COLORS.record_bg
+            ctx.fillStyle = COLORS.record_bg_running if is_running else COLORS.record_bg
             ctx.fill()
             ctx.strokeStyle = COLORS.record_edge
             ctx.stroke()
@@ -2290,7 +2291,7 @@ class RecordsWidget(Widget):
             ctx.fillStyle = COLORS.record_text
             ctx.fillText(timetext, 0.5 * (x1f + x2f), ry1 + (inset - outset) / 2)
 
-        # Flat below to drag t2 - only present if not running
+        # Flap below to drag t2 - only present if not running
         if record.t1 < record.t2:
             # Picking
             ob = {"recordrect": True, "region": 2, "record": record}
@@ -3320,15 +3321,10 @@ class AnalyticsWidget(Widget):
             ctx.lineWidth = 2
             ctx.strokeStyle = COLORS.panel_edge
             ctx.fillStyle = COLORS.panel_bg
-        elif is_running:
-            y2 += 0.4
-            ctx.lineWidth = 2.3
-            ctx.strokeStyle = COLORS.record_edge
-            ctx.fillStyle = COLORS.record_bg
         else:
             ctx.lineWidth = 1.2
             ctx.strokeStyle = COLORS.record_edge
-            ctx.fillStyle = COLORS.record_bg
+            ctx.fillStyle = COLORS.record_bg_running if is_running else COLORS.record_bg
         path = window.Path2D()
         path.arc(x3 - rn, y2 + rn, rn, 1.5 * PI, 2.0 * PI)
         path.arc(x3 - rn, y3 - rn, rn, 0.0 * PI, 0.5 * PI)
