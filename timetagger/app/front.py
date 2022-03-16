@@ -83,11 +83,11 @@ def set_colors():
         COLORS.top_bg = COLORS.prim1_clr
 
         COLORS.panel_bg = COLORS.sec1_clr
-        COLORS.panel_edge = "#BEBFBD"
+        COLORS.panel_edge = COLORS.prim1_clr
 
         COLORS.button_bg = "#FFFFFF"
         COLORS.button_tag_bg = "#FFFFFF"
-        COLORS.button_shadow = "rgba(0, 0, 0, 0.5)"
+        COLORS.button_shadow = "rgba(0, 0, 0, 0.45)"
 
         COLORS.button_text = COLORS.prim1_clr
         COLORS.button_tag_text = COLORS.prim1_clr
@@ -860,7 +860,7 @@ class TopWidget(Widget):
         self._picker = utils.Picker()
         self._button_pressed = None
         self._current_scale = {}
-        self._sync_feedback_xy = 0, 0
+        self._sync_feedback_xy = 0, 0, 0
         window.setInterval(self._draw_sync_feedback_callback, 100)
 
         # For navigation with keys. Listen to canvas events, and window events (in
@@ -877,16 +877,14 @@ class TopWidget(Widget):
         y2 = y1 + 60
         y3 = y2 + 20
 
+        margin = 8
         h = 36
 
-        ctx.rect(0, 0, x2, 60)
+        # Top band background
         ctx.fillStyle = COLORS.top_bg
-        ctx.fill()
-
-        self._margin = margin = self._canvas.grid_round(max(2, (x2 - x1) / 30))
+        ctx.fillRect(0, 0, x2, 60)
 
         # Draw icon in top-right
-        margin = 10
         iconsize = (y2 - y1) - 2 * margin
 
         if iconsize:
@@ -917,7 +915,7 @@ class TopWidget(Widget):
             return
 
         # Draw some more inside dark banner
-        self._draw_header_text(ctx, x1 + 60, y1, x2 - 60, y2)
+        self._draw_header_text(ctx, x1 + 85, y1, x2 - 55, y2)
 
         now_scale, now_clr = self._get_now_scale()
         if now_scale != "1D":
@@ -1048,11 +1046,13 @@ class TopWidget(Widget):
             text = "Sandbox"
         else:
             text = ""
+        text = ""
+        sync_radius = 7
+        yoffset = -6 if len(text) else 0
 
-        y = (y2 - y1) / 2
-        x = x1 + y
-
-        margin = -6 if len(text) else 0
+        d = (y2 - y1) / 2
+        y = y1 + d
+        x = x1 + d
 
         opt = {
             "body": False,
@@ -1060,8 +1060,9 @@ class TopWidget(Widget):
             "ref": "centermiddle",
             "color": COLORS.sec2_clr,
         }
-        self._draw_button(ctx, x, y + margin, None, 48, "fas-\uf0c9", "menu", "", opt)
-        self._draw_sync_feedback(ctx, x + y + 5, y)
+        dx = self._draw_button(
+            ctx, x, y + yoffset, None, 48, "fas-\uf0c9", "menu", "", opt
+        )
 
         # Draw title
         if text:
@@ -1071,10 +1072,11 @@ class TopWidget(Widget):
             ctx.fillStyle = COLORS.acc_clr
             ctx.fillText(text, x, y2 - 8)
 
-        return x - x1
+        self._draw_sync_feedback(ctx, x + d + 4, y, sync_radius)
+        return d + dx + 2 * sync_radius + 4
 
-    def _draw_sync_feedback(self, ctx, x1, y1):
-        self._sync_feedback_xy = x1, y1
+    def _draw_sync_feedback(self, ctx, x1, y1, radius):
+        self._sync_feedback_xy = x1, y1, radius
         return self._draw_sync_feedback_work()
 
     def _draw_sync_feedback_callback(self):
@@ -1087,15 +1089,17 @@ class TopWidget(Widget):
             return
 
         ctx = self._canvas.node.getContext("2d")
-        x, y = self._sync_feedback_xy
+        x, y, radius = self._sync_feedback_xy
 
         # Get factor 0..1
         factor = window.store.sync_time
         factor = max(0, (factor[1] - dt.now()) / (factor[1] - factor[0] + 0.0001))
         factor = max(0, 1 - factor)
 
-        radius = 9
-        ctx.lineWidth = 3
+        ctx.lineWidth = 2.5
+        color_circle = "rgba(255, 255, 255, 0.15)"
+        color_progress = "rgba(255, 255, 255, 0.25)"
+        color_text = COLORS.prim2_clr
 
         # Clear bg
         ctx.beginPath()
@@ -1106,14 +1110,14 @@ class TopWidget(Widget):
         # Outline
         ctx.beginPath()
         ctx.arc(x, y, radius, 0, 2 * PI)
-        ctx.strokeStyle = "rgba(255, 255, 255, 0.2)"
+        ctx.strokeStyle = color_circle
         ctx.stroke()
 
         # Progress
         ref_angle = -0.5 * PI
         ctx.beginPath()
         ctx.arc(x, y, radius, ref_angle, ref_angle + factor * 2 * PI)
-        ctx.strokeStyle = COLORS.prim2_clr
+        ctx.strokeStyle = color_progress
         ctx.stroke()
 
         # Draw indicator icon - rotating when syncing
@@ -1132,10 +1136,10 @@ class TopWidget(Widget):
                 ctx.translate(x, y)
                 if state == "sync":
                     ctx.rotate(((0.5 * time()) % 1) * 2 * PI)
-                ctx.font = radius * 0.9 + "px FontAwesome"
+                ctx.font = radius * 1.1 + "px FontAwesome"
                 ctx.textBaseline = "middle"
                 ctx.textAlign = "center"
-                ctx.fillStyle = COLORS.prim2_clr
+                ctx.fillStyle = color_text
                 ctx.fillText(text, 0, 0)
             finally:
                 ctx.restore()
@@ -1281,7 +1285,8 @@ class TopWidget(Widget):
         header = self._canvas.range.get_context_header() + " "  # margin
 
         x3 = (x2 + x1) / 2
-        y3 = (y2 - y1) / 2
+        dy = (y2 - y1) / 2
+        y3 = y1 + dy
 
         # Draw header
         ctx.textBaseline = "middle"
@@ -1297,9 +1302,9 @@ class TopWidget(Widget):
             # Two parts below each-other
             size = utils.fit_font_size(ctx, x2 - x1, FONT.default, text2, 20)
             ctx.fillStyle = COLORS.acc_clr
-            ctx.fillText(text1 + " ", x3, y3)
+            ctx.fillText(text1 + " ", x3, y3 - dy / 2.5)
             ctx.fillStyle = COLORS.sec2_clr
-            ctx.fillText(text2, x3, y1 + 5 + 18)
+            ctx.fillText(text2, x3, y3 + dy / 2.5)
         else:
             # Two parts next to each-other
             text1 += "  "
@@ -1744,7 +1749,7 @@ class RecordsWidget(Widget):
             # Draw day boundaries
             t3 = dt.floor(t1, "1D")
             t4 = dt.add(dt.floor(t2, "1D"), "1D")
-            ctx.lineWidth = 2
+            ctx.lineWidth = 2.5
             ctx.strokeStyle = COLORS.tick_stripe2
             ctx.beginPath()
             while t3 <= t4:
@@ -2133,7 +2138,7 @@ class RecordsWidget(Widget):
             ctx.fillRect(ex, ry1, ew, ry2 - ry1)
 
         # Set back bg color, and draw the record edge
-        ctx.fillStyle = COLORS.record_bg
+        ctx.fillStyle = COLORS.record_bg_running if is_running else COLORS.record_bg
         ctx.stroke(path)
 
         # Running records have a small outset
@@ -2226,6 +2231,7 @@ class RecordsWidget(Widget):
         PSCRIPT_OVERLOAD = False  # noqa
 
         grid_round = self._canvas.grid_round
+        is_running = record.t1 == record.t2
 
         # Add another x
         x2 = x1 + 8
@@ -2274,7 +2280,7 @@ class RecordsWidget(Widget):
             ctx.arc(x1f + rn, ry1 - outset + rn, rn, 1.0 * PI, 1.5 * PI)
             ctx.arc(x2f - rn, ry1 - outset + rn, rn, 1.5 * PI, 2.0 * PI)
             ctx.lineTo(x2f, ry1 + inset)
-            ctx.fillStyle = COLORS.record_bg
+            ctx.fillStyle = COLORS.record_bg_running if is_running else COLORS.record_bg
             ctx.fill()
             ctx.strokeStyle = COLORS.record_edge
             ctx.stroke()
@@ -2290,7 +2296,7 @@ class RecordsWidget(Widget):
             ctx.fillStyle = COLORS.record_text
             ctx.fillText(timetext, 0.5 * (x1f + x2f), ry1 + (inset - outset) / 2)
 
-        # Flat below to drag t2 - only present if not running
+        # Flap below to drag t2 - only present if not running
         if record.t1 < record.t2:
             # Picking
             ob = {"recordrect": True, "region": 2, "record": record}
@@ -3320,15 +3326,10 @@ class AnalyticsWidget(Widget):
             ctx.lineWidth = 2
             ctx.strokeStyle = COLORS.panel_edge
             ctx.fillStyle = COLORS.panel_bg
-        elif is_running:
-            y2 += 0.4
-            ctx.lineWidth = 2.3
-            ctx.strokeStyle = COLORS.record_edge
-            ctx.fillStyle = COLORS.record_bg
         else:
             ctx.lineWidth = 1.2
             ctx.strokeStyle = COLORS.record_edge
-            ctx.fillStyle = COLORS.record_bg
+            ctx.fillStyle = COLORS.record_bg_running if is_running else COLORS.record_bg
         path = window.Path2D()
         path.arc(x3 - rn, y2 + rn, rn, 1.5 * PI, 2.0 * PI)
         path.arc(x3 - rn, y3 - rn, rn, 0.0 * PI, 0.5 * PI)
