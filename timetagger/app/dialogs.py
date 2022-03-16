@@ -1391,6 +1391,7 @@ class RecordDialog(BaseDialog):
             if utils.looks_like_desktop():
                 self._ds_input.focus()
         self._show_tags_from_ds()
+        self._mark_as_edited()
 
     def _add_tag(self, tag):
         self._ds_input.value = self._ds_input.value.rstrip() + " " + tag + " "
