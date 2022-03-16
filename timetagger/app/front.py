@@ -196,10 +196,18 @@ class TimeTaggerCanvas(BaseCanvas):
     def on_resize(self):
         """Perform layout; set sizes of widgets. We can go all responsive here."""
 
-        margin = 5
+        # Establish the margin. We are relatively close to the edges
+        # by default, but introduce more margin on wider screens.
+        min_margin = 5
+        extra_margin = 0
+        if self.w > 800:
+            extra_margin = (self.w - 800) * 0.1
+        margin = min_margin + extra_margin
+
+        #  Determine width of record area, and margin between records and overview.
         space_to_divide = self.w - margin - margin
         if space_to_divide >= 785:
-            margin2 = 40
+            margin2 = 40 + extra_margin
             records_width = (space_to_divide - margin2) / 2
         else:
             margin2 = 5
@@ -1570,7 +1578,7 @@ class RecordsWidget(Widget):
             ctx.textBaseline = "top"
             ctx.font = "bold " + (FONT.size * 1.4) + "px " + FONT.mono
             ctx.fillStyle = COLORS.prim2_clr
-            ctx.fillText(text1, 15, 75)
+            ctx.fillText(text1, x1 + 10, 75)
             # ctx.font = (FONT.size * 0.9) + "px " + FONT.default
             # ctx.fillStyle = COLORS.prim2_clr
             # ctx.fillText(self._help_text, 10, 90)
