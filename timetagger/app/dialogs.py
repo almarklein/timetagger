@@ -1209,18 +1209,18 @@ class RecordDialog(BaseDialog):
             e.stopPropagation()
         self.show_presets_and_recents(False, True)
 
-    def show_presets_and_recents(self, presets=True, recents=True, hint=""):
+    def show_presets_and_recents(self, presets=True, recents=True):
         suggestions = []
         types = []
         # Collect presets
         if presets:
-            types.push("presets")
+            types.push("Presets")
             for preset in self._get_suggested_tags_presets():
                 html = preset + "<span class='meta'>preset<span>"
                 suggestions.push((preset, html))
         # Collect recents
         if recents:
-            types.push("recent tags")
+            types.push("Recent tags")
             now = dt.now()
             for tag, tag_t2 in self._suggested_tags_recent:
                 date = max(0, int((now - tag_t2) / 86400))
@@ -1232,7 +1232,7 @@ class RecordDialog(BaseDialog):
             self._autocomp_clear()
         elif suggestions:
             self._autocomp_state = self._get_autocomp_state()
-            self._autocomp_show(types.join(" & ") + hint + ":", suggestions)
+            self._autocomp_show(types.join(" & ") + ":", suggestions)
         else:
             self._autocomp_show("No " + types.join(" or ") + " ...", [])
 
@@ -1240,7 +1240,8 @@ class RecordDialog(BaseDialog):
         """Show tag suggestions in the autocompletion dialog."""
 
         # Get partial tag being written
-        val, i1, i2 = self._get_autocomp_state()
+        self._autocomp_state = self._get_autocomp_state()
+        val, i1, i2 = self._autocomp_state
         tag_to_be = val[i1:i2].toLowerCase()
         if not tag_to_be:
             self._autocomp_clear()
@@ -1251,11 +1252,9 @@ class RecordDialog(BaseDialog):
 
         if tag_to_be == "#":
             if show_presets:
-                return self.show_presets_and_recents(True, False, "")
+                return self.show_presets_and_recents(True, False)
             else:
-                return self.show_presets_and_recents(
-                    False, True, " (type '##' for presets)"
-                )
+                return self.show_presets_and_recents(False, True)
 
         # Obtain suggestions
         now = dt.now()
@@ -1315,20 +1314,24 @@ class RecordDialog(BaseDialog):
 
         # Show
         if suggestions:
-            self._autocomp_state = val, i1, i2
             if show_presets:
                 self._autocomp_show("Matching presets:", suggestions)
             else:
-                self._autocomp_show("Matching recents:", suggestions)
+                self._autocomp_show("Matching recent tags:", suggestions)
         else:
-            self._autocomp_clear()
+            if show_presets:
+                self._autocomp_show("No matching presets ...", suggestions)
+            else:
+                self._autocomp_show("No matching recent tags ...", suggestions)
 
     def _autocomp_show(self, headline, suggestions):
         self._autocomp_clear()
         # Add title
+        hint = "(type '#' to toggle recents / presets)"
+        hint_html = "<span style='color:#999;'>" + hint + "</span>"
         item = document.createElement("div")
         item.classList.add("meta")
-        item.innerHTML = headline
+        item.innerHTML = headline + " &nbsp;&nbsp;&nbsp;" + hint_html
         self._autocomp_div.appendChild(item)
         # Add suggestions
         self._suggested_tags_in_autocomp = []
@@ -1473,6 +1476,22 @@ class RecordDialog(BaseDialog):
                 self._autocomp_make_active(self._autocomp_index - 1)
                 e.preventDefault()
                 return
+            elif key == "#":
+                # Toggle between preset/recents by inserting/removing a '#'
+                val, i1, i2 = self._autocomp_state
+                if i2 > i1:
+                    is_double = i1 > 0 and val[i1 - 1] == "#"
+                    if is_double:
+                        new_val = val[:i1] + val[i1 + 1 :]
+                        new_i = i2 - 1
+                    else:
+                        new_val = val[:i1] + "#" + val[i1:]
+                        new_i = i2 + 1
+                    self._ds_input.value = new_val
+                    self._ds_input.selectionStart = self._ds_input.selectionEnd = new_i
+                    e.preventDefault()
+                    self._autocomp_init()
+                    return
         if key == "enter" or key == "return":
             self.submit()
         else:
