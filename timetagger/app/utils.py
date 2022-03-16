@@ -808,6 +808,11 @@ class BaseCanvas:
     def _tooltip_handler(self, e):
         ev = create_pointer_event(self.node, e)
         x, y = ev.pos
+        # Only on mouse - it's anoying for touch
+        is_mouse = bool(ev.touches["-1"])
+        if not is_mouse:
+            self._tooltipdiv.style.display = "none"
+            return
         # Get tooltip object - if text is None it means no tooltip
         ob = self._tooltips.pick(x, y)
         # Handle over. Schedule a new draw if the over-status changes.
