@@ -252,7 +252,7 @@ class TimeTaggerCanvas(BaseCanvas):
 
         # Draw icon in bottom right
         if self.w >= 800:
-            iconw = 192 if self.w >= 400 else 96
+            iconw = 162 if self.w >= 400 else 96
             iconh = iconw / 6
             ctx.drawImage(
                 window.document.getElementById("ttlogo_tg"),
@@ -874,48 +874,32 @@ class TopWidget(Widget):
         x1, y1, x2, y2 = self.rect
 
         y4 = y2  # noqa - bottom
-        y2 = y1 + 50
-        y3 = y2 + 12
+        y2 = y1 + 60
+        y3 = y2 + 20
 
         h = 36
 
-        # Dark background wave (a cosine with the belly in the middle)
-        ctx.beginPath()
-        n = 20
-        amplitude = 3
-        period = 1.2 * 2 * PI
-        ctx.moveTo(x2 + 50, y2)
-        ctx.lineTo(x2 + 50, y1 - 50)
-        ctx.lineTo(x2, y1 - 50)
-        ctx.lineTo(x1, y1 - 50)
-        ctx.lineTo(x1 - 50, y1 - 50)
-        ctx.lineTo(x1 - 50, y2)
-        for i in range(n + 1):
-            x = x1 + i * (x2 - x1) / n
-            y = y2 - amplitude * Math.cos(period * (i / n - 0.5))
-            ctx.lineTo(x, y)
-        ctx.closePath()
-
+        ctx.rect(0, 0, x2, 60)
         ctx.fillStyle = COLORS.top_bg
         ctx.fill()
 
         self._margin = margin = self._canvas.grid_round(max(2, (x2 - x1) / 30))
-        x = x1 + 4
 
         # Draw icon in top-right
-        iconsize = (x2 - x1) / 22
-        iconsize = 48
+        margin = 10
+        iconsize = (y2 - y1) - 2 * margin
+
         if iconsize:
             ctx.drawImage(
                 window.document.getElementById("ttlogo_sl"),
-                x2 - iconsize,
-                y1 + 2,
+                x2 - iconsize - margin,
+                y1 + margin,
                 iconsize,
                 iconsize,
             )
 
         # Always draw the menu button
-        self._draw_menu_button(ctx, x, y1, x2, y2)
+        self._draw_menu_button(ctx, x1, y1, x2, y2)
 
         # If menu-only, also draw login, then exit
         if menu_only:
@@ -933,7 +917,7 @@ class TopWidget(Widget):
             return
 
         # Draw some more inside dark banner
-        self._draw_header_text(ctx, 60, y1, x2 - 60, y2 - 5)
+        self._draw_header_text(ctx, x1 + 60, y1, x2 - 60, y2)
 
         now_scale, now_clr = self._get_now_scale()
         if now_scale != "1D":
@@ -941,7 +925,7 @@ class TopWidget(Widget):
 
         # Draw buttons below the dark banner
         # We go from the center to the sides
-        xc = 0.5 * (x1 + x2)
+        xc = (x1 + x2) / 2
 
         # Move a bit to the right on smaller screens
         avail_width = x2 - x1
@@ -1065,9 +1049,10 @@ class TopWidget(Widget):
         else:
             text = ""
 
-        dx = self._draw_sync_feedback(ctx, 4, 4)
+        y = (y2 - y1) / 2
+        x = x1 + y
 
-        x = x1 + dx + 24
+        margin = -6 if len(text) else 0
 
         opt = {
             "body": False,
@@ -1075,15 +1060,16 @@ class TopWidget(Widget):
             "ref": "centermiddle",
             "color": COLORS.sec2_clr,
         }
-        self._draw_button(ctx, x, y1 + 18, None, 48, "fas-\uf0c9", "menu", "", opt)
+        self._draw_button(ctx, x, y + margin, None, 48, "fas-\uf0c9", "menu", "", opt)
+        self._draw_sync_feedback(ctx, x + y + 5, y)
 
         # Draw title
         if text:
             ctx.textAlign = "center"
-            ctx.textBaseline = "top"
+            ctx.textBaseline = "bottom"
             ctx.font = "12px " + FONT.default
             ctx.fillStyle = COLORS.acc_clr
-            ctx.fillText(text, x, 34)
+            ctx.fillText(text, x, y2 - 8)
 
         return x - x1
 
@@ -1108,25 +1094,25 @@ class TopWidget(Widget):
         factor = max(0, (factor[1] - dt.now()) / (factor[1] - factor[0] + 0.0001))
         factor = max(0, 1 - factor)
 
-        radius = 7
-        ctx.lineWidth = 2
+        radius = 9
+        ctx.lineWidth = 3
 
         # Clear bg
         ctx.beginPath()
-        ctx.arc(x + radius, y + radius, radius + ctx.lineWidth, 0, 2 * PI)
+        ctx.arc(x, y, radius + ctx.lineWidth, 0, 2 * PI)
         ctx.fillStyle = COLORS.top_bg
         ctx.fill()
 
         # Outline
         ctx.beginPath()
-        ctx.arc(x + radius, y + radius, radius, 0, 2 * PI)
-        ctx.strokeStyle = "rgba(255, 255, 255, 0.3)"
+        ctx.arc(x, y, radius, 0, 2 * PI)
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.2)"
         ctx.stroke()
 
         # Progress
         ref_angle = -0.5 * PI
         ctx.beginPath()
-        ctx.arc(x + radius, y + radius, radius, ref_angle, ref_angle + factor * 2 * PI)
+        ctx.arc(x, y, radius, ref_angle, ref_angle + factor * 2 * PI)
         ctx.strokeStyle = COLORS.prim2_clr
         ctx.stroke()
 
@@ -1143,10 +1129,10 @@ class TopWidget(Widget):
         if text:
             ctx.save()
             try:
-                ctx.translate(x + radius, y + radius)
+                ctx.translate(x, y)
                 if state == "sync":
                     ctx.rotate(((0.5 * time()) % 1) * 2 * PI)
-                ctx.font = (radius * 1.2) + "px FontAwesome"
+                ctx.font = radius * 0.9 + "px FontAwesome"
                 ctx.textBaseline = "middle"
                 ctx.textAlign = "center"
                 ctx.fillStyle = COLORS.prim2_clr
@@ -1158,7 +1144,7 @@ class TopWidget(Widget):
         if register:
             ob = {"button": True, "action": "refresh", "help": ""}
             self._picker.register(
-                x - 1, y - 1, x + radius * 2 + 1, y + radius * 2 + 1, ob
+                x - radius - 1, y - radius - 1, x + radius + 1, y + radius + 1, ob
             )
 
         return 2 * radius
@@ -1294,14 +1280,14 @@ class TopWidget(Widget):
 
         header = self._canvas.range.get_context_header() + " "  # margin
 
-        x3 = (x1 + x2) / 2
-        y3 = y1 + 3
+        x3 = (x2 + x1) / 2
+        y3 = (y2 - y1) / 2
 
         # Draw header
-        ctx.textBaseline = "top"
+        ctx.textBaseline = "middle"
         ctx.textAlign = "center"
         #
-        size = utils.fit_font_size(ctx, x2 - x1, FONT.default, header, 36)
+        size = utils.fit_font_size(ctx, x2 - x1, FONT.default, header, 34)
         text1, _, text2 = header.partition("  ")
         if len(text2) == 0:
             # One part
@@ -1579,7 +1565,7 @@ class RecordsWidget(Widget):
             ctx.textBaseline = "top"
             ctx.font = "bold " + (FONT.size * 1.4) + "px " + FONT.mono
             ctx.fillStyle = COLORS.prim2_clr
-            ctx.fillText(text1, 10, 65)
+            ctx.fillText(text1, 15, 75)
             # ctx.font = (FONT.size * 0.9) + "px " + FONT.default
             # ctx.fillStyle = COLORS.prim2_clr
             # ctx.fillText(self._help_text, 10, 90)
@@ -1759,7 +1745,7 @@ class RecordsWidget(Widget):
             t3 = dt.floor(t1, "1D")
             t4 = dt.add(dt.floor(t2, "1D"), "1D")
             ctx.lineWidth = 2
-            ctx.strokeStyle = COLORS.tick_stripe1
+            ctx.strokeStyle = COLORS.tick_stripe2
             ctx.beginPath()
             while t3 <= t4:
                 y = y1 + (t3 - t1) * pps
@@ -2942,7 +2928,7 @@ class AnalyticsWidget(Widget):
             ctx.textBaseline = "top"
             ctx.font = "bold " + (FONT.size * 1.4) + "px " + FONT.mono
             ctx.fillStyle = COLORS.prim2_clr
-            ctx.fillText(text1, x2 - 10, 65)
+            ctx.fillText(text1, x2 - 10, 75)
             # ctx.font = (FONT.size * 0.9) + "px " + FONT.default
             # ctx.fillStyle = COLORS.prim2_clr
             # ctx.fillText(self._help_text, x2 - 10, 90)
@@ -3331,7 +3317,7 @@ class AnalyticsWidget(Widget):
 
         # Draw front
         if is_root:
-            ctx.lineWidth = 3
+            ctx.lineWidth = 2
             ctx.strokeStyle = COLORS.panel_edge
             ctx.fillStyle = COLORS.panel_bg
         elif is_running:
