@@ -4,7 +4,7 @@
 
 # TimeTagger
 
-Tag your time, get the insight* - an open source time-tracker with an
+*Tag your time, get the insight* - an open source time-tracker with an
 interactive user experience and powerful reporting.
 
 * Website: https://timetagger.app
