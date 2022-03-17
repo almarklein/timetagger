@@ -1054,7 +1054,7 @@ class TopWidget(Widget):
             text = "Sandbox"
         else:
             text = ""
-        text = ""
+
         sync_radius = 7
         yoffset = -6 if len(text) else 0
 

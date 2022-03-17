@@ -4,10 +4,11 @@
 
 # TimeTagger
 
-*Tag your time, get the insight* - an open source time tracker with a focus on
-a simple and interactive user experience.
+Tag your time, get the insight* - an open source time-tracker with an
+interactive user experience and powerful reporting.
 
 * Website: https://timetagger.app
+* Demo: https://timetagger.app/demo
 * Docs: https://timetagger.readthedocs.io
 * CLI tool: https://github.com/almarklein/timetagger_cli
 
@@ -15,8 +16,19 @@ a simple and interactive user experience.
 ## Introduction
 
 TimeTagger is a web-based time-tracking solution that can be run locally
-or on a server. In the latter case, you'll want to add authentication,
-and also be aware of the license restrictions.
+or on a server. It's aimed at individuals and freelancers, and has the
+following features:
+
+* Intuitive UI based around an interactive timeline.
+* Lightweight feel by use of tags rather than projects.
+* Reporting in PDF and CSV.
+* Set daily/weekly/monthly targets.
+* Integrated Pomodoro method.
+* Responsive: works well on small and large screens.
+* Sync between devices.
+
+
+## Under the hood
 
 The server runs on async Python using
 [uvicorn](https://github.com/encode/uvicorn) and
@@ -30,16 +42,21 @@ Python to JavaScript. This may be a bit idiosyncratic, but it's fun!
 Maybe I'll someday implement it in something that compiles down to Wasm :)
 
 
-## Usage example
+## Self-hosting your time tracker
 
-This repo is organized as a library, making it quite flexible to apply tweaks.
-See `run.py` for an example of how to run it as a web app.
-See the [docs](https://timetagger.readthedocs.io) for more info.
+This repo is organized as a library, making it quite flexible to apply
+tweaks. After installation, you create a script that runs the web app.
+See `run.py` (in this repo) for an example, and
+[this article](https://timetagger.app/articles/selfhost/) for
+details about self hosting.
 
-You can also see it in action at https://timetagger.app - you can
-purchase an account for €3 per month so you don't have to worry about
-maintaining a server, backups, and all that. Plus you'd sponsor this
-project and open source in general.
+
+## Using the hosted version
+
+You can also make use of https://timetagger.app so you don't have to worry about
+maintaining a server, backups, and all that. An account costs just €3 per month.
+With that you'd also sponsor this project and open source in general.
+
 
 ## Installation
 
@@ -56,7 +73,8 @@ pip install -U https://github.com/almarklein/timetagger/archive/main.zip
 pip uninstall timetagger
 ```
 
-After installation, copy and execute  `python run.py` to get started.
+After installation, copy `run.py` from this repo, and execute  `python run.py` to get started.
+
 
 ## Copright and license
 
