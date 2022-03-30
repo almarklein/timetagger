@@ -1633,38 +1633,27 @@ class TargetHelper:
             """
 
         self._hour_input, _, self._period_select = div.children
-        self._load_current()
 
-    def _load_current(self):
-        item = window.store.settings.get_by_key("tag_targets")
-        targets = (None if item is None else item.value) or {}
-        target = targets.get(self._tagz, None)
-        if target is None:
+    def load_from_info(self, info):
+        targets = info.get("targets", [])
+        if not targets:
             self._hour_input.value = 1
             self._period_select.value = "none"
         else:
+            target = targets[0]
             self._hour_input.value = target.hours or 1
             self._period_select.value = target.period or "none"
 
-    def submit(self):
+    def write_to_info(self, info):
+        targets = []
 
         target = {}
         target.hours = float(self._hour_input.value)
         target.period = self._period_select.value
-
-        # Load all targets
-        item = window.store.settings.get_by_key("tag_targets")
-        targets = (None if item is None else item.value) or {}
-
-        # Add/remove this target
         if target.hours > 0 and target.period and target.period != "none":
-            targets[self._tagz] = target
-        else:
-            targets.pop(self._tagz, None)
+            targets.push(target)
 
-        # Push
-        item = window.store.settings.create("tag_targets", targets)
-        window.store.settings.put(item)
+        info.targets = targets
 
 
 class TagComboDialog(BaseDialog):
@@ -1726,6 +1715,7 @@ class TagComboDialog(BaseDialog):
         finish_buttons.children[1].onclick = self.submit
 
         super().open(None)
+        self._load_current()
 
     def _make_click_handler(self, tag, callback):
         def handler():
@@ -1734,8 +1724,14 @@ class TagComboDialog(BaseDialog):
 
         return handler
 
+    def _load_current(self):
+        info = window.store.settings.get_tag_info(self._tagz)
+        self._target.load_from_info(info)
+
     def submit(self):
-        self._target.submit()
+        info = {}
+        self._target.write_to_info(info)
+        window.store.settings.set_tag_info(self._tagz, info)
         super().submit()
 
 
@@ -1759,6 +1755,11 @@ class TagDialog(BaseDialog):
                 </h1>
             <h2><i class='fas'>\uf140</i>&nbsp;&nbsp;Target</h2>
             <div>target goes here</div>
+            <h2><i class='fas'>\uf074</i>&nbsp;&nbsp;Priority</h2>
+            <select>
+                <option value='1'>Primary (default, determines order)</option>
+                <option value='2'>Secondary (for "extra" tags)</option>
+            </select>
             <h2><i class='fas'>\uf53f</i>&nbsp;&nbsp;Color</h2>
             <input type='text' style='width: 210px; border: 5px solid #eee' spellcheck='false' />
             <br>
@@ -1783,6 +1784,8 @@ class TagDialog(BaseDialog):
             _,  # h1
             _,  # target header
             target_div,
+            _,  # priority header
+            self._priority_select,
             _,  # color header
             self._color_input,
             _,  # br
@@ -1817,9 +1820,8 @@ class TagDialog(BaseDialog):
             self._make_clickable(el, hex)
             self._color_grid.appendChild(el)
 
-        self._set_color(window.store.settings.get_color_for_tag(tagz))
-
         super().open(callback)
+        self._load_current()
         if utils.looks_like_desktop():
             self._color_input.focus()
             self._color_input.select()
@@ -1851,17 +1853,24 @@ class TagDialog(BaseDialog):
             self._color_input.value = clr
         self._color_input.style.borderColor = clr
 
+    def _load_current(self):
+        info = window.store.settings.get_tag_info(self._tagz)
+        self._target.load_from_info(info)
+        self._priority_select.value = info.get("priority", 0) or 1
+        self._set_color(info.get("color", ""))
+
     def submit(self):
-        # Target
-        self._target.submit()
-        # Color
+        info = {}
+        # Set target
+        self._target.write_to_info(info)
+        # Set priority
+        prio = self._priority_select.value
+        info["priority"] = 0 if prio == 1 else prio
+        # Set color
         clr = self._color_input.value
-        cur_color = window.store.settings.get_color_for_tag(self._tagz)
-        if clr != cur_color:
-            if clr == self._default_color:
-                window.store.settings.set_color_for_tag(self._tagz, "")
-            else:
-                window.store.settings.set_color_for_tag(self._tagz, clr)
+        info["color"] = "" if clr == self._default_color else clr
+        # Store
+        window.store.settings.set_tag_info(self._tagz, info)
         super().submit()
 
 
@@ -2260,17 +2269,12 @@ class TagManageDialog(BaseDialog):
                 record.ds = "".join(new_parts)
                 window.store.records.put(record)
 
-            # Also update colors
+            # Also update tag info
             if len(search_tags) == 1 and len(replacement_tags) == 1:
                 tag1, tag2 = search_tags[0], replacement_tags[0]
-                cur_color = window.store.settings.get_color_for_tag(tag1)
-                default_color = window.store.settings.get_color_for_tag(
-                    "#notanactualtag"
-                )
-                window.store.settings.set_color_for_tag(tag1, "")
-                if cur_color != default_color:
-                    window.store.settings.set_color_for_tag(tag2, cur_color)
-
+                info = window.store.settings.get_tag_info(tag1)
+                window.store.settings.set_tag_info(tag1, {})
+                window.store.settings.set_tag_info(tag2, info)
         else:
             search_text = self._tagname1.value.strip().toLowerCase()
             replacement_text = self._tagname2.value.strip()
