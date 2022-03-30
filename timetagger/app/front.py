@@ -154,15 +154,14 @@ class TimeTaggerCanvas(BaseCanvas):
         self.timeselection_dialog = dialogs.TimeSelectionDialog(self)
         self.settings_dialog = dialogs.SettingsDialog(self)
         self.record_dialog = dialogs.RecordDialog(self)
-        self.tag_color_selection_dialog = dialogs.TagColorSelectionDialog(self)
-        self.tag_color_dialog = dialogs.TagColorDialog(self)
+        self.tag_combo_dialog = dialogs.TagComboDialog(self)
+        self.tag_dialog = dialogs.TagDialog(self)
         self.report_dialog = dialogs.ReportDialog(self)
         self.tag_preset_dialog = dialogs.TagPresetsDialog(self)
         self.tag_manage_dialog = dialogs.TagManageDialog(self)
         self.export_dialog = dialogs.ExportDialog(self)
         self.import_dialog = dialogs.ImportDialog(self)
         self.pomodoro_dialog = dialogs.PomodoroDialog(self)
-        self.targets_dialog = dialogs.TargetsDialog(self)
 
         # The order here is also the draw-order. Records must come after analytics.
         self.widgets = {
@@ -3386,7 +3385,7 @@ class AnalyticsWidget(Widget):
                 y2,
                 ex,
                 y3,
-                {"button": True, "action": "chosecolor:" + unit.tagz},
+                {"button": True, "action": "configure_tags:" + unit.tagz},
             )
             tt_text = "Color for " + unit.tagz + "\n(Click to change color)"
             hover = self._canvas.register_tooltip(
@@ -3430,12 +3429,14 @@ class AnalyticsWidget(Widget):
             if len(self.selected_tags):
                 tx = unit.x2 + 11
                 texts.push([" ←  back to all ", "select:", "Full overview"])
-                if len(self.selected_tags) > 0:
-                    action = "chosetargets:" + self.selected_tags.join(" ")
-                    texts.push(["fas-\uf140", action, "Set targets"])
-                if len(self.selected_tags) == 1:
-                    action = "chosecolor:" + self.selected_tags[0]
-                    texts.push(["fas-\uf53f", action, "Select a different color"])
+                if len(self.selected_tags) == 0:
+                    pass
+                elif len(self.selected_tags) == 1:
+                    action = "configure_tag:" + self.selected_tags[0]
+                    texts.push(["fas-\uf02b", action, "Configure tag"])
+                else:
+                    action = "configure_tags:" + self.selected_tags.join(" ")
+                    texts.push(["fas-\uf02c", action, "Configure tag combo"])
             else:
                 ctx.textAlign = "right"
                 ctx.fillText(duration, x_ref_duration, ty)
@@ -3541,16 +3542,12 @@ class AnalyticsWidget(Widget):
                             self.selected_tags.push(tag)
                     else:
                         self.selected_tags = []
-                elif picked.action.startswith("chosecolor:"):
+                elif picked.action.startswith("configure_tag:"):
                     _, _, tagz = picked.action.partition(":")
-                    tags = tagz.split(" ")
-                    if len(tags) == 1:
-                        self._canvas.tag_color_dialog.open(tags[0], self.update)
-                    elif len(tags) > 1:
-                        self._canvas.tag_color_selection_dialog.open(tags, self.update)
-                elif picked.action.startswith("chosetargets:"):
+                    self._canvas.tag_dialog.open(tagz, self.update)
+                elif picked.action.startswith("configure_tags:"):
                     _, _, tagz = picked.action.partition(":")
-                    self._canvas.targets_dialog.open(tagz, self.update)
+                    self._canvas.tag_combo_dialog.open(tagz, self.update)
                 self.update()
 
 

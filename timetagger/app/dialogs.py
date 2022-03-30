@@ -1614,24 +1614,104 @@ class RecordDialog(BaseDialog):
             self._canvas.pomodoro_dialog.start_work()
 
 
-class TagColorSelectionDialog(BaseDialog):
-    """Select a tag to define the color for."""
+class TargetHelper:
+    """A little class to help with targets. Because targets occur in two dialogs."""
+
+    def __init__(self, tagz, div):
+        self._tagz = tagz
+
+        div.innerHTML = f"""
+            <input type='number' min=1 value=1 style='width:5em;' />
+            <span style='padding: 0 1em;'>hours per</span>
+            <select>
+                <option value='none'>No target</option>
+                <option value='day'>Day</option>
+                <option value='week'>Week</option>
+                <option value='month'>Month</option>
+                <option value='year'>Year</option>
+            </select>
+            """
+
+        self._hour_input, _, self._period_select = div.children
+        self._load_current()
+
+    def _load_current(self):
+        item = window.store.settings.get_by_key("tag_targets")
+        targets = (None if item is None else item.value) or {}
+        target = targets.get(self._tagz, None)
+        if target is None:
+            self._hour_input.value = 1
+            self._period_select.value = "none"
+        else:
+            self._hour_input.value = target.hours or 1
+            self._period_select.value = target.period or "none"
+
+    def submit(self):
+
+        target = {}
+        target.hours = float(self._hour_input.value)
+        target.period = self._period_select.value
+
+        # Load all targets
+        item = window.store.settings.get_by_key("tag_targets")
+        targets = (None if item is None else item.value) or {}
+
+        # Add/remove this target
+        if target.hours > 0 and target.period and target.period != "none":
+            targets[self._tagz] = target
+        else:
+            targets.pop(self._tagz, None)
+
+        # Push
+        item = window.store.settings.create("tag_targets", targets)
+        window.store.settings.put(item)
+
+
+class TagComboDialog(BaseDialog):
+    """Dialog to configure a combination of tags."""
 
     def open(self, tags, callback):
+
+        # Put in deterministic order
         if isinstance(tags, str):
             tags = tags.split(" ")
+        tags.sort()
+        self._tagz = tagz = tags.join(" ")
 
         self.maindiv.innerHTML = f"""
-            <h1><i class='fas'>\uf53f</i>&nbsp;&nbsp;Select color for ...
+            <h1><i class='fas'>\uf02c</i>&nbsp;&nbsp;Tag combo {tagz}
                 <button type='button'><i class='fas'>\uf00d</i></button>
                 </h1>
-            <div></div>
+            <h2>Individual tags</h2>
+            <div>buttons for tags go here</div>
+            <h2>Combo target</h2>
+            <div>target goes here</div>
+            <h2>Manage</h2>
+            <div>
+                TODO
+            </div>
+            <div style='margin-top:2em;'></div>
+            <div style='display: flex;justify-content: flex-end;'>
+                <button type='button' class='actionbutton'><i class='fas'>\uf00d</i>&nbsp;&nbsp;Cancel</button>
+                <button type='button' class='actionbutton submit'><i class='fas'>\uf00c</i>&nbsp;&nbsp;Apply</button>
+            </div>
         """
 
         close_but = self.maindiv.children[0].children[-1]
-        _, buttondiv = self.maindiv.children
+        (
+            _,
+            _,  # button header
+            button_div,
+            _,  # target header
+            target_div,
+            _,  # manage header
+            manage_div,
+            _,  # margin
+            finish_buttons,
+        ) = self.maindiv.children
         close_but.onclick = self.close
 
+        button_div.innerHTML = ""
         for tag in tags:
             clr = window.store.settings.get_color_for_tag(tag)
             el = document.createElement("button")
@@ -1639,25 +1719,34 @@ class TagColorSelectionDialog(BaseDialog):
             el.classList.add("actionbutton")
             el.innerHTML = f"<b style='color:{clr};'>#</b>" + tag[1:]
             el.onclick = self._make_click_handler(tag, callback)
-            buttondiv.appendChild(el)
+            button_div.appendChild(el)
+
+        self._target = TargetHelper(tags, target_div)
+        finish_buttons.children[0].onclick = self.close
+        finish_buttons.children[1].onclick = self.submit
 
         super().open(None)
 
     def _make_click_handler(self, tag, callback):
         def handler():
             self.close()
-            self._canvas.tag_color_dialog.open(tag, callback),
+            self._canvas.tag_dialog.open(tag, callback),
 
         return handler
 
+    def submit(self):
+        self._target.submit()
+        super().submit()
 
-class TagColorDialog(BaseDialog):
-    """Dialog to set the color for a tag."""
 
-    def open(self, tagz, callback=None):
+class TagDialog(BaseDialog):
+    """Dialog to configure a singleton tag."""
+
+    def open(self, tags, callback=None):
 
         # Put in deterministic order
-        tags = tagz.split(" ")
+        if isinstance(tags, str):
+            tags = tags.split(" ")
         tags.sort()
         self._tagz = tagz = tags.join(" ")
 
@@ -1665,15 +1754,24 @@ class TagColorDialog(BaseDialog):
         # self._default_color = utils.color_from_name(self._tagz)
 
         self.maindiv.innerHTML = f"""
-            <h1><i class='fas'>\uf53f</i>&nbsp;&nbsp;Set color for {tagz}
+            <h1><i class='fas'>\uf02b</i>&nbsp;&nbsp;Configure tag {tagz}
                 <button type='button'><i class='fas'>\uf00d</i></button>
                 </h1>
-            <input type='text' style='width: 210px; border: 5px solid #eee' spellcheck='false' />
-            <br>
-            <button type='button'><i class='fas'>\uf12d</i> Default</button>
-            <button type='button' style='margin-left: 2px'><i class='fas'>\uf2f1</i> Random</button>
-            <br>
-            <div style='display: inline-grid; grid-gap: 2px;'></div>
+            <h2>Tag target</h2>
+            <div>target goes here</div>
+            <h2>Tag color</h2>
+            <div>
+                <input type='text' style='width: 210px; border: 5px solid #eee' spellcheck='false' />
+                <br>
+                <button type='button'><i class='fas'>\uf12d</i> Default</button>
+                <button type='button' style='margin-left: 2px'><i class='fas'>\uf2f1</i> Random</button>
+                <br>
+                <div style='display: inline-grid; grid-gap: 2px;'></div>
+            </div>
+            <h2>Manage</h2>
+            <div>
+                TODO
+            </div>
             <div style='margin-top:2em;'></div>
             <div style='display: flex;justify-content: flex-end;'>
                 <button type='button' class='actionbutton'><i class='fas'>\uf00d</i>&nbsp;&nbsp;Cancel</button>
@@ -1685,23 +1783,35 @@ class TagColorDialog(BaseDialog):
 
         (
             _,  # h1
+            _,  # target header
+            target_div,
+            _,  # color header
+            color_div,
+            _,  # manage header
+            manage_div,
+            _,  # gap
+            finish_buttons,
+        ) = self.maindiv.children
+
+        (
             self._color_input,
             _,  # br
-            self._default_button,
-            self._random_button,
+            self._color_default_button,
+            self._color_random_button,
             _,  # br
             self._color_grid,
-            _,  # gap
-            buttons,
-        ) = self.maindiv.children
+        ) = color_div.children
+
+        self._target = TargetHelper(tags, target_div)
 
         # Connect things up
         close_but.onclick = self.close
-        buttons.children[0].onclick = self.close
-        buttons.children[1].onclick = self.submit
+        finish_buttons.children[0].onclick = self.close
+        finish_buttons.children[1].onclick = self.submit
+
         self._color_input.onchange = lambda: self._set_color(self._color_input.value)
-        self._default_button.onclick = self._set_default_color
-        self._random_button.onclick = self._set_random_color
+        self._color_default_button.onclick = self._set_default_color
+        self._color_random_button.onclick = self._set_random_color
 
         # Generate palette
         self._color_grid.style.gridTemplateColumns = "auto ".repeat(utils.PALETTE_COLS)
@@ -1748,6 +1858,9 @@ class TagColorDialog(BaseDialog):
         self._color_input.style.borderColor = clr
 
     def submit(self):
+        # Target
+        self._target.submit()
+        # Color
         clr = self._color_input.value
         cur_color = window.store.settings.get_color_for_tag(self._tagz)
         if clr != cur_color:
@@ -2190,90 +2303,6 @@ class TagManageDialog(BaseDialog):
     def _open_record(self, key):
         record = window.store.records.get_by_key(key)
         self._canvas.record_dialog.open("Edit", record, self._show_records)
-
-
-class TargetsDialog(BaseDialog):
-    """Dialog for tag targets."""
-
-    def open(self, tagz, callback=None):
-
-        # Put in deterministic order
-        tags = tagz.split(" ")
-        tags.sort()
-        self._tagz = tagz = tags.join(" ")
-
-        self.maindiv.innerHTML = f"""
-            <h1><i class='fas'>\uf140</i>&nbsp;&nbsp;Target for {tagz}
-                <button type='button'><i class='fas'>\uf00d</i></button>
-            </h1>
-            <div>
-                <input type='number' min=1 value=1 style='width:5em;' />
-                <span style='padding: 0 1em;'>hours per</span>
-                <select>
-                    <option value='none'>No target</option>
-                    <option value='day'>Day</option>
-                    <option value='week'>Week</option>
-                    <option value='month'>Month</option>
-                    <option value='year'>Year</option>
-                </select>
-            </div>
-            <div style='margin-top:2em;'></div>
-            <div style='display: flex;justify-content: flex-end;'>
-                <button type='button' class='actionbutton'><i class='fas'>\uf00d</i>&nbsp;&nbsp;Cancel</button>
-                <button type='button' class='actionbutton submit'><i class='fas'>\uf00c</i>&nbsp;&nbsp;Apply</button>
-            </div>
-            """
-
-        close_but = self.maindiv.children[0].children[-1]
-        (
-            _,  # h1
-            formdiv,
-            _,  # gap
-            buttons,
-        ) = self.maindiv.children
-
-        # Expand formdiv
-        self._hour_input, _, self._period_select = formdiv.children
-
-        # Connect things up
-        close_but.onclick = self.close
-        buttons.children[0].onclick = self.close
-        buttons.children[1].onclick = self.submit
-
-        super().open(callback)
-        self._load_current()
-
-    def _load_current(self):
-        item = window.store.settings.get_by_key("tag_targets")
-        targets = (None if item is None else item.value) or {}
-        target = targets.get(self._tagz, None)
-        if target is None:
-            self._hour_input.value = 1
-            self._period_select.value = "none"
-        else:
-            self._hour_input.value = target.hours or 1
-            self._period_select.value = target.period or "none"
-
-    def submit(self):
-
-        target = {}
-        target.hours = float(self._hour_input.value)
-        target.period = self._period_select.value
-
-        # Load all targets
-        item = window.store.settings.get_by_key("tag_targets")
-        targets = (None if item is None else item.value) or {}
-
-        # Add/remove this target
-        if target.hours > 0 and target.period and target.period != "none":
-            targets[self._tagz] = target
-        else:
-            targets.pop(self._tagz)
-
-        # Push
-        item = window.store.settings.create("tag_targets", targets)
-        window.store.settings.put(item)
-        self.close()
 
 
 class ReportDialog(BaseDialog):
