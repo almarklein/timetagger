@@ -1682,11 +1682,11 @@ class TagComboDialog(BaseDialog):
             <h1><i class='fas'>\uf02c</i>&nbsp;&nbsp;Tag combo {tagz}
                 <button type='button'><i class='fas'>\uf00d</i></button>
                 </h1>
-            <h2>Individual tags</h2>
+            <h2><i class='fas'>\uf02c</i>&nbsp;&nbsp;Tags</h2>
             <div>buttons for tags go here</div>
-            <h2>Combo target</h2>
+            <h2><i class='fas'>\uf140</i>&nbsp;&nbsp;Target</h2>
             <div>target goes here</div>
-            <h2>Manage</h2>
+            <h2><i class='fas'>\uf101</i>&nbsp;&nbsp;More</h2>
             <div>
                 TODO
             </div>
@@ -1757,18 +1757,16 @@ class TagDialog(BaseDialog):
             <h1><i class='fas'>\uf02b</i>&nbsp;&nbsp;Configure tag {tagz}
                 <button type='button'><i class='fas'>\uf00d</i></button>
                 </h1>
-            <h2>Tag target</h2>
+            <h2><i class='fas'>\uf140</i>&nbsp;&nbsp;Target</h2>
             <div>target goes here</div>
-            <h2>Tag color</h2>
-            <div>
-                <input type='text' style='width: 210px; border: 5px solid #eee' spellcheck='false' />
-                <br>
-                <button type='button'><i class='fas'>\uf12d</i> Default</button>
-                <button type='button' style='margin-left: 2px'><i class='fas'>\uf2f1</i> Random</button>
-                <br>
-                <div style='display: inline-grid; grid-gap: 2px;'></div>
-            </div>
-            <h2>Manage</h2>
+            <h2><i class='fas'>\uf53f</i>&nbsp;&nbsp;Color</h2>
+            <input type='text' style='width: 210px; border: 5px solid #eee' spellcheck='false' />
+            <br>
+            <button type='button'><i class='fas'>\uf12d</i> Default</button>
+            <button type='button' style='margin-left: 2px'><i class='fas'>\uf2f1</i> Random</button>
+            <br>
+            <div style='display: inline-grid; grid-gap: 2px;'></div>
+            <h2><i class='fas'>\uf101</i>&nbsp;&nbsp;More</h2>
             <div>
                 TODO
             </div>
@@ -1786,21 +1784,17 @@ class TagDialog(BaseDialog):
             _,  # target header
             target_div,
             _,  # color header
-            color_div,
-            _,  # manage header
-            manage_div,
-            _,  # gap
-            finish_buttons,
-        ) = self.maindiv.children
-
-        (
             self._color_input,
             _,  # br
             self._color_default_button,
             self._color_random_button,
             _,  # br
             self._color_grid,
-        ) = color_div.children
+            _,  # manage header
+            manage_div,
+            _,  # gap
+            finish_buttons,
+        ) = self.maindiv.children
 
         self._target = TargetHelper(tags, target_div)
 
