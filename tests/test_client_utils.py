@@ -229,6 +229,14 @@ def test_get_better_tag_order_from_stats():
     stats2 = get_better_tag_order(stats, [], False, priorities)
     assert stats2 == stats2_ref
 
+    # But selected tags override
+    priorities = {"#client1": 1, "#client2": 1, "#code": 2, "#admin": 2}
+    stats2 = get_better_tag_order(stats, ["#code"], False, priorities)
+    assert stats2 == [
+        "#code #client1",
+        "#code #client2",
+    ]
+
 
 def test_timestr2tuple():
     assert timestr2tuple("") == (None, None, None)
