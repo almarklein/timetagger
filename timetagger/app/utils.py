@@ -216,7 +216,9 @@ def get_tags_and_parts_from_string(s="", sorted=True):
     return tags, parts
 
 
-def get_better_tag_order_from_stats(stats, selected_tags, remove_selected):
+def get_better_tag_order_from_stats(
+    stats, selected_tags, remove_selected, priorities=None
+):
     """Given a stats dict (tagz -> times) put the tags of each item in a
     sensible order. Returns a dict that maps the old tagz to the new.
     """
@@ -233,35 +235,45 @@ def get_better_tag_order_from_stats(stats, selected_tags, remove_selected):
             if all([tag in tags for tag in selected_tags]):
                 stats[tagz] = ori_stats[tagz]
 
-    # Score the individual tags based on duration, so we can sort them later
+    # We have two scores, both apply to individual tags.
+
+    # Score 1: A score based on duration, so we can sort them later.
     tag_scores1 = {}
-    tag_connections = {}
     depth = 0
     for tagz, t in stats.items():
         tags = tagz.split(" ")
         depth = max(depth, len(tags))
         for tag in tags:
             tag_scores1[tag] = tag_scores1.get(tag, 0) + t
-            tag_connections[tag] = tag_connections.get(tag, 0) + 1
 
-    # Also calculate a score based on how often a tag occurs. This works
-    # by letting each tag deal out points to other tags that it occurs
-    # with together, which gives a nicer result than just counting occurances.
-    # This is actually the more important score.
+    # Correction: Make sure that selected tags have the best scores
+    for i, tag in enumerate(selected_tags):
+        d = 1000 + len(selected_tags) - i
+        tag_scores1[tag] = tag_scores1.get(tag, 0) + d
+
+    # Score 2: A score based on how often a tag occurs.
+    # This works by letting each tag deal out points to other tags that
+    # it occurs with together, which gives a nicer result than just
+    # counting occurances. This is actually the more important score.
     tag_scores2 = {}
+    tag_connections = {}
+    for tagz, t in stats.items():
+        for tag in tagz.split(" "):
+            tag_connections[tag] = tag_connections.get(tag, 0) + 1
+            tag_scores2[tag] = 1000  # init
     for tagz, t in stats.items():
         tags = tagz.split(" ")
         for tag in tags:
             for tag2 in tags:
                 if tag2 != tag:
-                    tag_scores2[tag2] = (
-                        tag_scores2.get(tag2, 0) + 1 / tag_connections[tag]
-                    )
+                    tag_scores2[tag2] += 1 / tag_connections[tag]
 
-    # Make sure that selected tags have the best scores
-    for i, tag in enumerate(selected_tags):
-        d = 1000 + len(selected_tags) - i
-        tag_scores1[tag] = tag_scores1.get(tag, 0) + d
+    # Correction: Make sure that higher priority (lower number) tags come first
+    if priorities is not None:
+        for tag, score2 in tag_scores2.items():
+            priority = priorities.get(tag, 0) or 1
+            d = -100 * priority
+            tag_scores2[tag] = score2 + d
 
     # Sort the tagz (tag combis), based on the tag_scores.
     # This will be the order for the renaming process. This is important,

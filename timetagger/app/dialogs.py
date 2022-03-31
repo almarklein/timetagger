@@ -1864,7 +1864,7 @@ class TagDialog(BaseDialog):
         # Set target
         self._target.write_to_info(info)
         # Set priority
-        prio = self._priority_select.value
+        prio = int(self._priority_select.value)
         info["priority"] = 0 if prio == 1 else prio
         # Set color
         clr = self._color_input.value
@@ -2431,8 +2431,18 @@ class ReportDialog(BaseDialog):
         records = window.store.records.get_records(t1, t2).values()
         records.sort(key=lambda record: record.t1)
 
+        # Determine priorities
+        priorities = {}
+        for tagz in stats.keys():
+            tags = tagz.split(" ")
+            for tag in tags:
+                info = window.store.settings.get_tag_info(tag)
+                priorities[tag] = info.get("priority", 0) or 1
+
         # Get better names
-        name_map = utils.get_better_tag_order_from_stats(stats, self._tags, True)
+        name_map = utils.get_better_tag_order_from_stats(
+            stats, self._tags, True, priorities
+        )
 
         # Create list of pairs of stat-name, stat-key, and sort.
         # Thid is the reference order for tagz.

@@ -2982,9 +2982,17 @@ class AnalyticsWidget(Widget):
             for tag in tags:
                 self._time_per_tag[tag] = self._time_per_tag.get(tag, 0) + t
 
+        # Determine priorities
+        priorities = {}
+        for tagz in stats.keys():
+            tags = tagz.split(" ")
+            for tag in tags:
+                info = window.store.settings.get_tag_info(tag)
+                priorities[tag] = info.get("priority", 0) or 1
+
         # Get better names (order of tags in each tag combo)
         name_map = utils.get_better_tag_order_from_stats(
-            stats, self.selected_tags, False
+            stats, self.selected_tags, False, priorities
         )
         self.tagzmap.update(name_map)
 
