@@ -1635,23 +1635,23 @@ class TargetHelper:
         self._hour_input, _, self._period_select = div.children
 
     def load_from_info(self, info):
-        targets = info.get("targets", [])
-        if not targets:
-            self._hour_input.value = 1
-            self._period_select.value = "none"
-        else:
-            target = targets[0]
-            self._hour_input.value = target.hours or 1
-            self._period_select.value = target.period or "none"
+        targets = info.get("targets", None) or {}
+        for period, hours in targets.items():
+            if period and hours:
+                self._hour_input.value = hours or 1
+                self._period_select.value = period or "none"
+                break
+            else:
+                self._hour_input.value = 0
+                self._period_select.value = "none"
 
     def write_to_info(self, info):
-        targets = []
+        targets = {}
 
-        target = {}
-        target.hours = float(self._hour_input.value)
-        target.period = self._period_select.value
-        if target.hours > 0 and target.period and target.period != "none":
-            targets.push(target)
+        hours = float(self._hour_input.value)
+        period = self._period_select.value
+        if hours > 0 and period and period != "none":
+            targets[period] = hours
 
         info.targets = targets
 

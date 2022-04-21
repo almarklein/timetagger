@@ -335,18 +335,18 @@ class SettingsStore(BaseStore):
 
     def get_tag_info(self, tagz):
 
-        info = {"targets": []}
+        info = {"targets": {}}
 
         # Load color the old way. We can remove this in about a year or so (2023)
         ob = self.get_by_key("color " + tagz)
         if ob is not None and ob.value:
             info["color"] = ob.value
 
-        # Dito for the targets
+        # Load targets the old way
         item = self._items.get("tag_targets", None) or {"value": {}}
         target = item.value.get(tagz, None)
         if target:
-            info["targets"].push(target)
+            info["targets"][target.period] = target.hours
 
         # Load the actual data
         key = "taginfo " + tagz

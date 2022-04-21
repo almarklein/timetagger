@@ -3084,11 +3084,12 @@ class AnalyticsWidget(Widget):
             avail_height -= 20  # Need extra space for target info
 
         # Determine targets
-        item = window.store.settings.get_by_key("tag_targets")
-        targets = (None if item is None else item.value) or {}
-        self._current_target = targets.get(
-            self.selected_tags, {"period": "none", "hours": 0}
-        )
+        if len(self.selected_tags) > 0:
+            tagz = sorted(self.selected_tags).join(" ")
+            info = window.store.settings.get_tag_info(tagz)
+            self._current_targets = info.targets
+        else:
+            self._current_targets = {}
 
         # Set _npixels_each (number of pixels per bar)
         n = 0
@@ -3463,23 +3464,35 @@ class AnalyticsWidget(Widget):
             # If this is a selection, draw target info
             if len(self.selected_tags) and unit.level == 1:
                 texts.push(["Total of"])
+                # Select the target that best matches the current time range
+                best_target = None
+                m = {"day": 24, "week": 168, "month": 720, "year": 8760}
+                for period, divisor in m.items():
+                    target_hours = self._current_targets.get(period, 0)
+                    if target_hours <= 0:
+                        continue
+                    factor = self._hours_in_range / divisor
+                    if factor > 0.93 or not best_target:
+                        best_target = {
+                            "period": period,
+                            "factor": factor,
+                            "hours": target_hours,
+                        }
+                    else:
+                        break
                 # Show target info
                 ctx.textAlign = "left"
                 ctx.fillStyle = COLORS.prim2_clr
                 target_info_y = ty + 0.5 * npixels
-                period = self._current_target.period
-                m = {"day": 24, "week": 168, "month": 720, "year": 8760}
-                divisor = m.get(period, 0)
-                if divisor == 0:
-                    ctx.fillText("No target", tx, target_info_y)
-                else:
-                    factor = self._hours_in_range / divisor
+                if best_target:
                     done_this_period = unit.cum_t
-                    target_this_period = 3600 * self._current_target.hours * factor
+                    target_this_period = 3600 * best_target.hours * best_target.factor
                     perc = 100 * done_this_period / target_this_period
-                    prefix = "" if 0.93 < factor < 1.034 else "~ "
+                    prefix = "" if 0.93 < best_target.factor < 1.034 else "~ "
                     ctx.fillText(
-                        f"{period} target at {prefix}{perc:0.0f}%", tx, target_info_y
+                        f"{best_target.period} target at {prefix}{perc:0.0f}%",
+                        tx,
+                        target_info_y,
                     )
                     left = target_this_period - done_this_period
                     left_s = dt.duration_string(abs(left), False)
@@ -3490,6 +3503,8 @@ class AnalyticsWidget(Widget):
                         x_ref_duration,
                         target_info_y,
                     )
+                else:
+                    ctx.fillText("No target", tx, target_info_y)
             # Collect texts for tags
             tags = [tag for tag in unit.subtagz.split(" ")]
             for tag in tags:
