@@ -1633,38 +1633,27 @@ class TargetHelper:
             """
 
         self._hour_input, _, self._period_select = div.children
-        self._load_current()
 
-    def _load_current(self):
-        item = window.store.settings.get_by_key("tag_targets")
-        targets = (None if item is None else item.value) or {}
-        target = targets.get(self._tagz, None)
-        if target is None:
-            self._hour_input.value = 1
-            self._period_select.value = "none"
-        else:
-            self._hour_input.value = target.hours or 1
-            self._period_select.value = target.period or "none"
+    def load_from_info(self, info):
+        targets = info.get("targets", None) or {}
+        for period, hours in targets.items():
+            if period and hours:
+                self._hour_input.value = hours or 1
+                self._period_select.value = period or "none"
+                break
+            else:
+                self._hour_input.value = 0
+                self._period_select.value = "none"
 
-    def submit(self):
+    def write_to_info(self, info):
+        targets = {}
 
-        target = {}
-        target.hours = float(self._hour_input.value)
-        target.period = self._period_select.value
+        hours = float(self._hour_input.value)
+        period = self._period_select.value
+        if hours > 0 and period and period != "none":
+            targets[period] = hours
 
-        # Load all targets
-        item = window.store.settings.get_by_key("tag_targets")
-        targets = (None if item is None else item.value) or {}
-
-        # Add/remove this target
-        if target.hours > 0 and target.period and target.period != "none":
-            targets[self._tagz] = target
-        else:
-            targets.pop(self._tagz, None)
-
-        # Push
-        item = window.store.settings.create("tag_targets", targets)
-        window.store.settings.put(item)
+        info.targets = targets
 
 
 class TagComboDialog(BaseDialog):
@@ -1726,6 +1715,7 @@ class TagComboDialog(BaseDialog):
         finish_buttons.children[1].onclick = self.submit
 
         super().open(None)
+        self._load_current()
 
     def _make_click_handler(self, tag, callback):
         def handler():
@@ -1734,8 +1724,14 @@ class TagComboDialog(BaseDialog):
 
         return handler
 
+    def _load_current(self):
+        info = window.store.settings.get_tag_info(self._tagz)
+        self._target.load_from_info(info)
+
     def submit(self):
-        self._target.submit()
+        info = {}
+        self._target.write_to_info(info)
+        window.store.settings.set_tag_info(self._tagz, info)
         super().submit()
 
 
@@ -1759,6 +1755,11 @@ class TagDialog(BaseDialog):
                 </h1>
             <h2><i class='fas'>\uf140</i>&nbsp;&nbsp;Target</h2>
             <div>target goes here</div>
+            <h2><i class='fas'>\uf074</i>&nbsp;&nbsp;Priority</h2>
+            <select>
+                <option value='1'>Primary (default)</option>
+                <option value='2'>Secondary (for "extra" tags)</option>
+            </select>
             <h2><i class='fas'>\uf53f</i>&nbsp;&nbsp;Color</h2>
             <input type='text' style='width: 210px; border: 5px solid #eee' spellcheck='false' />
             <br>
@@ -1783,6 +1784,8 @@ class TagDialog(BaseDialog):
             _,  # h1
             _,  # target header
             target_div,
+            _,  # priority header
+            self._priority_select,
             _,  # color header
             self._color_input,
             _,  # br
@@ -1817,9 +1820,8 @@ class TagDialog(BaseDialog):
             self._make_clickable(el, hex)
             self._color_grid.appendChild(el)
 
-        self._set_color(window.store.settings.get_color_for_tag(tagz))
-
         super().open(callback)
+        self._load_current()
         if utils.looks_like_desktop():
             self._color_input.focus()
             self._color_input.select()
@@ -1851,17 +1853,24 @@ class TagDialog(BaseDialog):
             self._color_input.value = clr
         self._color_input.style.borderColor = clr
 
+    def _load_current(self):
+        info = window.store.settings.get_tag_info(self._tagz)
+        self._target.load_from_info(info)
+        self._priority_select.value = info.get("priority", 0) or 1
+        self._set_color(info.get("color", ""))
+
     def submit(self):
-        # Target
-        self._target.submit()
-        # Color
+        info = {}
+        # Set target
+        self._target.write_to_info(info)
+        # Set priority
+        prio = int(self._priority_select.value)
+        info["priority"] = 0 if prio == 1 else prio
+        # Set color
         clr = self._color_input.value
-        cur_color = window.store.settings.get_color_for_tag(self._tagz)
-        if clr != cur_color:
-            if clr == self._default_color:
-                window.store.settings.set_color_for_tag(self._tagz, "")
-            else:
-                window.store.settings.set_color_for_tag(self._tagz, clr)
+        info["color"] = "" if clr == self._default_color else clr
+        # Store
+        window.store.settings.set_tag_info(self._tagz, info)
         super().submit()
 
 
@@ -2260,17 +2269,12 @@ class TagManageDialog(BaseDialog):
                 record.ds = "".join(new_parts)
                 window.store.records.put(record)
 
-            # Also update colors
+            # Also update tag info
             if len(search_tags) == 1 and len(replacement_tags) == 1:
                 tag1, tag2 = search_tags[0], replacement_tags[0]
-                cur_color = window.store.settings.get_color_for_tag(tag1)
-                default_color = window.store.settings.get_color_for_tag(
-                    "#notanactualtag"
-                )
-                window.store.settings.set_color_for_tag(tag1, "")
-                if cur_color != default_color:
-                    window.store.settings.set_color_for_tag(tag2, cur_color)
-
+                info = window.store.settings.get_tag_info(tag1)
+                window.store.settings.set_tag_info(tag1, {})
+                window.store.settings.set_tag_info(tag2, info)
         else:
             search_text = self._tagname1.value.strip().toLowerCase()
             replacement_text = self._tagname2.value.strip()
@@ -2338,6 +2342,7 @@ class ReportDialog(BaseDialog):
                                         <option value='tagz/date'>tags / date</option>
                                         <option value='date/tagz'>date / tags</option>
                                      </select>
+                <div>Tag order:</div> <label><input type='checkbox' /> Hide secondary tags</label>
                 <div>Format:</div> <label><input type='checkbox' /> Hours in decimals</label>
                 <div>Details:</div> <label><input type='checkbox' checked /> Show records</label>
                 <button type='button'><i class='fas'>\uf328</i>&nbsp;&nbsp;{self._copybuttext}</button>
@@ -2358,11 +2363,12 @@ class ReportDialog(BaseDialog):
         # filter text = form.children[1]
         self._date_range = form.children[3]
         self._grouping_select = form.children[5]
-        self._hourdecimals_but = form.children[7].children[0]  # inside label
-        self._showrecords_but = form.children[9].children[0]  # inside label
-        self._copy_but = form.children[10]
-        self._savecsv_but = form.children[12]
-        self._savepdf_but = form.children[14]
+        self._hidesecondary_but = form.children[7].children[0]  # inside label
+        self._hourdecimals_but = form.children[9].children[0]  # inside label
+        self._showrecords_but = form.children[11].children[0]  # inside label
+        self._copy_but = form.children[12]
+        self._savecsv_but = form.children[14]
+        self._savepdf_but = form.children[16]
 
         # Connect input elements
         close_but = self.maindiv.children[0].children[-1]
@@ -2371,9 +2377,17 @@ class ReportDialog(BaseDialog):
         #
         grouping = window.localsettings.get("report_grouping", "date")
         self._grouping_select.value = grouping
-        self._grouping_select.onchange = self._on_grouping_changed
-        self._hourdecimals_but.oninput = self._update_table
-        self._showrecords_but.oninput = self._update_table
+        hidesecondary = window.localsettings.get("report_hidesecondary", False)
+        self._hidesecondary_but.checked = hidesecondary
+        hourdecimals = window.localsettings.get("report_hourdecimals", False)
+        self._hourdecimals_but.checked = hourdecimals
+        showrecords = window.localsettings.get("report_showrecords", True)
+        self._showrecords_but.checked = showrecords
+        #
+        self._grouping_select.onchange = self._on_setting_changed
+        self._hidesecondary_but.oninput = self._on_setting_changed
+        self._hourdecimals_but.oninput = self._on_setting_changed
+        self._showrecords_but.oninput = self._on_setting_changed
         #
         self._copy_but.onclick = self._copy_clipboard
         self._savecsv_but.onclick = self._save_as_csv
@@ -2382,8 +2396,13 @@ class ReportDialog(BaseDialog):
         window.setTimeout(self._update_table)
         super().open(None)
 
-    def _on_grouping_changed(self):
+    def _on_setting_changed(self):
         window.localsettings.set("report_grouping", self._grouping_select.value)
+        window.localsettings.set(
+            "report_hidesecondary", self._hidesecondary_but.checked
+        )
+        window.localsettings.set("report_hourdecimals", self._hourdecimals_but.checked)
+        window.localsettings.set("report_showrecords", self._showrecords_but.checked)
         self._update_table()
 
     def _update_table(self):
@@ -2427,24 +2446,50 @@ class ReportDialog(BaseDialog):
         records = window.store.records.get_records(t1, t2).values()
         records.sort(key=lambda record: record.t1)
 
+        # Determine priorities
+        priorities = {}
+        for tagz in stats.keys():
+            tags = tagz.split(" ")
+            for tag in tags:
+                info = window.store.settings.get_tag_info(tag)
+                priorities[tag] = info.get("priority", 0) or 1
+
         # Get better names
-        name_map = utils.get_better_tag_order_from_stats(stats, self._tags, True)
+        name_map = utils.get_better_tag_order_from_stats(
+            stats, self._tags, True, priorities
+        )
+
+        # Hide secondary tags by removing them from the mapping.
+        # Note that this means that different keys now map to the same value.
+        if self._hidesecondary_but.checked:
+            for tagz1, tagz2 in name_map.items():
+                tags = tagz2.split(" ")
+                tags = [tag for tag in tags if priorities[tag] <= 1]
+                tagz2 = tags.join(" ")
+                name_map[tagz1] = tagz2
 
         # Create list of pairs of stat-name, stat-key, and sort.
-        # Thid is the reference order for tagz.
-        statobjects = []
+        # This is the reference order for tagz.
+        statobjects = {}
         for tagz1, tagz2 in name_map.items():
-            statobjects.append({"oritagz": tagz1, "tagz": tagz2, "t": stats[tagz1]})
+            t = statobjects.get(tagz2, {}).get("t", 0) + stats[tagz1]
+            statobjects[tagz2] = {"tagz": tagz2, "t": t}
+        statobjects = statobjects.values()
         utils.order_stats_by_duration_and_name(statobjects)
 
         # Get how to group the records
         group_method = self._grouping_select.value
+        empty_title = "General"
 
         # Perform grouping ...
         if group_method == "tagz":
             groups = {}
             for obj in statobjects:
-                groups[obj.tagz] = {"title": obj.tagz, "t": 0, "records": []}
+                groups[obj.tagz] = {
+                    "title": obj.tagz or empty_title,
+                    "t": 0,
+                    "records": [],
+                }
             for i in range(len(records)):
                 record = records[i]
                 tagz1 = window.store.records.tags_from_record(record).join(" ")
@@ -2487,7 +2532,7 @@ class ReportDialog(BaseDialog):
                 if date not in subgroups:
                     tdate = "-".join(reversed(date.split("-")))
                     subgroups[date] = {
-                        "title": tagz2 + " / " + tdate,
+                        "title": (tagz2 or empty_title) + " / " + tdate,
                         "t": 0,
                         "records": [],
                     }
@@ -2514,7 +2559,7 @@ class ReportDialog(BaseDialog):
                     for obj in statobjects:
                         tdate = "-".join(reversed(date.split("-")))
                         subgroups[obj.tagz] = {
-                            "title": tdate + " / " + obj.tagz,
+                            "title": tdate + " / " + (obj.tagz or empty_title),
                             "t": 0,
                             "records": [],
                         }

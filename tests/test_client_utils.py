@@ -192,6 +192,51 @@ def test_get_better_tag_order_from_stats():
         "#client3 #code",
     ]
 
+    # Priority - first the reason why we have it: unwanted grouping
+    stats = {
+        "#client1 #code": 5280,
+        "#client2 #code": 4680,
+        "#client1 #admin": 20,
+        "#client2 #admin": 10,
+    }
+    stats2 = get_better_tag_order(stats, [], False)
+    assert stats2 == [
+        "#code #client1",
+        "#code #client2",
+        "#admin #client1",
+        "#admin #client2",
+    ]
+
+    # Now fix it
+    # Note that the function order_stats_by_duration_and_name() is not called
+    # in these tests. That function will make the order of the tagz correct.
+    # What we test here is only the order of tags in one tagz.
+    priorities = {"#client1": 1, "#client2": 1, "#code": 2, "#admin": 2}
+    stats2 = get_better_tag_order(stats, [], False, priorities)
+    stats2_ref = [
+        "#client1 #code",
+        "#client2 #code",
+        "#client1 #admin",
+        "#client2 #admin",
+    ]
+    assert stats2 == stats2_ref
+    # Should also work
+    priorities = {"#code": 2}
+    stats2 = get_better_tag_order(stats, [], False, priorities)
+    assert set(stats2) == set(stats2_ref)
+    # Should also work
+    priorities = {"#client1": 3, "#client2": 3, "#code": 4, "#admin": 4}
+    stats2 = get_better_tag_order(stats, [], False, priorities)
+    assert stats2 == stats2_ref
+
+    # But selected tags override
+    priorities = {"#client1": 1, "#client2": 1, "#code": 2, "#admin": 2}
+    stats2 = get_better_tag_order(stats, ["#code"], False, priorities)
+    assert stats2 == [
+        "#code #client1",
+        "#code #client2",
+    ]
+
 
 def test_timestr2tuple():
     assert timestr2tuple("") == (None, None, None)

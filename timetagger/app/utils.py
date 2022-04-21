@@ -216,7 +216,9 @@ def get_tags_and_parts_from_string(s="", sorted=True):
     return tags, parts
 
 
-def get_better_tag_order_from_stats(stats, selected_tags, remove_selected):
+def get_better_tag_order_from_stats(
+    stats, selected_tags, remove_selected, priorities=None
+):
     """Given a stats dict (tagz -> times) put the tags of each item in a
     sensible order. Returns a dict that maps the old tagz to the new.
     """
@@ -233,35 +235,47 @@ def get_better_tag_order_from_stats(stats, selected_tags, remove_selected):
             if all([tag in tags for tag in selected_tags]):
                 stats[tagz] = ori_stats[tagz]
 
-    # Score the individual tags based on duration, so we can sort them later
+    # We have three scores, in increasing importance. Each applies to individual tags.
+    depth = 0  # Used down below
     tag_scores1 = {}
-    tag_connections = {}
-    depth = 0
-    for tagz, t in stats.items():
+    tag_scores2 = {}
+    tag_scores3 = {}
+    for tagz in stats.keys():
         tags = tagz.split(" ")
         depth = max(depth, len(tags))
         for tag in tags:
-            tag_scores1[tag] = tag_scores1.get(tag, 0) + t
-            tag_connections[tag] = tag_connections.get(tag, 0) + 1
+            tag_scores1[tag] = 0
+            tag_scores2[tag] = 0
+            tag_scores3[tag] = 0
 
-    # Also calculate a score based on how often a tag occurs. This works
-    # by letting each tag deal out points to other tags that it occurs
-    # with together, which gives a nicer result than just counting occurances.
-    # This is actually the more important score.
-    tag_scores2 = {}
+    # Score 1: A score based on duration.
+    for tagz, t in stats.items():
+        for tag in tagz.split(" "):
+            tag_scores1[tag] = tag_scores1.get(tag, 0) + t
+
+    # Score 2: A score based on how often a tag occurs.
+    # This works by letting each tag deal out points to other tags that
+    # it occurs with together, which gives a nicer result than just
+    # counting occurances.
+    tag_connections = {}
+    for tagz, t in stats.items():
+        for tag in tagz.split(" "):
+            tag_connections[tag] = tag_connections.get(tag, 0) + 1
     for tagz, t in stats.items():
         tags = tagz.split(" ")
         for tag in tags:
             for tag2 in tags:
                 if tag2 != tag:
-                    tag_scores2[tag2] = (
-                        tag_scores2.get(tag2, 0) + 1 / tag_connections[tag]
-                    )
+                    tag_scores2[tag2] += 1 / tag_connections[tag]
 
-    # Make sure that selected tags have the best scores
+    # Score 3: A score based on priority and selection. Overrides the other scores.
+    if priorities is not None:
+        for tag in tag_scores3.keys():
+            priority = priorities.get(tag, 0) or 1
+            tag_scores3[tag] -= min(priority, 10)
     for i, tag in enumerate(selected_tags):
-        d = 1000 + len(selected_tags) - i
-        tag_scores1[tag] = tag_scores1.get(tag, 0) + d
+        d = 100 - i * 10
+        tag_scores3[tag] = tag_scores3.get(tag, 0) + d
 
     # Sort the tagz (tag combis), based on the tag_scores.
     # This will be the order for the renaming process. This is important,
@@ -270,17 +284,20 @@ def get_better_tag_order_from_stats(stats, selected_tags, remove_selected):
     for tagz in stats.keys():
         score1 = 0
         score2 = 0
+        score3 = 0
         for tag in tagz.split(" "):
             score1 += tag_scores1[tag]
             score2 += tag_scores2[tag]
-        sorted_tagz.append((tagz, score1, score2))
+            score3 += tag_scores3[tag]
+        sorted_tagz.append((tagz, score1, score2, score3))
     sorted_tagz.sort(key=lambda x: -x[1])
     sorted_tagz.sort(key=lambda x: -x[2])
+    sorted_tagz.sort(key=lambda x: -x[3])
 
     # Rename the tagz (change tag order) based on the tag score
     name_map = {}
     position_votes = {}
-    for tagz, _, _ in sorted_tagz:
+    for tagz, _, _, _ in sorted_tagz:
         tags = tagz.split(" ")
         # Optionally clear the list from selected tags
         if remove_selected:
@@ -296,6 +313,7 @@ def get_better_tag_order_from_stats(stats, selected_tags, remove_selected):
             i += 1
             remaining_tags.sort(key=lambda tag: -tag_scores1[tag])
             remaining_tags.sort(key=lambda tag: -tag_scores2[tag])
+            remaining_tags.sort(key=lambda tag: -tag_scores3[tag])
             remaining_tags.sort(key=lambda tag: -position_votes.get(str(i) + tag, 0))
             tags.append(remaining_tags.pop(0))
         name_map[tagz] = " ".join(tags)
