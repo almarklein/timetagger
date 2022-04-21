@@ -1757,7 +1757,7 @@ class TagDialog(BaseDialog):
             <div>target goes here</div>
             <h2><i class='fas'>\uf074</i>&nbsp;&nbsp;Priority</h2>
             <select>
-                <option value='1'>Primary (default, determines order)</option>
+                <option value='1'>Primary (default)</option>
                 <option value='2'>Secondary (for "extra" tags)</option>
             </select>
             <h2><i class='fas'>\uf53f</i>&nbsp;&nbsp;Color</h2>

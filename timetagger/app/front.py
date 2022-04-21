@@ -2371,14 +2371,22 @@ class RecordsWidget(Widget):
         sumcount_nominal = 0
         sumcount_selected = 0
         for tagz, count in stats_dict.items():
-            tags = tagz.split(" ")
-            sumcount_full += count * len(tags)
+            # Get tags list, tags2 filters out the secondary tags
+            tags1 = tagz.split(" ")
+            tags2 = []
+            for tag in tags1:
+                info = window.store.settings.get_tag_info(tag)
+                if info.get("priority", 1) <= 1:
+                    tags2.push(tag)
+            # Update sums
+            sumcount_full += count * len(tags2)
             sumcount_nominal += count
+            # Filter selected (mind to test against tags1 here)
             if len(selected_tags):
-                if not all([tag in tags for tag in selected_tags]):
+                if not all([tag in tags1 for tag in selected_tags]):
                     continue
             sumcount_selected += count
-            for tag in tags:
+            for tag in tags2:
                 tag_stats[tag] = tag_stats.get(tag, 0) + count
 
         # Turn stats into tuples and sort.
