@@ -2342,6 +2342,7 @@ class ReportDialog(BaseDialog):
                                         <option value='tagz/date'>tags / date</option>
                                         <option value='date/tagz'>date / tags</option>
                                      </select>
+                <div>Tag order:</div> <label><input type='checkbox' /> Hide secondary tags</label>
                 <div>Format:</div> <label><input type='checkbox' /> Hours in decimals</label>
                 <div>Details:</div> <label><input type='checkbox' checked /> Show records</label>
                 <button type='button'><i class='fas'>\uf328</i>&nbsp;&nbsp;{self._copybuttext}</button>
@@ -2362,11 +2363,12 @@ class ReportDialog(BaseDialog):
         # filter text = form.children[1]
         self._date_range = form.children[3]
         self._grouping_select = form.children[5]
-        self._hourdecimals_but = form.children[7].children[0]  # inside label
-        self._showrecords_but = form.children[9].children[0]  # inside label
-        self._copy_but = form.children[10]
-        self._savecsv_but = form.children[12]
-        self._savepdf_but = form.children[14]
+        self._hidesecondary_but = form.children[7].children[0]  # inside label
+        self._hourdecimals_but = form.children[9].children[0]  # inside label
+        self._showrecords_but = form.children[11].children[0]  # inside label
+        self._copy_but = form.children[12]
+        self._savecsv_but = form.children[14]
+        self._savepdf_but = form.children[16]
 
         # Connect input elements
         close_but = self.maindiv.children[0].children[-1]
@@ -2376,6 +2378,7 @@ class ReportDialog(BaseDialog):
         grouping = window.localsettings.get("report_grouping", "date")
         self._grouping_select.value = grouping
         self._grouping_select.onchange = self._on_grouping_changed
+        self._hidesecondary_but.oninput = self._update_table
         self._hourdecimals_but.oninput = self._update_table
         self._showrecords_but.oninput = self._update_table
         #
@@ -2444,21 +2447,37 @@ class ReportDialog(BaseDialog):
             stats, self._tags, True, priorities
         )
 
+        # Hide secondary tags by removing them from the mapping.
+        # Note that this means that different keys now map to the same value.
+        if self._hidesecondary_but.checked:
+            for tagz1, tagz2 in name_map.items():
+                tags = tagz2.split(" ")
+                tags = [tag for tag in tags if priorities[tag] <= 1]
+                tagz2 = tags.join(" ")
+                name_map[tagz1] = tagz2
+
         # Create list of pairs of stat-name, stat-key, and sort.
-        # Thid is the reference order for tagz.
-        statobjects = []
+        # This is the reference order for tagz.
+        statobjects = {}
         for tagz1, tagz2 in name_map.items():
-            statobjects.append({"oritagz": tagz1, "tagz": tagz2, "t": stats[tagz1]})
+            t = statobjects.get(tagz2, {}).get("t", 0) + stats[tagz1]
+            statobjects[tagz2] = {"tagz": tagz2, "t": t}
+        statobjects = statobjects.values()
         utils.order_stats_by_duration_and_name(statobjects)
 
         # Get how to group the records
         group_method = self._grouping_select.value
+        empty_title = "General"
 
         # Perform grouping ...
         if group_method == "tagz":
             groups = {}
             for obj in statobjects:
-                groups[obj.tagz] = {"title": obj.tagz, "t": 0, "records": []}
+                groups[obj.tagz] = {
+                    "title": obj.tagz or empty_title,
+                    "t": 0,
+                    "records": [],
+                }
             for i in range(len(records)):
                 record = records[i]
                 tagz1 = window.store.records.tags_from_record(record).join(" ")
@@ -2501,7 +2520,7 @@ class ReportDialog(BaseDialog):
                 if date not in subgroups:
                     tdate = "-".join(reversed(date.split("-")))
                     subgroups[date] = {
-                        "title": tagz2 + " / " + tdate,
+                        "title": (tagz2 or empty_title) + " / " + tdate,
                         "t": 0,
                         "records": [],
                     }
@@ -2528,7 +2547,7 @@ class ReportDialog(BaseDialog):
                     for obj in statobjects:
                         tdate = "-".join(reversed(date.split("-")))
                         subgroups[obj.tagz] = {
-                            "title": tdate + " / " + obj.tagz,
+                            "title": tdate + " / " + (obj.tagz or empty_title),
                             "t": 0,
                             "records": [],
                         }
