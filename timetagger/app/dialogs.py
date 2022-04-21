@@ -2377,10 +2377,17 @@ class ReportDialog(BaseDialog):
         #
         grouping = window.localsettings.get("report_grouping", "date")
         self._grouping_select.value = grouping
-        self._grouping_select.onchange = self._on_grouping_changed
-        self._hidesecondary_but.oninput = self._update_table
-        self._hourdecimals_but.oninput = self._update_table
-        self._showrecords_but.oninput = self._update_table
+        hidesecondary = window.localsettings.get("report_hidesecondary", False)
+        self._hidesecondary_but.checked = hidesecondary
+        hourdecimals = window.localsettings.get("report_hourdecimals", False)
+        self._hourdecimals_but.checked = hourdecimals
+        showrecords = window.localsettings.get("report_showrecords", True)
+        self._showrecords_but.checked = showrecords
+        #
+        self._grouping_select.onchange = self._on_setting_changed
+        self._hidesecondary_but.oninput = self._on_setting_changed
+        self._hourdecimals_but.oninput = self._on_setting_changed
+        self._showrecords_but.oninput = self._on_setting_changed
         #
         self._copy_but.onclick = self._copy_clipboard
         self._savecsv_but.onclick = self._save_as_csv
@@ -2389,8 +2396,13 @@ class ReportDialog(BaseDialog):
         window.setTimeout(self._update_table)
         super().open(None)
 
-    def _on_grouping_changed(self):
+    def _on_setting_changed(self):
         window.localsettings.set("report_grouping", self._grouping_select.value)
+        window.localsettings.set(
+            "report_hidesecondary", self._hidesecondary_but.checked
+        )
+        window.localsettings.set("report_hourdecimals", self._hourdecimals_but.checked)
+        window.localsettings.set("report_showrecords", self._showrecords_but.checked)
         self._update_table()
 
     def _update_table(self):
