@@ -3027,24 +3027,22 @@ class AnalyticsWidget(Widget):
         bars = self._tag_bars_dict.values()
         utils.order_stats_by_duration_and_name(bars)
 
-        # Calculate available light for all the bars, plus space to show the total
+        # Calculate available height for all the bars, plus space to show the total
         if len(self.selected_tags) > 0:
-            virtual_items = 2
-            extra_overview_height = 0
+            header_bar_space = 2
         else:
-            virtual_items = 1
-            extra_overview_height = 0
-        avail_height = (y2 - y1) - extra_overview_height - 4
+            header_bar_space = 1
+        avail_height = (y2 - y1) - 4
 
         # Set _npixels_each (number of pixels per bar)
         npixels_each_min_max = 25, 60
-        npixels_each = avail_height / (len(bars) + virtual_items)
+        npixels_each = avail_height / (len(bars) + header_bar_space)
         npixels_each = max(npixels_each, npixels_each_min_max[0])
         npixels_each = min(npixels_each, npixels_each_min_max[1])
         self._npixels_each = self._slowly_update_value(self._npixels_each, npixels_each)
 
         # Get overview height
-        overview_height = self._npixels_each * virtual_items
+        overview_height = self._npixels_each * header_bar_space
 
         # Calculate right base edge. Note that the bars will go beyond it
         x3 = x2 - 10 - 2
