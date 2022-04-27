@@ -1760,9 +1760,8 @@ class TagDialog(BaseDialog):
                 <option value='2'>Secondary (for "extra" tags)</option>
             </select>
             <h2><i class='fas'>\uf53f</i>&nbsp;&nbsp;Color</h2>
-            <input type='text' style='width: 210px; border: 5px solid #eee' spellcheck='false' />
-            <br>
-            <button type='button'><i class='fas'>\uf12d</i> Default</button>
+            <input type='text' style='width: 100px; border: 5px solid #eee' spellcheck='false' />
+            <button type='button' style='margin-left: 2px'><i class='fas'>\uf12d</i> Default</button>
             <button type='button' style='margin-left: 2px'><i class='fas'>\uf2f1</i> Random</button>
             <br>
             <div style='display: inline-grid; grid-gap: 2px;'></div>
@@ -1784,7 +1783,6 @@ class TagDialog(BaseDialog):
             self._priority_select,
             _,  # color header
             self._color_input,
-            _,  # br
             self._color_default_button,
             self._color_random_button,
             _,  # br
@@ -1846,6 +1844,7 @@ class TagDialog(BaseDialog):
             clr = self._default_color
         if clr != self._color_input.value:
             self._color_input.value = clr
+        self._color_input.style.borderColor = "rgba(0, 0, 0, 0)"
         self._color_input.style.borderColor = clr
 
     def _load_current(self):
