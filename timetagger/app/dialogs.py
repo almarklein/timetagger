@@ -1675,12 +1675,9 @@ class TagComboDialog(BaseDialog):
             <div>buttons for tags go here</div>
             <h2><i class='fas'>\uf140</i>&nbsp;&nbsp;Target</h2>
             <div>target goes here</div>
-            <h2><i class='fas'>\uf101</i>&nbsp;&nbsp;More</h2>
-            <div>
-                TODO
-            </div>
             <div style='margin-top:2em;'></div>
             <div style='display: flex;justify-content: flex-end;'>
+                <button type='button' class='actionbutton'><i class='fas'>\uf304</i>&nbsp;&nbsp;Rename</button>
                 <button type='button' class='actionbutton'><i class='fas'>\uf00d</i>&nbsp;&nbsp;Cancel</button>
                 <button type='button' class='actionbutton submit'><i class='fas'>\uf00c</i>&nbsp;&nbsp;Apply</button>
             </div>
@@ -1693,8 +1690,6 @@ class TagComboDialog(BaseDialog):
             button_div,
             _,  # target header
             target_div,
-            _,  # manage header
-            manage_div,
             _,  # margin
             finish_buttons,
         ) = self.maindiv.children
@@ -1711,8 +1706,9 @@ class TagComboDialog(BaseDialog):
             button_div.appendChild(el)
 
         self._target = TargetHelper(tags, target_div)
-        finish_buttons.children[0].onclick = self.close
-        finish_buttons.children[1].onclick = self.submit
+        finish_buttons.children[0].onclick = self.rename
+        finish_buttons.children[1].onclick = self.close
+        finish_buttons.children[2].onclick = self.submit
 
         super().open(None)
         self._load_current()
@@ -1733,6 +1729,9 @@ class TagComboDialog(BaseDialog):
         self._target.write_to_info(info)
         window.store.settings.set_tag_info(self._tagz, info)
         super().submit()
+
+    def rename(self):
+        self._canvas.tag_rename_dialog.open(self._tagz.split(" "), self.close)
 
 
 class TagDialog(BaseDialog):
@@ -1767,12 +1766,9 @@ class TagDialog(BaseDialog):
             <button type='button' style='margin-left: 2px'><i class='fas'>\uf2f1</i> Random</button>
             <br>
             <div style='display: inline-grid; grid-gap: 2px;'></div>
-            <h2><i class='fas'>\uf101</i>&nbsp;&nbsp;More</h2>
-            <div>
-                TODO
-            </div>
             <div style='margin-top:2em;'></div>
             <div style='display: flex;justify-content: flex-end;'>
+                <button type='button' class='actionbutton'><i class='fas'>\uf304</i>&nbsp;&nbsp;Rename</button>
                 <button type='button' class='actionbutton'><i class='fas'>\uf00d</i>&nbsp;&nbsp;Cancel</button>
                 <button type='button' class='actionbutton submit'><i class='fas'>\uf00c</i>&nbsp;&nbsp;Apply</button>
             </div>
@@ -1793,8 +1789,6 @@ class TagDialog(BaseDialog):
             self._color_random_button,
             _,  # br
             self._color_grid,
-            _,  # manage header
-            manage_div,
             _,  # gap
             finish_buttons,
         ) = self.maindiv.children
@@ -1803,8 +1797,9 @@ class TagDialog(BaseDialog):
 
         # Connect things up
         close_but.onclick = self.close
-        finish_buttons.children[0].onclick = self.close
-        finish_buttons.children[1].onclick = self.submit
+        finish_buttons.children[0].onclick = self.rename
+        finish_buttons.children[1].onclick = self.close
+        finish_buttons.children[2].onclick = self.submit
 
         self._color_input.onchange = lambda: self._set_color(self._color_input.value)
         self._color_default_button.onclick = self._set_default_color
@@ -1872,6 +1867,9 @@ class TagDialog(BaseDialog):
         # Store
         window.store.settings.set_tag_info(self._tagz, info)
         super().submit()
+
+    def rename(self):
+        self._canvas.tag_rename_dialog.open(self._tagz.split(" "), self.close)
 
 
 class TagPresetsDialog(BaseDialog):
@@ -2004,6 +2002,168 @@ class TagPresetsDialog(BaseDialog):
             + ntags
             + " unique tags."
         )
+
+
+class TagRenameDialog(BaseDialog):
+    """Dialog to rename tags."""
+
+    def open(self, tags, callback=None):
+
+        # Put in deterministic order
+        if isinstance(tags, str):
+            tags = tags.split(" ")
+        tags.sort()
+        self._tagz = tagz = tags.join(" ")
+
+        self._tags1 = tags
+        self._tags2 = []
+
+        if len(tags) == 1:
+            title = "Current tag name"
+            tagword = "tag"
+        else:
+            title = "Tag combi to rename"
+            tagword = "tags"
+
+        self.maindiv.innerHTML = f"""
+            <h1><i class='fas'>\uf02b</i>&nbsp;&nbsp;Rename {tagword}
+                <button type='button'><i class='fas'>\uf00d</i></button>
+                </h1>
+            <div class='formlayout'>
+                <div>{title}:</div>
+                <div>{tagz}</div>
+                <div>New tag(s):</div>
+                <input type='text' spellcheck='false' />
+                <div></div>
+                <button type='button'>Prepare renaming ...</button>
+                <div></div>
+                <button type='button'>Confirm</button>
+            </div>
+            <div style='margin-top:2em;'></div>
+        """
+
+        close_but = self.maindiv.children[0].children[-1]
+        close_but.onclick = self.close
+
+        formdiv = self.maindiv.children[1]
+        self._tagname2 = formdiv.children[3]
+        self._button_replace = formdiv.children[5]
+        self._button_replace_comfirm = formdiv.children[7]
+
+        self._tagname2.oninput = self._hide_confirm_button
+        self._tagname2.onchange = self._on_name2_done
+        self._tagname2.onkeydown = self._on_key2
+
+        self._button_replace.onclick = self._replace_all
+        self._button_replace_comfirm.onclick = self._really_replace_all
+
+        self._button_replace_comfirm.disabled = True
+        self._button_replace_comfirm.style.visibility = "hidden"
+
+        self._records = []
+
+        super().open(callback)
+        if utils.looks_like_desktop():
+            self._tagname2.focus()
+
+    def close(self):
+        self._records = []
+        super().close()
+
+    def _hide_confirm_button(self):
+        self._button_replace_comfirm.disabled = True
+        self._button_replace_comfirm.style.visibility = "hidden"
+        self._button_replace_comfirm.innerText = "Confirm"
+
+    def _on_name2_done(self):
+        raw_parts = self._tagname2.value.split(" ")
+        text2 = ["#" + p for p in raw_parts].join(" ")
+        tags2, _ = utils.get_tags_and_parts_from_string(text2)
+        self._tags2 = tags2
+        self._tagname2.value = " ".join(tags2)
+
+    def _on_key2(self, e):
+        key = e.key.lower()
+        if key == "enter" or key == "return":
+            e.stopPropagation()
+            e.preventDefault()
+            self._on_name2_done()
+            self._replace_all()
+
+    def _find_records(self):
+        records = []
+
+        # Early exit?
+        if not self._tags1:
+            self._records = []
+            return
+        # Get list of records
+        for record in window.store.records.get_dump():
+            tags = window.store.records.tags_from_record(record)  # also #untagged
+            all_ok = True
+            for tag in self._tags1:
+                if tag not in tags:
+                    all_ok = False
+            if all_ok:
+                records.push([record.t1, record.key])
+
+        records.sort(key=lambda x: x[0])
+        self._records = [x[1] for x in records]
+
+    def _replace_all(self):
+        self._find_records()
+        tagword = "tag" if len(self._tags1) == 1 else "tags"
+
+        n = len(self._records)
+        if n == 0:
+            text = f"No records found"
+            disabled = True
+        elif len(self._tags2):
+            text = f"Confirm replacing {tagword} in {n} records"
+            disabled = False
+        else:
+            text = f"Confirm removing {tagword} in {n} records"
+            disabled = False
+
+        self._button_replace_comfirm.innerText = text
+        self._button_replace_comfirm.disabled = disabled
+        self._button_replace_comfirm.style.visibility = "visible"
+
+    def _really_replace_all(self):
+
+        search_tags = self._tags1
+        replacement_tags = self._tags2
+
+        for key in self._records:
+            record = window.store.records.get_by_key(key)
+            _, parts = utils.get_tags_and_parts_from_string(record.ds)
+            # Get updated parts
+            new_parts = []
+            replacement_made = False
+            for part in parts:
+                if part.startswith("#") and (
+                    part in search_tags or part in replacement_tags
+                ):
+                    if not replacement_made:
+                        replacement_made = True
+                        new_parts.push(" ".join(replacement_tags))
+                else:
+                    new_parts.push(part)
+            # Submit
+            record.ds = "".join(new_parts)
+            window.store.records.put(record)
+
+        # Also update tag info
+        if len(search_tags) == 1 and len(replacement_tags) == 1:
+            tag1, tag2 = search_tags[0], replacement_tags[0]
+            info = window.store.settings.get_tag_info(tag1)
+            window.store.settings.set_tag_info(tag1, {})
+            window.store.settings.set_tag_info(tag2, info)
+
+        # Feedback
+        self._button_replace_comfirm.innerText = "Done"
+        self._button_replace_comfirm.disabled = True
+        window.setTimeout(self._hide_confirm_button, 500)
 
 
 class TagManageDialog(BaseDialog):

@@ -158,6 +158,7 @@ class TimeTaggerCanvas(BaseCanvas):
         self.tag_dialog = dialogs.TagDialog(self)
         self.report_dialog = dialogs.ReportDialog(self)
         self.tag_preset_dialog = dialogs.TagPresetsDialog(self)
+        self.tag_rename_dialog = dialogs.TagRenameDialog(self)
         self.tag_manage_dialog = dialogs.TagManageDialog(self)
         self.export_dialog = dialogs.ExportDialog(self)
         self.import_dialog = dialogs.ImportDialog(self)
@@ -2940,13 +2941,12 @@ class AnalyticsWidget(Widget):
             # ctx.fillText(self._help_text, x2 - 10, 90)
 
         # Show some help if no records are shown
-        if not self._tag_bars_dict:
-
-            ctx.textAlign = "left"
-            ctx.font = FONT.size + "px " + FONT.default
+        if (not self._tag_bars_dict) and (not self.selected_tags):
 
             t1, t2 = self._canvas.range.get_range()
             if t1 < self._canvas.now() < t2:
+                ctx.textAlign = "left"
+                ctx.font = FONT.size + "px " + FONT.default
                 ctx.textBaseline = "top"
                 ctx.fillStyle = COLORS.prim1_clr
                 text = "Click the ▶ button to start tracking!"
