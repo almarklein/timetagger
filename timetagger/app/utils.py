@@ -7,7 +7,18 @@ from pscript.stubs import window, perf_counter, localStorage, RawJS, Math, JSON
 
 
 def looks_like_desktop():
-    return window.innerWidth >= 800
+    # https://stackoverflow.com/questions/3514784
+    # User agent parsing is not a great solution, but it should cover most use-cases,
+    # and its not the end of the world for us if it fails.
+    RawJS(
+        """
+    if( /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ) {
+        return false;  // mobile, not desktop
+    } else {
+        return true;
+    }
+    """
+    )
 
 
 # From https://github.com/hsluv/hsluv/tree/master/javascript
