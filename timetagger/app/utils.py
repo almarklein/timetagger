@@ -7,7 +7,7 @@ from pscript.stubs import window, perf_counter, localStorage, RawJS, Math, JSON
 
 
 def looks_like_desktop():
-    return window.innerWidth >= 800
+    return window.screen.width >= 800
 
 
 # From https://github.com/hsluv/hsluv/tree/master/javascript
