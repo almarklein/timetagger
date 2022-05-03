@@ -154,15 +154,15 @@ class TimeTaggerCanvas(BaseCanvas):
         self.timeselection_dialog = dialogs.TimeSelectionDialog(self)
         self.settings_dialog = dialogs.SettingsDialog(self)
         self.record_dialog = dialogs.RecordDialog(self)
-        self.tag_color_selection_dialog = dialogs.TagColorSelectionDialog(self)
-        self.tag_color_dialog = dialogs.TagColorDialog(self)
+        self.tag_combo_dialog = dialogs.TagComboDialog(self)
+        self.tag_dialog = dialogs.TagDialog(self)
         self.report_dialog = dialogs.ReportDialog(self)
         self.tag_preset_dialog = dialogs.TagPresetsDialog(self)
+        self.tag_rename_dialog = dialogs.TagRenameDialog(self)
         self.tag_manage_dialog = dialogs.TagManageDialog(self)
         self.export_dialog = dialogs.ExportDialog(self)
         self.import_dialog = dialogs.ImportDialog(self)
         self.pomodoro_dialog = dialogs.PomodoroDialog(self)
-        self.targets_dialog = dialogs.TargetsDialog(self)
 
         # The order here is also the draw-order. Records must come after analytics.
         self.widgets = {
@@ -2372,14 +2372,22 @@ class RecordsWidget(Widget):
         sumcount_nominal = 0
         sumcount_selected = 0
         for tagz, count in stats_dict.items():
-            tags = tagz.split(" ")
-            sumcount_full += count * len(tags)
+            # Get tags list, tags2 filters out the secondary tags
+            tags1 = tagz.split(" ")
+            tags2 = []
+            for tag in tags1:
+                info = window.store.settings.get_tag_info(tag)
+                if info.get("priority", 1) <= 1:
+                    tags2.push(tag)
+            # Update sums
+            sumcount_full += count * len(tags2)
             sumcount_nominal += count
+            # Filter selected (mind to test against tags1 here)
             if len(selected_tags):
-                if not all([tag in tags for tag in selected_tags]):
+                if not all([tag in tags1 for tag in selected_tags]):
                     continue
             sumcount_selected += count
-            for tag in tags:
+            for tag in tags2:
                 tag_stats[tag] = tag_stats.get(tag, 0) + count
 
         # Turn stats into tuples and sort.
@@ -2868,22 +2876,7 @@ class AnalyticsWidget(Widget):
         self._time_since_last_draw = 0
         self._npixels_each = 0
         self.tagzmap = {}  # public map of tagz -> tagz
-        # Init tag cache and root
-        self._tag_bars = {}  # name -> bar-info
-        self._tag_bars[""] = {
-            "key": "",
-            "tagz": "",
-            "subtagz": "",
-            "t": 0,
-            "cum_t": 0,
-            "inset": 0,
-            "xoffset": 0,
-            "cum_offset": 0,
-            "target_inset": 0,
-            "height": 0,
-            "target_height": 0,
-            "subs": [],
-        }
+        self._tag_bars_dict = {}  # tagz -> bar-info
 
     def on_draw(self, ctx):
 
@@ -2948,13 +2941,12 @@ class AnalyticsWidget(Widget):
             # ctx.fillText(self._help_text, x2 - 10, 90)
 
         # Show some help if no records are shown
-        if len(self._level_counts) == 1:
-
-            ctx.textAlign = "left"
-            ctx.font = FONT.size + "px " + FONT.default
+        if (not self._tag_bars_dict) and (not self.selected_tags):
 
             t1, t2 = self._canvas.range.get_range()
             if t1 < self._canvas.now() < t2:
+                ctx.textAlign = "left"
+                ctx.font = FONT.size + "px " + FONT.default
                 ctx.textBaseline = "top"
                 ctx.fillStyle = COLORS.prim1_clr
                 text = "Click the ▶ button to start tracking!"
@@ -2963,13 +2955,10 @@ class AnalyticsWidget(Widget):
     def _draw_stats(self, ctx, x1, y1, x2, y2):
         PSCRIPT_OVERLOAD = False  # noqa
 
-        root = self._tag_bars[""]
-
         # Reset times for all elements. The one that are still valid
         # will get their time set.
-        for key in self._tag_bars.keys():
-            self._tag_bars[key].cum_t = 0
-            self._tag_bars[key].t = 0
+        for bar in self._tag_bars_dict.values():
+            bar.t = 0
 
         # Get stats for the current time range
         t1, t2 = self._canvas.range.get_range()
@@ -2983,135 +2972,103 @@ class AnalyticsWidget(Widget):
             for tag in tags:
                 self._time_per_tag[tag] = self._time_per_tag.get(tag, 0) + t
 
+        # Determine priorities
+        priorities = {}
+        for tagz in stats.keys():
+            tags = tagz.split(" ")
+            for tag in tags:
+                info = window.store.settings.get_tag_info(tag)
+                priorities[tag] = info.get("priority", 0) or 1
+
         # Get better names (order of tags in each tag combo)
         name_map = utils.get_better_tag_order_from_stats(
-            stats, self.selected_tags, False
+            stats, self.selected_tags, False, priorities
         )
+
+        # We keep a public tagzmap on this widget
         self.tagzmap.update(name_map)
 
-        # Replace the stats with the fixed names
+        # Replace the stats with the updated names
         new_stats = {}
         for tagz1, tagz2 in name_map.items():
             new_stats[tagz2] = stats[tagz1]
 
-        # Group tags - creating "indentation"
-        group_counts = {}
+        # Get selected tagz
+        selected_tagz = ""
         if len(self.selected_tags) > 0:
             selected_tagz = self.selected_tags.join(" ")
-            for tagz in new_stats.keys():
-                tags = tagz.split(" ")
-                for level in range(len(tags)):
-                    tagz = tags[: level + 1].join(" ")
-                    if selected_tagz == tagz:
-                        group_counts[tagz] = group_counts.get(tagz, 0) + 1
 
-        # Insert any new tags into the hierarchy
+        # Update the tag bars - add missing entries
         for tagz, t in new_stats.items():
-            tags = tagz.split(" ")
-            dprev = root
-            key = ""
-            for level in range(len(tags)):
-                tagz = tags[: level + 1].join(" ")
-                is_leaf = level == len(tags) - 1
-                # Add an element if this is the leaf, or if the parent is a group
-                # with more than 1 member. And if the item is not already present.
-                if is_leaf or group_counts.get(tagz, 0) > 0:
-                    the_t = t if is_leaf else 0
-                    key += "/ " + tagz
-                    if key in self._tag_bars:
-                        dprev = self._tag_bars[key]
-                        dprev.t = the_t
-                    else:
-                        d = {
-                            "key": key,
-                            "tagz": tagz,
-                            "subtagz": tagz[len(dprev.tagz) :].lstrip(" "),
-                            "t": the_t,
-                            "cum_t": 0,
-                            "inset": 0,
-                            "target_inset": 0,
-                            "xoffset": 0,
-                            "target_xoffset": 0,
-                            "height": 0,
-                            "target_height": 0,
-                            "cum_offset": 0,
-                            "subs": [],
-                        }
-                        dprev.subs.push(d)
-                        # dprev.subs.sort(key=lambda x: x.subtagz.lower())
-                        # sort_items(dprev.subs)
-                        self._tag_bars[key] = d
-                        dprev = d
-
-        # # Validating our persistent structure integrity - comment when we're done
-        # known_names = window.Set()
-        #
-        # def collect_names(d):
-        #     known_names.add(d.tagz)
-        #     for sub in d.subs:
-        #         collect_names(sub)
-        #
-        # collect_names(root)
-        # for tagz in self._tag_bars.keys():
-        #     assert known_names.has(tagz)
-
-        # First resolve pass: resolve cumulative t, level, is_selected
-        self._level_counts = []  # list of [selected_bars, unselected_bars]
-        self._resolve_t(root, 0)
-
-        # Determine max level and derive more props
-        npixels_each_min_max = 40, 60
-        avail_height = (y2 - y1) - 4
-        n_max = avail_height / npixels_each_min_max[0]
-        n = 0
-        for level in range(len(self._level_counts)):
-            n += self._level_counts[level][0]  # selected
-        for level in range(len(self._level_counts)):
-            n += self._level_counts[level][1]  # unselected
-            if n > n_max:
-                break
-        self._maxlevel = max(1, level - 1)
-        if self._maxlevel == 1 and len(self._level_counts) <= 1:
-            self._maxlevel = 0
-        if self._maxlevel > 1:
-            avail_height -= 20  # Need extra space for target info
+            key = tagz
+            if key in self._tag_bars_dict:
+                self._tag_bars_dict[key].t = t
+            else:
+                self._tag_bars_dict[tagz] = {
+                    "key": key,
+                    "tagz": tagz,
+                    "subtagz": tagz[len(selected_tagz) :].lstrip(" "),
+                    "t": t,
+                    "target_height": 0,
+                    "target_width": 0,
+                    "height": 0,
+                    "width": 0,
+                }
 
         # Determine targets
-        item = window.store.settings.get_by_key("tag_targets")
-        targets = (None if item is None else item.value) or {}
-        self._current_target = targets.get(
-            self.selected_tags, {"period": "none", "hours": 0}
-        )
+        if len(self.selected_tags) > 0:
+            tagz = sorted(self.selected_tags).join(" ")
+            info = window.store.settings.get_tag_info(tagz)
+            self._current_targets = info.targets
+        else:
+            self._current_targets = {}
+
+        # Get list of bars, and sort
+        bars = self._tag_bars_dict.values()
+        utils.order_stats_by_duration_and_name(bars)
+
+        # Calculate available height for all the bars, plus space to show the total
+        if len(self.selected_tags) > 0:
+            header_bar_space = 2
+        else:
+            header_bar_space = 1
+        avail_height = (y2 - y1) - 4
 
         # Set _npixels_each (number of pixels per bar)
-        n = 0
-        for level in range(len(self._level_counts)):
-            n += self._level_counts[level][0]  # selected
-        for level in range(self._maxlevel + 1):
-            n += self._level_counts[level][1]  # unselected
-        npixels_each = min(avail_height / n, npixels_each_min_max[1])
+        npixels_each_min_max = 25, 60
+        npixels_each = avail_height / (len(bars) + header_bar_space)
+        npixels_each = max(npixels_each, npixels_each_min_max[0])
+        npixels_each = min(npixels_each, npixels_each_min_max[1])
         self._npixels_each = self._slowly_update_value(self._npixels_each, npixels_each)
 
-        # Three resolve passes: target inset and height, real inset and height, positioning
-        root_target_inset = 10  # stub value, but need > 0 for things to function
-        self._max_cum_offset = 0
-        self._resolve_target_inset_and_height(root, root_target_inset, root.cum_t)
-        self._resolve_real_inset_and_height(root, None)
-        self._resolve_positions(root, x1, x2 - self._max_cum_offset - 4, y1)
+        # Get overview height
+        overview_height = self._npixels_each * header_bar_space
 
-        # Sort bars, so that they are correctly drawn over each-other (assuming ortho projection)
-        bars = self._tag_bars.values()
-        bars.sort(key=lambda unit: -unit.y1)
-        bars.sort(key=lambda unit: unit.level)
+        # Calculate right base edge. Note that the bars will go beyond it
+        x3 = x2 - 10 - 2
 
-        # Prepare for drawing texts
-        ctx.textBaseline = "middle"
-        ctx.textAlign = "left"
+        # Three resolve passes: target size, real size, positioning
+        for bar in bars:
+            self._resolve_target_dimensions(bar, x3 - x1, self._npixels_each)
+        for bar in bars:
+            self._resolve_real_dimensions(bar)
+        y = y1 + overview_height
+        for bar in bars:
+            self._resolve_positions(bar, x1, x3, y)
+            y += bar.height
+
+        # Get statistics
+        total_time = 0
+        overview_y2 = y1 + overview_height
+        if len(bars):
+            overview_y2 = bars[-1].y2 + 8
+        for bar in bars:
+            total_time += bar.t
 
         # Draw all bars
+        self._draw_container(ctx, total_time, x1, y1, x3, overview_y2)
         for bar in bars:
-            if bar.height > 0:
-                self._draw_one_stat_unit(ctx, bar, root.cum_t)
+            self._draw_one_bar(ctx, bar)
 
         # # Determine help text
         # if self._maxlevel > 0:
@@ -3120,20 +3077,11 @@ class AnalyticsWidget(Widget):
         #     else:
         #         self._help_text = "click more tags to filter more"
 
-    def _invalidate_element(self, d, parent=None):
-        d.invalid = True
-        # parent.subs.remove(d)
-        # d.cum_t = 0
-        # d.t = 0
-        for sub in d.subs:
-            self._invalidate_element(sub)
-        #     d.subs = []
-
     def _slowly_update_value(self, current, target):
         PSCRIPT_OVERLOAD = False  # noqa
         delta = target - current
         snap_limit = 1.5  # How close the value must be to just set it
-        speed = 0.25  # The fraction of delta to apply. Smooth vs snappy.
+        speed = 0.20  # The fraction of delta to apply. Smooth vs snappy.
         if self._time_since_last_draw > 0:
             speed = min(0.8, 12 * self._time_since_last_draw)
         if abs(delta) > snap_limit:
@@ -3142,187 +3090,188 @@ class AnalyticsWidget(Widget):
         else:
             return target
 
-    def _resolve_t(self, d, level, parent_is_selected=0):
-        """Calculate cumulative t and t percentage for all bars.
-        Also set level and is_selected.
-        """
+    def _resolve_target_dimensions(self, bar, width, height):
         PSCRIPT_OVERLOAD = False  # noqa
 
-        # Set level
-        d.level = level
-        if len(self._level_counts) <= level:
-            self._level_counts.push([0, 0])
-
-        # Get whether this bar (or a parent) is selected
-        d.is_selected = 0
-        if parent_is_selected:
-            d.is_selected = 3
-        # elif self.selected_tags and d.tagz == self.selected_tags.join(" "):
-        #     d.is_selected = 2
-
-        # Recurse to subs
-        cum_t = 0
-        sub_is_selected = False
-        for sub in d.subs:
-            self._resolve_t(sub, level + 1, d.is_selected)
-            cum_t += sub.cum_t
-            sub_is_selected = sub_is_selected or sub.is_selected
-
-        d.cum_t = cum_t + d.t
-
-        # Apply percentages
-        d.percent_t = 1  # default or root
-        for sub in d.subs:
-            sub.percent_t = sub.cum_t / max(0.001, d.cum_t)
-
-        # Sort the items
-        utils.order_stats_by_duration_and_name(d.subs)
-
-        # Set level count now that we know whether we are selected
-        if d.is_selected == 0 and sub_is_selected:
-            d.is_selected = 1
-        if d.is_selected:
-            self._level_counts[level][0] += 1
+        # Bars start with zero width and height, growing to their full size,
+        # but when they disappear, they only diminish in height.
+        bar.target_width = width
+        if bar.t == 0:
+            bar.target_height = 0
         else:
-            self._level_counts[level][1] += 1
+            bar.target_height = height
 
-    def _resolve_target_inset_and_height(self, d, base_inset, base_cum_t):
-        """Calculate target inset and height for all bars."""
+    def _resolve_real_dimensions(self, bar, height_limit=None):
         PSCRIPT_OVERLOAD = False  # noqa
 
-        # Set own inset
-        d.target_inset = base_inset * d.cum_t / max(0.001, base_cum_t)
-
-        # Set own xoffset
-        d.target_xoffset = 10  # max(0, 15 - base_inset)
-        if d.level == 0:
-            d.target_xoffset = 0
-        elif d.is_selected == 2:
-            d.target_xoffset -= 10
-
-        # Get native height
-        d.native_height = self._npixels_each
-        if self.selected_tags.length and d.level == 1:
-            d.native_height += 0.5 * self._npixels_each
-
-        # Recurse to subs
-        cum_target_height = 0
-        cum_target_inset = 0
-        for sub in d.subs:
-            self._resolve_target_inset_and_height(sub, d.target_inset, d.cum_t)
-            cum_target_height += sub.target_height
-            cum_target_inset += sub.target_inset
-
-        cum_target_height += d.native_height
-        cum_target_inset += d.target_inset
-
-        # Set our own target height
-        if (
-            d.level == 0
-            or cum_target_inset > 0
-            or d.is_selected == 1
-            or d.is_selected == 2
-        ):
-            d.target_height = cum_target_height
-        else:
-            d.target_height = 0
-
-        # If this was the last valid level, target zero size, unless selected.
-        if d.level == 0:
-            d.target_inset = 0
-        if d.level > self._maxlevel:
-            if not d.is_selected:
-                d.target_height = 0
-                d.target_inset = 0
-
-    def _resolve_real_inset_and_height(self, d, height_limit=None):
-        """Calculate the real height, inset and cum_offset, limiting as needed."""
-        PSCRIPT_OVERLOAD = False  # noqa
-
-        # Set actual height, xoffset, inset is a historic thing that's disabled now
-        d.height = self._slowly_update_value(d.height, d.target_height)
-        d.xoffset = self._slowly_update_value(d.xoffset, d.target_xoffset)
-        d.inset = 0  # self._slowly_update_value(d.inset, d.target_inset)
-
-        # Set cum_offset for base
-        if d.level == 0:
-            d.cum_offset = d.inset + d.xoffset
+        # Set actual dimensions
+        bar.height = self._slowly_update_value(bar.height, bar.target_height)
+        bar.width = self._slowly_update_value(bar.width, bar.target_width)
 
         # Limit height
-        if height_limit is not None and d.height > height_limit + 0.1:
-            d.height = height_limit
+        if height_limit is not None and bar.height > height_limit + 0.1:
+            bar.height = height_limit
 
-        # Recurse to subs
-        height_left = max(0, d.height - d.native_height)
-        for sub in d.subs:
-            self._resolve_real_inset_and_height(sub, height_left)
-            height_left = max(0, height_left - sub.height)
-            # Set cum inset too
-            sub.cum_offset = d.cum_offset + sub.inset + sub.xoffset
-            self._max_cum_offset = max(self._max_cum_offset, sub.cum_offset)
+        # Delete this one?
+        if bar.t == 0 and bar.height < 5:
+            self._tag_bars_dict.pop(bar.key)
+            self._need_more_drawing_flag = True
 
-        # Delete any subs?
-        new_subs = []
-        for sub in d.subs:
-            if sub.cum_t == 0 and sub.inset == 0 and sub.height == 0:
-                self._tag_bars.pop(sub.key)
-            else:
-                new_subs.push(sub)
-        d.subs = new_subs
-
-    def _resolve_positions(self, d, x1, x4, y):
-        """Calculate the positions of the bar.
-        With x2-x3-y2-y3 the rectangle that forms the base of the bar,
-         and x1-x4-y1-y4 the front of the bar.
-         Input args x1, x4 represent the base of the parent, and y the vertical pos.
-        """
+    def _resolve_positions(self, bar, x1, x2, y):
         PSCRIPT_OVERLOAD = False  # noqa
 
-        # Note that it is important to resolve all positions, even if the height is zero,
-        # because sub bars may have a nonzero height (?), but more importantly,
-        # to get the order of drawing correct.
+        bar.x1 = x1 + 10
+        bar.x2 = x1 + 10 + bar.width
 
-        inset = 0  # d.inset
+        bar.y1 = y
+        bar.y2 = y + bar.height
 
-        # Set x's
-        d.x1 = x1 + d.xoffset
-        d.x2 = d.x1 + inset
-        d.x4 = x4 + d.xoffset
-        d.x3 = d.x4 + inset
-
-        margin = 0
-
-        # Set y's - orthographic projection
-        d.y1 = y
-        d.y4 = d.y1 + d.height - margin
-        d.y2 = d.y1 + inset / 4
-        d.y3 = d.y4 + inset / 4
-
-        # Recurse to subs
-        y = d.y2 + min(d.height, d.native_height)
-        for sub in d.subs:
-            self._resolve_positions(sub, d.x2, d.x3, y)
-            y = sub.y4 + margin
-
-    def _draw_one_stat_unit(self, ctx, unit, totaltime):
+    def _draw_container(self, ctx, total_time, x1, y1, x2, y2):
         PSCRIPT_OVERLOAD = False  # noqa
 
         t1, t2 = self._canvas.range.get_range()
-        x2, x3 = unit.x2, unit.x3
-        y2, y3 = unit.y2, unit.y3
+        npixels = self._npixels_each
 
-        is_root = unit.level == 0
-        target_npixels = self._npixels_each
-        npixels = min(y3 - y2, target_npixels)
+        # Roundness
+        rn = min(ANALYSIS_ROUNDNESS, npixels / 2)
+        rnb = min(COLORBAND_ROUNDNESS, npixels / 2)
 
-        if is_root:
-            y3 += 8
+        # Draw front
+        ctx.lineWidth = 2
+        ctx.strokeStyle = COLORS.panel_edge
+        ctx.fillStyle = COLORS.panel_bg
+        path = window.Path2D()
+        path.arc(x2 - rn, y1 + rn, rn, 1.5 * PI, 2.0 * PI)
+        path.arc(x2 - rn, y2 - rn, rn, 0.0 * PI, 0.5 * PI)
+        path.arc(x1 + rnb, y2 - rnb, rnb, 0.5 * PI, 1.0 * PI)
+        path.arc(x1 + rnb, y1 + rnb, rnb, 1.0 * PI, 1.5 * PI)
+        path.closePath()
+        ctx.fill(path)
+        ctx.stroke(path)
+
+        ymid = y1 + 0.55 * npixels
+        x_ref_duration = x2 - 30 + 10  # right side of minute
+        x_ref_labels = x1 + 11  # start of labels
+        but_height = min(30, 0.8 * npixels)
+
+        # Get duration text
+        duration = dt.duration_string(total_time, False)
+
+        # Draw content
+
+        ctx.textBaseline = "middle"
+
+        if len(self.selected_tags) == 0:
+            # -- Top row
+            tx, ty = x_ref_labels, ymid
+            # Show total
+            ctx.font = FONT.size + "px " + FONT.default
+            ctx.fillStyle = COLORS.record_text
+            ctx.textAlign = "left"
+            ctx.fillText("Total", tx, ty)
+            ctx.textAlign = "right"
+            ctx.fillText(duration, x_ref_duration, ty)
+        else:
+            # -- Top row
+            tx, ty = x_ref_labels, ymid - 2
+            # Show buttons
+            opt = {"ref": "leftmiddle"}
+            tx += 6 + self._draw_button(
+                ctx, tx, ty, None, but_height, " ← ", "select:", "Back to overview", opt
+            )
+            if len(self.selected_tags) == 1:
+                tx += 12 + self._draw_button(
+                    ctx,
+                    tx,
+                    ty,
+                    None,
+                    but_height,
+                    "fas-\uf02b",
+                    "configure_tag:" + self.selected_tags[0],
+                    "Configure tag",
+                    opt,
+                )
+            else:
+                tx += 12 + self._draw_button(
+                    ctx,
+                    tx,
+                    ty,
+                    None,
+                    but_height,
+                    "fas-\uf02c",
+                    "configure_tags:" + self.selected_tags.join(" "),
+                    "Configure tag combo",
+                    opt,
+                )
+            # Snow total title
+            ctx.textAlign = "left"
+            ctx.font = FONT.size + "px " + FONT.default
+            ctx.fillStyle = COLORS.record_text
+            for tag in self.selected_tags:
+                text = tag
+                draw_tag(ctx, text, tx, ty)
+                tx += ctx.measureText(text).width + 12
+            # Show total duration
+            ctx.textAlign = "right"
+            ctx.fillStyle = COLORS.record_text
+            ctx.fillText(duration, x_ref_duration, ty)
+            # -- Row for target
+            tx, ty = x_ref_labels, ymid - 2 + npixels * 0.85
+            # Select the target that best matches the current time range
+            best_target = None
+            m = {"day": 24, "week": 168, "month": 720, "year": 8760}
+            for period, divisor in m.items():
+                target_hours = self._current_targets.get(period, 0)
+                if target_hours <= 0:
+                    continue
+                factor = self._hours_in_range / divisor
+                if factor > 0.93 or not best_target:
+                    best_target = {
+                        "period": period,
+                        "factor": factor,
+                        "hours": target_hours,
+                    }
+                else:
+                    break
+            # Show target info
+            ctx.font = FONT.size + "px " + FONT.default
+            ctx.textAlign = "left"
+            ctx.fillStyle = COLORS.prim2_clr
+            if best_target:
+                done_this_period = total_time
+                target_this_period = 3600 * best_target.hours * best_target.factor
+                perc = 100 * done_this_period / target_this_period
+                prefix = "" if 0.93 < best_target.factor < 1.034 else "~ "
+                ctx.fillText(
+                    f"{best_target.period} target at {prefix}{perc:0.0f}%",
+                    tx,
+                    ty,
+                )
+                left = target_this_period - done_this_period
+                left_s = dt.duration_string(abs(left), False)
+                left_prefix = "left" if left >= 0 else "over"
+                ctx.textAlign = "right"
+                ctx.fillText(
+                    f"{left_prefix}: {prefix}{left_s}",
+                    x_ref_duration,
+                    ty,
+                )
+            else:
+                ctx.fillText("No target", tx, ty)
+
+    def _draw_one_bar(self, ctx, bar):
+        PSCRIPT_OVERLOAD = False  # noqa
+
+        t1, t2 = self._canvas.range.get_range()
+        x1, x2 = bar.x1, bar.x2
+        y1, y2 = bar.y1, bar.y2
+        npixels = min(y2 - y1, self._npixels_each)
 
         # Get whether the current tag combi corresponds to the currently running record
         is_running = False
         if t1 < self._canvas.now() < t2:
             for record in window.store.records.get_running_records():
-                if window.store.records.tags_from_record(record).join(" ") == unit.tagz:
+                if window.store.records.tags_from_record(record).join(" ") == bar.tagz:
                     is_running = True
 
         # Roundness
@@ -3330,193 +3279,127 @@ class AnalyticsWidget(Widget):
         rnb = min(COLORBAND_ROUNDNESS, npixels / 2)
 
         # Draw front
-        if is_root:
-            ctx.lineWidth = 2
-            ctx.strokeStyle = COLORS.panel_edge
-            ctx.fillStyle = COLORS.panel_bg
-        else:
-            ctx.lineWidth = 1.2
-            ctx.strokeStyle = COLORS.record_edge
-            ctx.fillStyle = COLORS.record_bg_running if is_running else COLORS.record_bg
+        ctx.lineWidth = 1.2
+        ctx.strokeStyle = COLORS.record_edge
+        ctx.fillStyle = COLORS.record_bg_running if is_running else COLORS.record_bg
         path = window.Path2D()
-        path.arc(x3 - rn, y2 + rn, rn, 1.5 * PI, 2.0 * PI)
-        path.arc(x3 - rn, y3 - rn, rn, 0.0 * PI, 0.5 * PI)
-        path.arc(x2 + rnb, y3 - rnb, rnb, 0.5 * PI, 1.0 * PI)
-        path.arc(x2 + rnb, y2 + rnb, rnb, 1.0 * PI, 1.5 * PI)
+        path.arc(x2 - rn, y1 + rn, rn, 1.5 * PI, 2.0 * PI)
+        path.arc(x2 - rn, y2 - rn, rn, 0.0 * PI, 0.5 * PI)
+        path.arc(x1 + rnb, y2 - rnb, rnb, 0.5 * PI, 1.0 * PI)
+        path.arc(x1 + rnb, y1 + rnb, rnb, 1.0 * PI, 1.5 * PI)
         path.closePath()
         ctx.fill(path)
 
-        # Draw more, or are we (dis)appearing?
-        if unit.height / target_npixels < 0.3:
-            ctx.stroke(path)
-            return
-
-        ymid = y2 + 0.55 * npixels
-        x_ref_duration = x3 - 35  # right side of minute
-        x_ref_labels = x2 + 30  # start of labels
+        ymid = y1 + 0.55 * npixels
+        x_ref_duration = x2 - 30  # right side of minute
+        x_ref_labels = x1 + 30  # start of labels
+        but_height = min(30, 0.8 * npixels)
 
         # Draw coloured edge
-        if unit.level > 0 and unit.level == self._maxlevel:
-            colors = [
-                window.store.settings.get_color_for_tag(tag)
-                for tag in unit.tagz.split(" ")
-            ]
-            # Width and xpos
-            ew = 8 / len(colors) ** 0.5
-            ew = max(ew, rnb)
-            ex = x2
-            # First band
-            ctx.fillStyle = colors[0]
+        colors = [
+            window.store.settings.get_color_for_tag(tag) for tag in bar.tagz.split(" ")
+        ]
+        # Width and xpos
+        ew = 8 / len(colors) ** 0.5
+        ew = max(ew, rnb)
+        ex = x1
+        # First band
+        ctx.fillStyle = colors[0]
+        ctx.beginPath()
+        ctx.arc(x1 + rnb, y2 - rnb, rnb, 0.5 * PI, 1.0 * PI)
+        ctx.arc(x1 + rnb, y1 + rnb, rnb, 1.0 * PI, 1.5 * PI)
+        ctx.lineTo(x1 + ew, y1)
+        ctx.lineTo(x1 + ew, y2)
+        ctx.closePath()
+        ctx.fill()
+        # Remaining bands
+        for color in colors[1:]:
+            ex += ew  # + 0.15  # small offset creates subtle band
+            ctx.fillStyle = color
+            ctx.fillRect(ex, y1, ew, y2 - y1)
+        ex += ew
+        # That coloured region is also a button
+        self._picker.register(
+            x1,
+            y1,
+            ex,
+            y2,
+            {"button": True, "action": "configure_tags:" + bar.tagz},
+        )
+        tt_text = "Color for " + bar.tagz + "\n(Click to change color)"
+        hover = self._canvas.register_tooltip(
+            x1,
+            y1,
+            ex,
+            y2,
+            tt_text,
+        )
+        if hover:
             ctx.beginPath()
-            ctx.arc(x2 + rnb, y3 - rnb, rnb, 0.5 * PI, 1.0 * PI)
-            ctx.arc(x2 + rnb, y2 + rnb, rnb, 1.0 * PI, 1.5 * PI)
-            ctx.lineTo(x2 + ew, y2)
-            ctx.lineTo(x2 + ew, y3)
+            ctx.arc(x1 + rnb, y2 - rnb - 0.6, rnb, 0.5 * PI, 1.0 * PI)
+            ctx.arc(x1 + rnb, y1 + rnb - 0.6, rnb, 1.0 * PI, 1.5 * PI)
+            ctx.lineTo(ex, y1)
+            ctx.lineTo(ex, y2)
             ctx.closePath()
-            ctx.fill()
-            # Remaining bands
-            for color in colors[1:]:
-                ex += ew  # + 0.15  # small offset creates subtle band
-                ctx.fillStyle = color
-                ctx.fillRect(ex, y2, ew, y3 - y2)
-            ex += ew
-            # That coloured region is also a button
-            self._picker.register(
-                x2,
-                y2,
-                ex,
-                y3,
-                {"button": True, "action": "chosecolor:" + unit.tagz},
-            )
-            tt_text = "Color for " + unit.tagz + "\n(Click to change color)"
-            hover = self._canvas.register_tooltip(
-                x2,
-                y2,
-                ex,
-                y3,
-                tt_text,
-            )
-            if hover:
-                ctx.beginPath()
-                ctx.arc(x2 + rnb, y3 - rnb - 0.6, rnb, 0.5 * PI, 1.0 * PI)
-                ctx.arc(x2 + rnb, y2 + rnb - 0.6, rnb, 1.0 * PI, 1.5 * PI)
-                ctx.lineTo(ex, y2)
-                ctx.lineTo(ex, y3)
-                ctx.closePath()
-                ctx.stroke()
+            ctx.stroke()
 
         # Draw edge
         ctx.stroke(path)
 
+        # Draw more, or are we (dis)appearing?
+        if bar.height < 25:
+            return
+
         # Get duration text
         if is_running:
-            duration, _, duration_sec = dt.duration_string(unit.cum_t, True).rpartition(
-                ":"
-            )
+            duration, _, duration_sec = dt.duration_string(bar.t, True).rpartition(":")
             duration_sec = ":" + duration_sec
         else:
-            duration = dt.duration_string(unit.cum_t, False)
+            duration = dt.duration_string(bar.t, False)
             duration_sec = ""
 
-        # Draw text labels
-        tx, ty = x_ref_labels, ymid
+        # Draw content
+
+        ctx.textBaseline = "middle"
+
+        # Draw one row
+        tx, ty = x_ref_labels, ymid - 2
+        # Draw duration
         ctx.font = FONT.size + "px " + FONT.default
+        ctx.textAlign = "right"
         ctx.fillStyle = COLORS.record_text
-        ctx.lineWidth = 1.2
-        ctx.strokeStyle = COLORS.acc_clr
-        # Define text labels, and draw initial duration
-        texts = []
-        if is_root:
-            if len(self.selected_tags):
-                tx = unit.x2 + 11
-                texts.push([" ←  back to all ", "select:", "Full overview"])
-                if len(self.selected_tags) > 0:
-                    action = "chosetargets:" + self.selected_tags.join(" ")
-                    texts.push(["fas-\uf140", action, "Set targets"])
-                if len(self.selected_tags) == 1:
-                    action = "chosecolor:" + self.selected_tags[0]
-                    texts.push(["fas-\uf53f", action, "Select a different color"])
-            else:
-                ctx.textAlign = "right"
-                ctx.fillText(duration, x_ref_duration, ty)
-                if unit.cum_t > 0:
-                    texts.push(["Total"])
-                else:
-                    texts.push(["Total"])
-        else:
-            # Draw duration
-            ctx.textAlign = "right"
-            ctx.fillText(duration, x_ref_duration, ty)
-            if duration_sec:
-                ctx.textAlign = "left"
-                ctx.fillStyle = COLORS.prim2_clr
-                ctx.fillText(duration_sec, x_ref_duration + 1, ty)
-            # If this is a selection, draw target info
-            if len(self.selected_tags) and unit.level == 1:
-                texts.push(["Total of"])
-                # Show target info
-                ctx.textAlign = "left"
-                ctx.fillStyle = COLORS.prim2_clr
-                target_info_y = ty + 0.5 * npixels
-                period = self._current_target.period
-                m = {"day": 24, "week": 168, "month": 720, "year": 8760}
-                divisor = m.get(period, 0)
-                if divisor == 0:
-                    ctx.fillText("No target", tx, target_info_y)
-                else:
-                    factor = self._hours_in_range / divisor
-                    done_this_period = unit.cum_t
-                    target_this_period = 3600 * self._current_target.hours * factor
-                    perc = 100 * done_this_period / target_this_period
-                    prefix = "" if 0.93 < factor < 1.034 else "~ "
-                    ctx.fillText(
-                        f"{period} target at {prefix}{perc:0.0f}%", tx, target_info_y
-                    )
-                    left = target_this_period - done_this_period
-                    left_s = dt.duration_string(abs(left), False)
-                    left_prefix = "left" if left >= 0 else "over"
-                    ctx.textAlign = "right"
-                    ctx.fillText(
-                        f"{left_prefix}: {prefix}{left_s}",
-                        x_ref_duration,
-                        target_info_y,
-                    )
-            # Collect texts for tags
-            tags = [tag for tag in unit.subtagz.split(" ")]
-            for tag in tags:
-                if tag in self.selected_tags:
-                    texts.push([tag, ""])
-                else:
-                    tt = dt.duration_string(self._time_per_tag.get(tag, 0))
-                    tt += " in total"
-                    tt += "\n(Click to filter)"
-                    texts.push([tag, "select:" + tag, tt])
-        if unit.is_selected >= 2 and unit.cum_t > 0:
-            texts.push([f" ({100*unit.percent_t:0.0f}%)", ""])
-        # Draw text labels
-        ctx.textAlign = "left"
-        ctx.font = FONT.size + "px " + FONT.default
-        for text, action, tt in texts:
-            if action and text.startswith("#"):
-                opt = {
-                    "ref": "leftmiddle",
-                    "color": COLORS.button_tag_text,
-                    "body": COLORS.button_tag_bg,
-                    # "padding": 0,
-                }
-                dx = self._draw_button(ctx, tx, ty, None, 30, text, action, tt, opt)
-                tx += dx + 12
-            elif action:
-                opt = {"ref": "leftmiddle"}
-                dx = self._draw_button(ctx, tx, ty, None, 30, text, action, tt, opt)
-                tx += dx + 4
-            else:
-                ctx.fillStyle = COLORS.record_text
-                if text.startsWith("#"):
-                    draw_tag(ctx, text, tx, ty)
-                else:
-                    ctx.fillText(text, tx, ty)
+        ctx.fillText(duration, x_ref_duration, ty)
+        if duration_sec:
+            ctx.textAlign = "left"
+            ctx.fillStyle = COLORS.prim2_clr
+            ctx.fillText(duration_sec, x_ref_duration + 1, ty)
+        # Draw tags
+        tags = [tag for tag in bar.subtagz.split(" ")]
+        opt = {
+            "ref": "leftmiddle",
+            "color": COLORS.button_tag_text,
+            "body": COLORS.button_tag_bg,
+            "padding": min(7, (x2 - x1) / 100),
+        }
+        for tag in tags:
+            ctx.textAlign = "left"
+            ctx.font = FONT.size + "px " + FONT.default
+            ctx.fillStyle = COLORS.record_text
+            if not tag:
+                text = "General"
+                ctx.fillText(text, tx, ty)
                 tx += ctx.measureText(text).width + 12
+            elif tag in self.selected_tags:
+                text = tag
+                draw_tag(ctx, text, tx, ty)
+                tx += ctx.measureText(text).width + 12
+            else:
+                tt = dt.duration_string(self._time_per_tag.get(tag, 0))
+                tt += " in total"
+                tt += "\n(Click to filter)"
+                tx += 12 + self._draw_button(
+                    ctx, tx, ty, None, but_height, tag, "select:" + tag, tt, opt
+                )
 
     def on_pointer(self, ev):
 
@@ -3541,16 +3424,13 @@ class AnalyticsWidget(Widget):
                             self.selected_tags.push(tag)
                     else:
                         self.selected_tags = []
-                elif picked.action.startswith("chosecolor:"):
+                    self._tag_bars_dict = {}  # trigger animation
+                elif picked.action.startswith("configure_tag:"):
                     _, _, tagz = picked.action.partition(":")
-                    tags = tagz.split(" ")
-                    if len(tags) == 1:
-                        self._canvas.tag_color_dialog.open(tags[0], self.update)
-                    elif len(tags) > 1:
-                        self._canvas.tag_color_selection_dialog.open(tags, self.update)
-                elif picked.action.startswith("chosetargets:"):
+                    self._canvas.tag_dialog.open(tagz, self.update)
+                elif picked.action.startswith("configure_tags:"):
                     _, _, tagz = picked.action.partition(":")
-                    self._canvas.targets_dialog.open(tagz, self.update)
+                    self._canvas.tag_combo_dialog.open(tagz, self.update)
                 self.update()
 
 

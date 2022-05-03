@@ -1614,24 +1614,88 @@ class RecordDialog(BaseDialog):
             self._canvas.pomodoro_dialog.start_work()
 
 
-class TagColorSelectionDialog(BaseDialog):
-    """Select a tag to define the color for."""
+class TargetHelper:
+    """A little class to help with targets. Because targets occur in two dialogs."""
+
+    def __init__(self, tagz, div):
+        self._tagz = tagz
+
+        div.innerHTML = f"""
+            <input type='number' min=1 value=1 style='width:5em;' />
+            <span style='padding: 0 1em;'>hours per</span>
+            <select>
+                <option value='none'>No target</option>
+                <option value='day'>Day</option>
+                <option value='week'>Week</option>
+                <option value='month'>Month</option>
+                <option value='year'>Year</option>
+            </select>
+            """
+
+        self._hour_input, _, self._period_select = div.children
+
+    def load_from_info(self, info):
+        targets = info.get("targets", None) or {}
+        for period, hours in targets.items():
+            if period and hours:
+                self._hour_input.value = hours or 1
+                self._period_select.value = period or "none"
+                break
+            else:
+                self._hour_input.value = 0
+                self._period_select.value = "none"
+
+    def write_to_info(self, info):
+        targets = {}
+
+        hours = float(self._hour_input.value)
+        period = self._period_select.value
+        if hours > 0 and period and period != "none":
+            targets[period] = hours
+
+        info.targets = targets
+
+
+class TagComboDialog(BaseDialog):
+    """Dialog to configure a combination of tags."""
 
     def open(self, tags, callback):
+
+        # Put in deterministic order
         if isinstance(tags, str):
             tags = tags.split(" ")
+        tags.sort()
+        self._tagz = tagz = tags.join(" ")
 
         self.maindiv.innerHTML = f"""
-            <h1><i class='fas'>\uf53f</i>&nbsp;&nbsp;Select color for ...
+            <h1><i class='fas'>\uf02c</i>&nbsp;&nbsp;Tag combo {tagz}
                 <button type='button'><i class='fas'>\uf00d</i></button>
                 </h1>
-            <div></div>
+            <h2><i class='fas'>\uf02c</i>&nbsp;&nbsp;Tags</h2>
+            <div>buttons for tags go here</div>
+            <h2><i class='fas'>\uf140</i>&nbsp;&nbsp;Target</h2>
+            <div>target goes here</div>
+            <div style='margin-top:2em;'></div>
+            <div style='display: flex;justify-content: flex-end;'>
+                <button type='button' class='actionbutton'><i class='fas'>\uf304</i>&nbsp;&nbsp;Rename</button>
+                <button type='button' class='actionbutton'><i class='fas'>\uf00d</i>&nbsp;&nbsp;Cancel</button>
+                <button type='button' class='actionbutton submit'><i class='fas'>\uf00c</i>&nbsp;&nbsp;Apply</button>
+            </div>
         """
 
         close_but = self.maindiv.children[0].children[-1]
-        _, buttondiv = self.maindiv.children
+        (
+            _,
+            _,  # button header
+            button_div,
+            _,  # target header
+            target_div,
+            _,  # margin
+            finish_buttons,
+        ) = self.maindiv.children
         close_but.onclick = self.close
 
+        button_div.innerHTML = ""
         for tag in tags:
             clr = window.store.settings.get_color_for_tag(tag)
             el = document.createElement("button")
@@ -1639,25 +1703,45 @@ class TagColorSelectionDialog(BaseDialog):
             el.classList.add("actionbutton")
             el.innerHTML = f"<b style='color:{clr};'>#</b>" + tag[1:]
             el.onclick = self._make_click_handler(tag, callback)
-            buttondiv.appendChild(el)
+            button_div.appendChild(el)
+
+        self._target = TargetHelper(tags, target_div)
+        finish_buttons.children[0].onclick = self.rename
+        finish_buttons.children[1].onclick = self.close
+        finish_buttons.children[2].onclick = self.submit
 
         super().open(None)
+        self._load_current()
 
     def _make_click_handler(self, tag, callback):
         def handler():
             self.close()
-            self._canvas.tag_color_dialog.open(tag, callback),
+            self._canvas.tag_dialog.open(tag, callback),
 
         return handler
 
+    def _load_current(self):
+        info = window.store.settings.get_tag_info(self._tagz)
+        self._target.load_from_info(info)
 
-class TagColorDialog(BaseDialog):
-    """Dialog to set the color for a tag."""
+    def submit(self):
+        info = {}
+        self._target.write_to_info(info)
+        window.store.settings.set_tag_info(self._tagz, info)
+        super().submit()
 
-    def open(self, tagz, callback=None):
+    def rename(self):
+        self._canvas.tag_rename_dialog.open(self._tagz.split(" "), self.close)
+
+
+class TagDialog(BaseDialog):
+    """Dialog to configure a singleton tag."""
+
+    def open(self, tags, callback=None):
 
         # Put in deterministic order
-        tags = tagz.split(" ")
+        if isinstance(tags, str):
+            tags = tags.split(" ")
         tags.sort()
         self._tagz = tagz = tags.join(" ")
 
@@ -1665,17 +1749,25 @@ class TagColorDialog(BaseDialog):
         # self._default_color = utils.color_from_name(self._tagz)
 
         self.maindiv.innerHTML = f"""
-            <h1><i class='fas'>\uf53f</i>&nbsp;&nbsp;Set color for {tagz}
+            <h1><i class='fas'>\uf02b</i>&nbsp;&nbsp;Configure tag {tagz}
                 <button type='button'><i class='fas'>\uf00d</i></button>
                 </h1>
-            <input type='text' style='width: 210px; border: 5px solid #eee' spellcheck='false' />
-            <br>
-            <button type='button'><i class='fas'>\uf12d</i> Default</button>
+            <h2><i class='fas'>\uf140</i>&nbsp;&nbsp;Target</h2>
+            <div>target goes here</div>
+            <h2><i class='fas'>\uf074</i>&nbsp;&nbsp;Priority</h2>
+            <select>
+                <option value='1'>Primary (default)</option>
+                <option value='2'>Secondary (for "extra" tags)</option>
+            </select>
+            <h2><i class='fas'>\uf53f</i>&nbsp;&nbsp;Color</h2>
+            <input type='text' style='width: 100px; border: 5px solid #eee' spellcheck='false' />
+            <button type='button' style='margin-left: 2px'><i class='fas'>\uf12d</i> Default</button>
             <button type='button' style='margin-left: 2px'><i class='fas'>\uf2f1</i> Random</button>
             <br>
             <div style='display: inline-grid; grid-gap: 2px;'></div>
             <div style='margin-top:2em;'></div>
             <div style='display: flex;justify-content: flex-end;'>
+                <button type='button' class='actionbutton'><i class='fas'>\uf304</i>&nbsp;&nbsp;Rename</button>
                 <button type='button' class='actionbutton'><i class='fas'>\uf00d</i>&nbsp;&nbsp;Cancel</button>
                 <button type='button' class='actionbutton submit'><i class='fas'>\uf00c</i>&nbsp;&nbsp;Apply</button>
             </div>
@@ -1685,23 +1777,31 @@ class TagColorDialog(BaseDialog):
 
         (
             _,  # h1
+            _,  # target header
+            target_div,
+            _,  # priority header
+            self._priority_select,
+            _,  # color header
             self._color_input,
-            _,  # br
-            self._default_button,
-            self._random_button,
+            self._color_default_button,
+            self._color_random_button,
             _,  # br
             self._color_grid,
             _,  # gap
-            buttons,
+            finish_buttons,
         ) = self.maindiv.children
+
+        self._target = TargetHelper(tags, target_div)
 
         # Connect things up
         close_but.onclick = self.close
-        buttons.children[0].onclick = self.close
-        buttons.children[1].onclick = self.submit
+        finish_buttons.children[0].onclick = self.rename
+        finish_buttons.children[1].onclick = self.close
+        finish_buttons.children[2].onclick = self.submit
+
         self._color_input.onchange = lambda: self._set_color(self._color_input.value)
-        self._default_button.onclick = self._set_default_color
-        self._random_button.onclick = self._set_random_color
+        self._color_default_button.onclick = self._set_default_color
+        self._color_random_button.onclick = self._set_random_color
 
         # Generate palette
         self._color_grid.style.gridTemplateColumns = "auto ".repeat(utils.PALETTE_COLS)
@@ -1713,9 +1813,8 @@ class TagColorDialog(BaseDialog):
             self._make_clickable(el, hex)
             self._color_grid.appendChild(el)
 
-        self._set_color(window.store.settings.get_color_for_tag(tagz))
-
         super().open(callback)
+        self._load_current()
         if utils.looks_like_desktop():
             self._color_input.focus()
             self._color_input.select()
@@ -1745,17 +1844,31 @@ class TagColorDialog(BaseDialog):
             clr = self._default_color
         if clr != self._color_input.value:
             self._color_input.value = clr
+        self._color_input.style.borderColor = "rgba(0, 0, 0, 0)"
         self._color_input.style.borderColor = clr
 
+    def _load_current(self):
+        info = window.store.settings.get_tag_info(self._tagz)
+        self._target.load_from_info(info)
+        self._priority_select.value = info.get("priority", 0) or 1
+        self._set_color(info.get("color", ""))
+
     def submit(self):
+        info = {}
+        # Set target
+        self._target.write_to_info(info)
+        # Set priority
+        prio = int(self._priority_select.value)
+        info["priority"] = 0 if prio == 1 else prio
+        # Set color
         clr = self._color_input.value
-        cur_color = window.store.settings.get_color_for_tag(self._tagz)
-        if clr != cur_color:
-            if clr == self._default_color:
-                window.store.settings.set_color_for_tag(self._tagz, "")
-            else:
-                window.store.settings.set_color_for_tag(self._tagz, clr)
+        info["color"] = "" if clr == self._default_color else clr
+        # Store
+        window.store.settings.set_tag_info(self._tagz, info)
         super().submit()
+
+    def rename(self):
+        self._canvas.tag_rename_dialog.open(self._tagz.split(" "), self.close)
 
 
 class TagPresetsDialog(BaseDialog):
@@ -1888,6 +2001,168 @@ class TagPresetsDialog(BaseDialog):
             + ntags
             + " unique tags."
         )
+
+
+class TagRenameDialog(BaseDialog):
+    """Dialog to rename tags."""
+
+    def open(self, tags, callback=None):
+
+        # Put in deterministic order
+        if isinstance(tags, str):
+            tags = tags.split(" ")
+        tags.sort()
+        self._tagz = tagz = tags.join(" ")
+
+        self._tags1 = tags
+        self._tags2 = []
+
+        if len(tags) == 1:
+            title = "Current tag name"
+            tagword = "tag"
+        else:
+            title = "Tag combi to rename"
+            tagword = "tags"
+
+        self.maindiv.innerHTML = f"""
+            <h1><i class='fas'>\uf02b</i>&nbsp;&nbsp;Rename {tagword}
+                <button type='button'><i class='fas'>\uf00d</i></button>
+                </h1>
+            <div class='formlayout'>
+                <div>{title}:</div>
+                <div>{tagz}</div>
+                <div>New tag(s):</div>
+                <input type='text' spellcheck='false' />
+                <div></div>
+                <button type='button'>Prepare renaming ...</button>
+                <div></div>
+                <button type='button'>Confirm</button>
+            </div>
+            <div style='margin-top:2em;'></div>
+        """
+
+        close_but = self.maindiv.children[0].children[-1]
+        close_but.onclick = self.close
+
+        formdiv = self.maindiv.children[1]
+        self._tagname2 = formdiv.children[3]
+        self._button_replace = formdiv.children[5]
+        self._button_replace_comfirm = formdiv.children[7]
+
+        self._tagname2.oninput = self._hide_confirm_button
+        self._tagname2.onchange = self._on_name2_done
+        self._tagname2.onkeydown = self._on_key2
+
+        self._button_replace.onclick = self._replace_all
+        self._button_replace_comfirm.onclick = self._really_replace_all
+
+        self._button_replace_comfirm.disabled = True
+        self._button_replace_comfirm.style.visibility = "hidden"
+
+        self._records = []
+
+        super().open(callback)
+        if utils.looks_like_desktop():
+            self._tagname2.focus()
+
+    def close(self):
+        self._records = []
+        super().close()
+
+    def _hide_confirm_button(self):
+        self._button_replace_comfirm.disabled = True
+        self._button_replace_comfirm.style.visibility = "hidden"
+        self._button_replace_comfirm.innerText = "Confirm"
+
+    def _on_name2_done(self):
+        raw_parts = self._tagname2.value.split(" ")
+        text2 = ["#" + p for p in raw_parts].join(" ")
+        tags2, _ = utils.get_tags_and_parts_from_string(text2)
+        self._tags2 = tags2
+        self._tagname2.value = " ".join(tags2)
+
+    def _on_key2(self, e):
+        key = e.key.lower()
+        if key == "enter" or key == "return":
+            e.stopPropagation()
+            e.preventDefault()
+            self._on_name2_done()
+            self._replace_all()
+
+    def _find_records(self):
+        records = []
+
+        # Early exit?
+        if not self._tags1:
+            self._records = []
+            return
+        # Get list of records
+        for record in window.store.records.get_dump():
+            tags = window.store.records.tags_from_record(record)  # also #untagged
+            all_ok = True
+            for tag in self._tags1:
+                if tag not in tags:
+                    all_ok = False
+            if all_ok:
+                records.push([record.t1, record.key])
+
+        records.sort(key=lambda x: x[0])
+        self._records = [x[1] for x in records]
+
+    def _replace_all(self):
+        self._find_records()
+        tagword = "tag" if len(self._tags1) == 1 else "tags"
+
+        n = len(self._records)
+        if n == 0:
+            text = f"No records found"
+            disabled = True
+        elif len(self._tags2):
+            text = f"Confirm replacing {tagword} in {n} records"
+            disabled = False
+        else:
+            text = f"Confirm removing {tagword} in {n} records"
+            disabled = False
+
+        self._button_replace_comfirm.innerText = text
+        self._button_replace_comfirm.disabled = disabled
+        self._button_replace_comfirm.style.visibility = "visible"
+
+    def _really_replace_all(self):
+
+        search_tags = self._tags1
+        replacement_tags = self._tags2
+
+        for key in self._records:
+            record = window.store.records.get_by_key(key)
+            _, parts = utils.get_tags_and_parts_from_string(record.ds)
+            # Get updated parts
+            new_parts = []
+            replacement_made = False
+            for part in parts:
+                if part.startswith("#") and (
+                    part in search_tags or part in replacement_tags
+                ):
+                    if not replacement_made:
+                        replacement_made = True
+                        new_parts.push(" ".join(replacement_tags))
+                else:
+                    new_parts.push(part)
+            # Submit
+            record.ds = "".join(new_parts)
+            window.store.records.put(record)
+
+        # Also update tag info
+        if len(search_tags) == 1 and len(replacement_tags) == 1:
+            tag1, tag2 = search_tags[0], replacement_tags[0]
+            info = window.store.settings.get_tag_info(tag1)
+            window.store.settings.set_tag_info(tag1, {})
+            window.store.settings.set_tag_info(tag2, info)
+
+        # Feedback
+        self._button_replace_comfirm.innerText = "Done"
+        self._button_replace_comfirm.disabled = True
+        window.setTimeout(self._hide_confirm_button, 500)
 
 
 class TagManageDialog(BaseDialog):
@@ -2153,17 +2428,12 @@ class TagManageDialog(BaseDialog):
                 record.ds = "".join(new_parts)
                 window.store.records.put(record)
 
-            # Also update colors
+            # Also update tag info
             if len(search_tags) == 1 and len(replacement_tags) == 1:
                 tag1, tag2 = search_tags[0], replacement_tags[0]
-                cur_color = window.store.settings.get_color_for_tag(tag1)
-                default_color = window.store.settings.get_color_for_tag(
-                    "#notanactualtag"
-                )
-                window.store.settings.set_color_for_tag(tag1, "")
-                if cur_color != default_color:
-                    window.store.settings.set_color_for_tag(tag2, cur_color)
-
+                info = window.store.settings.get_tag_info(tag1)
+                window.store.settings.set_tag_info(tag1, {})
+                window.store.settings.set_tag_info(tag2, info)
         else:
             search_text = self._tagname1.value.strip().toLowerCase()
             replacement_text = self._tagname2.value.strip()
@@ -2190,90 +2460,6 @@ class TagManageDialog(BaseDialog):
     def _open_record(self, key):
         record = window.store.records.get_by_key(key)
         self._canvas.record_dialog.open("Edit", record, self._show_records)
-
-
-class TargetsDialog(BaseDialog):
-    """Dialog for tag targets."""
-
-    def open(self, tagz, callback=None):
-
-        # Put in deterministic order
-        tags = tagz.split(" ")
-        tags.sort()
-        self._tagz = tagz = tags.join(" ")
-
-        self.maindiv.innerHTML = f"""
-            <h1><i class='fas'>\uf140</i>&nbsp;&nbsp;Target for {tagz}
-                <button type='button'><i class='fas'>\uf00d</i></button>
-            </h1>
-            <div>
-                <input type='number' min=1 value=1 style='width:5em;' />
-                <span style='padding: 0 1em;'>hours per</span>
-                <select>
-                    <option value='none'>No target</option>
-                    <option value='day'>Day</option>
-                    <option value='week'>Week</option>
-                    <option value='month'>Month</option>
-                    <option value='year'>Year</option>
-                </select>
-            </div>
-            <div style='margin-top:2em;'></div>
-            <div style='display: flex;justify-content: flex-end;'>
-                <button type='button' class='actionbutton'><i class='fas'>\uf00d</i>&nbsp;&nbsp;Cancel</button>
-                <button type='button' class='actionbutton submit'><i class='fas'>\uf00c</i>&nbsp;&nbsp;Apply</button>
-            </div>
-            """
-
-        close_but = self.maindiv.children[0].children[-1]
-        (
-            _,  # h1
-            formdiv,
-            _,  # gap
-            buttons,
-        ) = self.maindiv.children
-
-        # Expand formdiv
-        self._hour_input, _, self._period_select = formdiv.children
-
-        # Connect things up
-        close_but.onclick = self.close
-        buttons.children[0].onclick = self.close
-        buttons.children[1].onclick = self.submit
-
-        super().open(callback)
-        self._load_current()
-
-    def _load_current(self):
-        item = window.store.settings.get_by_key("tag_targets")
-        targets = (None if item is None else item.value) or {}
-        target = targets.get(self._tagz, None)
-        if target is None:
-            self._hour_input.value = 1
-            self._period_select.value = "none"
-        else:
-            self._hour_input.value = target.hours or 1
-            self._period_select.value = target.period or "none"
-
-    def submit(self):
-
-        target = {}
-        target.hours = float(self._hour_input.value)
-        target.period = self._period_select.value
-
-        # Load all targets
-        item = window.store.settings.get_by_key("tag_targets")
-        targets = (None if item is None else item.value) or {}
-
-        # Add/remove this target
-        if target.hours > 0 and target.period and target.period != "none":
-            targets[self._tagz] = target
-        else:
-            targets.pop(self._tagz)
-
-        # Push
-        item = window.store.settings.create("tag_targets", targets)
-        window.store.settings.put(item)
-        self.close()
 
 
 class ReportDialog(BaseDialog):
@@ -2315,6 +2501,7 @@ class ReportDialog(BaseDialog):
                                         <option value='tagz/date'>tags / date</option>
                                         <option value='date/tagz'>date / tags</option>
                                      </select>
+                <div>Tag order:</div> <label><input type='checkbox' /> Hide secondary tags</label>
                 <div>Format:</div> <label><input type='checkbox' /> Hours in decimals</label>
                 <div>Details:</div> <label><input type='checkbox' checked /> Show records</label>
                 <button type='button'><i class='fas'>\uf328</i>&nbsp;&nbsp;{self._copybuttext}</button>
@@ -2335,11 +2522,12 @@ class ReportDialog(BaseDialog):
         # filter text = form.children[1]
         self._date_range = form.children[3]
         self._grouping_select = form.children[5]
-        self._hourdecimals_but = form.children[7].children[0]  # inside label
-        self._showrecords_but = form.children[9].children[0]  # inside label
-        self._copy_but = form.children[10]
-        self._savecsv_but = form.children[12]
-        self._savepdf_but = form.children[14]
+        self._hidesecondary_but = form.children[7].children[0]  # inside label
+        self._hourdecimals_but = form.children[9].children[0]  # inside label
+        self._showrecords_but = form.children[11].children[0]  # inside label
+        self._copy_but = form.children[12]
+        self._savecsv_but = form.children[14]
+        self._savepdf_but = form.children[16]
 
         # Connect input elements
         close_but = self.maindiv.children[0].children[-1]
@@ -2348,9 +2536,17 @@ class ReportDialog(BaseDialog):
         #
         grouping = window.localsettings.get("report_grouping", "date")
         self._grouping_select.value = grouping
-        self._grouping_select.onchange = self._on_grouping_changed
-        self._hourdecimals_but.oninput = self._update_table
-        self._showrecords_but.oninput = self._update_table
+        hidesecondary = window.localsettings.get("report_hidesecondary", False)
+        self._hidesecondary_but.checked = hidesecondary
+        hourdecimals = window.localsettings.get("report_hourdecimals", False)
+        self._hourdecimals_but.checked = hourdecimals
+        showrecords = window.localsettings.get("report_showrecords", True)
+        self._showrecords_but.checked = showrecords
+        #
+        self._grouping_select.onchange = self._on_setting_changed
+        self._hidesecondary_but.oninput = self._on_setting_changed
+        self._hourdecimals_but.oninput = self._on_setting_changed
+        self._showrecords_but.oninput = self._on_setting_changed
         #
         self._copy_but.onclick = self._copy_clipboard
         self._savecsv_but.onclick = self._save_as_csv
@@ -2359,8 +2555,13 @@ class ReportDialog(BaseDialog):
         window.setTimeout(self._update_table)
         super().open(None)
 
-    def _on_grouping_changed(self):
+    def _on_setting_changed(self):
         window.localsettings.set("report_grouping", self._grouping_select.value)
+        window.localsettings.set(
+            "report_hidesecondary", self._hidesecondary_but.checked
+        )
+        window.localsettings.set("report_hourdecimals", self._hourdecimals_but.checked)
+        window.localsettings.set("report_showrecords", self._showrecords_but.checked)
         self._update_table()
 
     def _update_table(self):
@@ -2404,24 +2605,50 @@ class ReportDialog(BaseDialog):
         records = window.store.records.get_records(t1, t2).values()
         records.sort(key=lambda record: record.t1)
 
+        # Determine priorities
+        priorities = {}
+        for tagz in stats.keys():
+            tags = tagz.split(" ")
+            for tag in tags:
+                info = window.store.settings.get_tag_info(tag)
+                priorities[tag] = info.get("priority", 0) or 1
+
         # Get better names
-        name_map = utils.get_better_tag_order_from_stats(stats, self._tags, True)
+        name_map = utils.get_better_tag_order_from_stats(
+            stats, self._tags, True, priorities
+        )
+
+        # Hide secondary tags by removing them from the mapping.
+        # Note that this means that different keys now map to the same value.
+        if self._hidesecondary_but.checked:
+            for tagz1, tagz2 in name_map.items():
+                tags = tagz2.split(" ")
+                tags = [tag for tag in tags if priorities[tag] <= 1]
+                tagz2 = tags.join(" ")
+                name_map[tagz1] = tagz2
 
         # Create list of pairs of stat-name, stat-key, and sort.
-        # Thid is the reference order for tagz.
-        statobjects = []
+        # This is the reference order for tagz.
+        statobjects = {}
         for tagz1, tagz2 in name_map.items():
-            statobjects.append({"oritagz": tagz1, "tagz": tagz2, "t": stats[tagz1]})
+            t = statobjects.get(tagz2, {}).get("t", 0) + stats[tagz1]
+            statobjects[tagz2] = {"tagz": tagz2, "t": t}
+        statobjects = statobjects.values()
         utils.order_stats_by_duration_and_name(statobjects)
 
         # Get how to group the records
         group_method = self._grouping_select.value
+        empty_title = "General"
 
         # Perform grouping ...
         if group_method == "tagz":
             groups = {}
             for obj in statobjects:
-                groups[obj.tagz] = {"title": obj.tagz, "t": 0, "records": []}
+                groups[obj.tagz] = {
+                    "title": obj.tagz or empty_title,
+                    "t": 0,
+                    "records": [],
+                }
             for i in range(len(records)):
                 record = records[i]
                 tagz1 = window.store.records.tags_from_record(record).join(" ")
@@ -2464,7 +2691,7 @@ class ReportDialog(BaseDialog):
                 if date not in subgroups:
                     tdate = "-".join(reversed(date.split("-")))
                     subgroups[date] = {
-                        "title": tagz2 + " / " + tdate,
+                        "title": (tagz2 or empty_title) + " / " + tdate,
                         "t": 0,
                         "records": [],
                     }
@@ -2491,7 +2718,7 @@ class ReportDialog(BaseDialog):
                     for obj in statobjects:
                         tdate = "-".join(reversed(date.split("-")))
                         subgroups[obj.tagz] = {
-                            "title": tdate + " / " + obj.tagz,
+                            "title": tdate + " / " + (obj.tagz or empty_title),
                             "t": 0,
                             "records": [],
                         }

@@ -315,19 +315,51 @@ class SettingsStore(BaseStore):
         for item in settings:
             self._items[item.key] = item
 
-    def set_color_for_tag(self, tag, color):
-        key = "color " + tag
-        ob = self.create(key, color)
+    def set_tag_info(self, tagz, info):
+        key = "taginfo " + tagz
+
+        # Check if any value is set
+        any_nonempty = False
+        for value in info.values():
+            if value:
+                any_nonempty = True
+                break
+
+        # Maybe there is no need to actually set the info
+        if (not any_nonempty) and (not self._items.get(key, None)):
+            return
+
+        # Apply
+        ob = self.create(key, info)
         self.put(ob)
 
-    def get_color_for_tag(self, tag):
-        key = "color " + tag
-        ob = self.get_by_key(key)
+    def get_tag_info(self, tagz):
+
+        info = {"targets": {}}
+
+        # Load color the old way. We can remove this in about a year or so (2023)
+        ob = self.get_by_key("color " + tagz)
         if ob is not None and ob.value:
-            return ob.value
-        else:
-            return window.front.COLORS.acc_clr
-            # return utils.color_from_name(tag)
+            info["color"] = ob.value
+
+        # Load targets the old way
+        item = self._items.get("tag_targets", None) or {"value": {}}
+        target = item.value.get(tagz, None)
+        if target:
+            info["targets"][target.period] = target.hours
+
+        # Load the actual data
+        key = "taginfo " + tagz
+        ob = self.get_by_key(key)
+        if ob is not None:
+            info.update(ob.value)
+
+        return info
+
+    def get_color_for_tag(self, tag):
+        info = self.get_tag_info(tag)
+        color = info.get("color", "")
+        return color or window.front.COLORS.acc_clr
 
 
 class RecordStore(BaseStore):
@@ -981,7 +1013,7 @@ class DemoDataStore(BaseDataStore):
             "#client2": "#429270",
         }
         for tag, color in colors.items():
-            self.settings.set_color_for_tag(tag, color)
+            self.settings.set_tag_info(tag, {"color": color})
 
     def _create_tags(self):
 
