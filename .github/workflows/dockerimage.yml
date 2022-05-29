@@ -6,6 +6,10 @@ on:
     tags:
       - "v*"
 
+permissions:
+  contents: read
+  packages: write
+
 jobs:
   docker:
     runs-on: ubuntu-latest
@@ -24,7 +28,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@98669ae865ea3cffbcbaa878cf57c20bbf1c6c38
         with:
-          images: ${{ github.repository }}
+          images: ghcr.io/${{ github.repository }}
           tags: type=ref,event=tag
       
       - name: Build and push Docker image
