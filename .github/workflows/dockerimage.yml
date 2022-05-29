@@ -6,10 +6,6 @@ on:
     tags:
       - "v*"
 
-permissions:
-  contents: read
-  packages: write
-
 jobs:
   docker:
     runs-on: ubuntu-latest
