@@ -37,6 +37,7 @@ FONT = {
 
 
 def init_module():
+    set_width_mode()
     set_colors()
     if window.matchMedia:
         try:
@@ -48,6 +49,22 @@ def init_module():
 
 
 window.addEventListener("load", init_module)
+
+
+def set_width_mode():
+    # Note that the width modes must match the css classes in _style_embed.scss
+    content_div = window.document.getElementById("main-content")
+    # Clear
+    entries = []
+    add = lambda x: entries.push(x)
+    content_div.classList.forEach(add)
+    print(entries)
+    for entry in entries:
+        if "width-" in entry:
+            content_div.classList.remove(entry)
+    # Apply
+    width_mode = window.localsettings.get("width_mode", "auto")
+    content_div.classList.add("width-" + width_mode)
 
 
 # Also see e.g. https://www.canva.com/colors/color-wheel/
