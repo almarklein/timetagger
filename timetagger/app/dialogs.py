@@ -989,21 +989,22 @@ completer_all_tags = None
 class Autocompleter:
     """Helper class to autocomplete tags."""
 
-    def __init__(self, div, input, callback, full_refresh=False):
+    def __init__(self, div, input, callback, mode_mask=7):
         self._div = div
         self._input = input
         self._callback = callback
+        self._mode_mask = mode_mask  # 1: all, 2: recent, 4: presets
 
         self.clear()
         self._state = "", 0, 0
 
         # Suggested tags
-        if full_refresh or completer_all_tags is None:
-            self._collect_all_tags()
         self._suggested_tags_recent = self._get_suggested_tags_recent()
-        self._suggested_tags_all = self._get_suggested_tags_all()
+        self._suggested_tags_combined = self._get_suggested_tags_combined()
         self._suggested_tags_presets = []
-        self._suggested_tags_in_autocomp = []  # current suggestion
+
+        # Current suggestion
+        self._suggested_tags_in_autocomp = []
 
         window._autocomp_finish = self._finish
 
@@ -1030,10 +1031,12 @@ class Autocompleter:
             return
 
         # We show presets if using double hashtags
-        show_presets = i1 > 0 and val[i1 - 1] == "#"
+        show_presets = i1 > 0 and val[i1 - 1] == "#" and (4 & self._mode_mask)
 
         if tag_to_be == "#":
-            if show_presets:
+            if self._mode_mask == 1:
+                return
+            elif show_presets:
                 return self.show_presets_and_recents(True, False)
             else:
                 return self.show_presets_and_recents(False, True)
@@ -1073,7 +1076,7 @@ class Autocompleter:
                         matches2.push((preset, html))
         else:
             # Suggestions from recent tags
-            for tag, tag_t2 in self._suggested_tags_all:
+            for tag, tag_t2 in self._suggested_tags_combined:
                 i = tag.indexOf(needle)
                 if i > 0:
                     date = max(0, int((now - tag_t2) / 86400))
@@ -1098,13 +1101,17 @@ class Autocompleter:
         if suggestions:
             if show_presets:
                 self._show("Matching presets:", suggestions)
-            else:
+            elif self._mode_mask & 2:
                 self._show("Matching recent tags:", suggestions)
+            else:
+                self._show("Matching tags:", suggestions)
         else:
             if show_presets:
                 self._show("No matching presets ...", suggestions)
-            else:
+            elif self._mode_mask & 2:
                 self._show("No matching recent tags ...", suggestions)
+            else:
+                self._show("No matching tags ...", suggestions)
 
     def show_presets_and_recents(self, presets=True, recents=True):
         suggestions = []
@@ -1156,7 +1163,14 @@ class Autocompleter:
                 val, i1, i2 = self._state
                 if i2 > i1:
                     is_double = i1 > 0 and val[i1 - 1] == "#"
-                    if is_double:
+                    if (self._mode_mask & 4) == 0:
+                        if is_double:
+                            new_val = val[:i1] + val[i1 + 1 :]
+                            new_i = i2 - 1
+                        else:
+                            new_val = val
+                            new_i = i2
+                    elif is_double:
                         new_val = val[:i1] + val[i1 + 1 :]
                         new_i = i2 - 1
                     else:
@@ -1174,8 +1188,10 @@ class Autocompleter:
     def _show(self, headline, suggestions):
         self.clear()
         # Add title
-        hint = "(type '#' to toggle recents / presets)"
-        hint_html = "<span style='color:#999;'>" + hint + "</span>"
+        hint_html = ""
+        if self._mode_mask & 3 and self._mode_mask & 4:
+            hint = "(type '#' to toggle recents / presets)"
+            hint_html = "<span style='color:#999;'>" + hint + "</span>"
         item = document.createElement("div")
         item.classList.add("meta")
         item.innerHTML = headline + " &nbsp;&nbsp;&nbsp;" + hint_html
@@ -1255,16 +1271,18 @@ class Autocompleter:
         presets = (None if item is None else item.value) or []
         return [preset for preset in presets if preset]
 
-    def _collect_all_tags(self):
+    def _get_suggested_tags_all_dict(self, force=False):
         """Get *all* tags ever used."""
         PSCRIPT_OVERLOAD = False  # noqa
         global completer_all_tags
-        suggested_tags = {}
-        for r in window.store.records.get_dump():
-            tags, _ = utils.get_tags_and_parts_from_string(r.ds)
-            for tag in tags:
-                suggested_tags[tag] = max(r.t2, suggested_tags[tag] | 0)
-        completer_all_tags = suggested_tags
+        if force or completer_all_tags is None:
+            suggested_tags = {}
+            for r in window.store.records.get_dump():
+                tags, _ = utils.get_tags_and_parts_from_string(r.ds)
+                for tag in tags:
+                    suggested_tags[tag] = max(r.t2, suggested_tags[tag] | 0)
+            completer_all_tags = suggested_tags
+        return completer_all_tags
 
     def _get_suggested_tags_recent(self):
         """Get recent tags and order by their usage/recent-ness."""
@@ -1292,10 +1310,16 @@ class Autocompleter:
         tag_list = [score_tag[:2] for score_tag in score_tag_list]
         return tag_list
 
-    def _get_suggested_tags_all(self):
+    def _get_suggested_tags_combined(self):
         """Combine the full tag dict with the more recent tags."""
-        tags_dict = completer_all_tags.copy()
-        new_tags = self._suggested_tags_recent
+        # Collect
+        tags_dict = {}
+        new_tags = []
+        if self._mode_mask & 1:
+            tags_dict = self._get_suggested_tags_all_dict(self._mode_mask == 1).copy()
+        if self._mode_mask & 2:
+            new_tags = self._suggested_tags_recent
+        # Combine
         for tag, tag_t2 in new_tags:
             tags_dict[tag] = tag_t2
         # Compose full tag suggestions list
@@ -2202,13 +2226,15 @@ class TagManageDialog(BaseDialog):
             rename/remove/merge/split the tags in these records. See
             <a href="https://timetagger.app/articles/tags/#manage" target='new'>this article</a> for details.<br><br>
             </p>
-            <input type='text' style='width:100%;' spellcheck='false' placeholder='Tags or text to search for ...'/>
+            <div class='container' style='position: relative;'>
+                <input type='text' style='width:100%;' spellcheck='false' />
+                <div class='tag-suggestions-autocomp'></div>
+            </div>
             <br>
-            <button type='button'>Search ...</button>
-            <br>
+            <button type='button'>Search</button>
             <button type='button'>Manage tags</button>
             <hr />
-            <div class='record_grid'></div>
+            <div class='record_grid' style='min-height:100px'></div>
         """
 
         close_but = self.maindiv.children[0].children[-1]
@@ -2219,128 +2245,126 @@ class TagManageDialog(BaseDialog):
         (
             _,  # h1
             _,  # p
-            self._search_input,
+            search_container,
             _,  # br
             self._search_but,
-            _,  # br
             self._tagmanage_but,
-        ) = self.maindiv.children[0]
+        ) = self.maindiv.children
+
+        self._search_input, self._autocompleter_div = search_container.children
+        self._search_input.placeholder = "Tags or text to search for ..."
 
         self._search_input.oninput = self._on_user_edit
         self._search_input.onchange = self._on_user_edit_done
         self._search_input.onkeydown = self._on_key
 
         self._search_but.onclick = self._find_records
-        self._tagmanage_but.onclick = self._open_tag_manager
+        self._tagmanage_but.onclick = self._open_tag_dialog
 
         self._search_but.disabled = True
         self._tagmanage_but.disabled = True
 
+        self._autocompleter = Autocompleter(
+            self._autocompleter_div, self._search_input, self._autocomp_finished, True
+        )
+
         self._records_uptodate = False
         window._tag_manage_dialog_open_record = self._open_record
         self._records = []
+        self._current_tags = []
 
         super().open(None)
+        self._check_names()
         if utils.looks_like_desktop():
-            self._tagname1.focus()
+            self._search_input.focus()
 
     def close(self):
+        self._autocompleter.close()
         self._records = []
         self._records_uptodate = False
         super().close()
 
+    def _autocomp_finished(self):
+        pass
+
     def _on_user_edit(self):
+        self._autocompleter.init()
         self._records_uptodate = False
         self._check_names()
 
     def _check_names(self):
+        text = self._search_input.value
+        tags, parts = utils.get_tags_and_parts_from_string(text)
 
-        text1 = self._tagname1.value
-        text2 = self._tagname2.value
+        words = []
+        for part in parts:
+            if not part.startswith("#"):
+                words.push(part.lower())
 
-        err = ""
-        ok1 = ok2 = False
+        ntags, nwords = len(tags), len(words)
+        self._current_tags = tags
+        self._current_words = words
 
-        if self._radio_mode_tags.checked:
-            tags1, _ = utils.get_tags_and_parts_from_string(text1)
-            tags2, _ = utils.get_tags_and_parts_from_string(text2)
+        # Process search button
+        if ntags > 0 or nwords > 0:
+            self._search_but.innerHTML = f"Search {ntags} tags and {nwords} words"
+            self._search_but.disabled = False
+        else:
+            self._search_but.innerHTML = "Search"
+            self._search_but.disabled = True
 
-            if not text1 or text1 == "#":
-                pass
-            elif not tags1:
-                err += "Tags need to start with '#'. "
+        # Process tags button
+        if ntags > 0:
+            if ntags == 1:
+                icon = "<i class='fas'>\uf02b</i>&nbsp;&nbsp;"
             else:
-                ok1 = True
-
-            if not text2:
-                ok2 = True  # remove is ok
-            elif not tags2:
-                err += "Tags needs to start with '#'. "
-            else:
-                ok2 = True
+                icon = "<i class='fas'>\uf02c</i>&nbsp;&nbsp;"
+            self._tagmanage_but.innerHTML = f"{icon} Manage {tags.join(' ')}"
+            self._tagmanage_but.disabled = False
         else:
-            if text1:
-                ok1 = True
-            ok2 = True
+            self._tagmanage_but.innerHTML = "Manage tags"
+            self._tagmanage_but.disabled = True
 
-        self._button_find.disabled = not ok1
-        self._button_replace.disabled = not (ok1 and ok2 and self._records_uptodate)
-        self._button_replace_comfirm.disabled = True
-        self._button_replace_comfirm.style.visibility = "hidden"
-        self._taghelp.innerHTML = "<i>" + err + "</i>"
-
-    def _fix_name1(self):
-        if self._radio_mode_tags.checked:
-            tags1, _ = utils.get_tags_and_parts_from_string(self._tagname1.value)
-            self._tagname1.value = " ".join(tags1)
-        else:
-            self._tagname1.value = self._tagname1.value.strip().lower()
-
-    def _fix_name2(self):
-        if self._radio_mode_tags.checked:
-            tags2, _ = utils.get_tags_and_parts_from_string(self._tagname2.value)
-            self._tagname2.value = " ".join(tags2)
-        else:
-            self._tagname2.value = self._tagname2.value.strip()  # not lower!
-
-    def _on_key1(self, e):
+    def _on_key(self, e):
         key = e.key.lower()
+        if self._autocompleter.on_key(e):
+            return
         if key == "enter" or key == "return":
+            e.preventDefault()
+            e.stopPropagation()
             self._find_records()
-
-    def _on_key2(self, e):
-        key = e.key.lower()
-        if key == "enter" or key == "return":
-            self._replace_all()
+        else:
+            super()._on_key(e)
 
     def _find_records(self):
         records = []
 
-        if self._radio_mode_tags.checked:
-            search_tags, _ = utils.get_tags_and_parts_from_string(self._tagname1.value)
-            # Early exit?
-            if not search_tags:
-                self._records_node.innerHTML = "Nothing found."
-                return
+        search_tags = self._current_tags
+        search_words = self._current_words
+
+        if len(search_tags) > 0 or len(search_words) > 0:
             # Get list of records
             for record in window.store.records.get_dump():
+                # Check tags
                 tags = window.store.records.tags_from_record(record)  # also #untagged
-                all_ok = True
+                all_tags_ok = True
                 for tag in search_tags:
                     if tag not in tags:
-                        all_ok = False
-                if all_ok:
-                    records.push([record.t1, record.key])
-        else:
-            search_text = self._tagname1.value
-            # Early exit?
-            if not search_text:
-                self._records_node.innerHTML = "Nothing found."
-                return
-            # Get list of records
-            for record in window.store.records.get_dump():
-                if search_text in record.ds.lower():
-                    records.push([record.t1, record.key])
+                        all_tags_ok = False
+                        break
+                if not all_tags_ok:
+                    break
+                # Check words
+                ds = record.ds.lower()
+                all_words_ok = True
+                for word in search_words:
+                    if word not in ds:
+                        all_words_ok = False
+                        break
+                if not all_words_ok:
+                    break
+                # All checks passed
+                records.push([record.t1, record.key])
 
         records.sort(key=lambda x: x[0])
         self._records = [x[1] for x in records]
@@ -2349,10 +2373,16 @@ class TagManageDialog(BaseDialog):
         self._check_names()
 
     def _show_records(self):
-        search_tags, _ = utils.get_tags_and_parts_from_string(self._tagname1.value)
         # Generate html
-        bold_tags = [f"<b>{tag}</b>" for tag in search_tags]
-        find_html = f"Finding records for tags " + ", ".join(bold_tags) + ".<br>"
+        bold_tags = [f"<b>{tag}</b>" for tag in self._current_tags]
+        italic_words = [f"'<i>{tag}</i>'" for tag in self._current_words]
+        find_html = f"Finding records for"
+        if len(self._current_tags) > 0:
+            find_html += " tags " + ", ".join(bold_tags)
+        if len(self._current_tags) > 0 and len(self._current_words) > 0:
+            find_html += " and "
+        if len(self._current_words) > 0:
+            find_html += " words " + italic_words + ".<br>"
         lines = [find_html, f"Found {self._records.length} records:<br>"]
         for key in self._records:
             record = window.store.records.get_by_key(key)
@@ -2371,6 +2401,14 @@ class TagManageDialog(BaseDialog):
     def _open_record(self, key):
         record = window.store.records.get_by_key(key)
         self._canvas.record_dialog.open("Edit", record, self._show_records)
+
+    def _open_tag_dialog(self):
+        if len(self._current_tags) == 1:
+            tagz = self._current_tags[0]
+            self._canvas.tag_dialog.open(tagz)
+        elif len(self._current_tags) > 1:
+            tagz = " ".join(self._current_tags)
+            self._canvas.tag_combo_dialog.open(tagz)
 
 
 class ReportDialog(BaseDialog):
