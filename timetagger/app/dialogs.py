@@ -983,268 +983,50 @@ class StartStopEdit:
             return self.render()
 
 
-class RecordDialog(BaseDialog):
-    """Dialog to allow modifying a record (setting description and times)."""
+completer_all_tags = None
 
-    def __init__(self, canvas):
-        super().__init__(canvas)
-        self._record = None
-        self._no_user_edit_yet = True
-        self._suggested_tags_all_dict = None  # will be calculated once
-        self._suggested_tags_recent = []
-        self._suggested_tags_all = []
-        self._suggested_tags_presets = []
-        self._suggested_tags_in_autocomp = []
 
-    def open(self, mode, record, callback=None):
-        """Show/open the dialog for the given record. On submit, the
-        record will be pushed to the store and callback (if given) will
-        be called with the record. On close/cancel, the callback will
-        be called without arguments.
-        """
-        self._record = record.copy()
-        assert mode.lower() in ("start", "new", "edit", "stop")
+class Autocompleter:
+    """Helper class to autocomplete tags."""
 
-        html = f"""
-            <h1><i class='fas'>\uf682</i>&nbsp;&nbsp;<span>Record</span>
-                <button type='button'><i class='fas'>\uf00d</i></button>
-            </h1>
-            <h2><i class='fas'>\uf305</i>&nbsp;&nbsp;Description</h2>
-            <div class='container' style='position: relative;'>
-                <input type='text' style='width:100%;' spellcheck='true' />
-                <div class='tag-suggestions-autocomp'></div>
-            </div>
-            <div class='container' style='min-height:5px;'>
-                <button type='button' style='float:right; font-size:85%; margin-top:-4px;'>
-                    <i class='fas'>\uf044</i></button>
-                <button type='button' style='float:right; font-size:85%; margin-top:-4px;'>
-                    Presets <i class='fas'>\uf0d7</i></button>
-                <button type='button' style='float:right; font-size:85%; margin-top:-4px;'>
-                    Recent <i class='fas'>\uf0d7</i></button>
-            </div>
-            <div></div>
-            <div style='color:#777;'></div>
-            <h2><i class='fas'>\uf017</i>&nbsp;&nbsp;Time</h2>
-            <div></div>
-            <div style='margin-top:2em;'></div>
-            <div style='display: flex;justify-content: flex-end;'>
-                <button type='button' class='actionbutton'><i class='fas'>\uf00d</i>&nbsp;&nbsp;Cancel</button>
-                <button type='button' class='actionbutton'><i class='fas'>\uf1f8</i>&nbsp;&nbsp;Delete</button>
-                <button type='button' class='actionbutton'><i class='fas'>\uf24d</i>&nbsp;&nbsp;Resume</button>
-                <button type='button' class='actionbutton submit'>Submit</button>
-            </div>
-            <button type='button' style='float:right;' class='actionbutton'>Confirm deleting this record</button>
-        """
-        self.maindiv.innerHTML = html
+    def __init__(self, div, input, callback, full_refresh=False):
+        self._div = div
+        self._input = input
+        self._callback = callback
 
-        # Unpack so we have all the components
-        (
-            h1,  # Dialog title
-            self._ds_header,
-            self._ds_container,
-            self._preset_container,
-            self._tags_div,
-            self._tag_hints_div,
-            _,  # Time header
-            self._time_node,
-            _,  # Splitter
-            self._buttons,
-            self._delete_but2,
-        ) = self.maindiv.children
-        #
-        self._ds_input = self._ds_container.children[0]
-        self._autocomp_div = self._ds_container.children[1]
-        self._recent_but = self._preset_container.children[2]
-        self._preset_but = self._preset_container.children[1]
-        self._preset_edit = self._preset_container.children[0]
-        self._title_div = h1.children[1]
-        self._cancel_but1 = self.maindiv.children[0].children[-1]
-        (
-            self._cancel_but2,
-            self._delete_but1,
-            self._resume_but,
-            self._submit_but,
-        ) = self._buttons.children
+        self.clear()
+        self._state = "", 0, 0
 
-        # Create the startstop-edit
-        self._time_edit = StartStopEdit(
-            self._time_node, self._on_times_change, record.t1, record.t2, mode
-        )
-
-        # Prepare autocompletion variables
-        self._autocomp_index = 0
-        self._autocomp_active_tag = ""
-        self._autocomp_active_tag = ""
-        self._autocomp_state = "", 0, 0
-        self._autocomp_div.hidden = True
-
-        # Get selected tags. A full search only once per session.
-        if self._suggested_tags_all_dict is None:
-            self._suggested_tags_all_dict = self._get_suggested_tags_all_dict()
+        # Suggested tags
+        if full_refresh or completer_all_tags is None:
+            self._collect_all_tags()
         self._suggested_tags_recent = self._get_suggested_tags_recent()
         self._suggested_tags_all = self._get_suggested_tags_all()
+        self._suggested_tags_presets = []
         self._suggested_tags_in_autocomp = []  # current suggestion
 
-        # Prepare some things to show suggested tags
-        window._record_dialog_autocomp_finish = self._autocomp_finish
+        window._autocomp_finish = self._finish
 
-        # Set some initial values
-        self._ds_input.value = record.get("ds", "")
-        self._show_tags_from_ds()
-        self._delete_but2.style.display = "none"
-        self._no_user_edit_yet = True
+    def close(self):
+        self._div = None
+        self._input = None
+        self._callback = None
 
-        # Show the right buttons
-        self._set_mode(mode)
+    def clear(self):
+        self._index = 0
+        self._active_tag = ""
+        self._div.hidden = True
+        self._div.innerHTML = ""
 
-        # Connect things up
-        self._cancel_but1.onclick = self.close
-        self._cancel_but2.onclick = self.close
-        self._submit_but.onclick = self.submit
-        self._resume_but.onclick = self.resume_record
-        self._ds_input.oninput = self._on_user_edit
-        self._ds_input.onchange = self._on_user_edit_done
-        self._recent_but.onclick = self.show_recents
-        self._preset_but.onclick = self.show_presets
-        self._preset_edit.onclick = lambda: self._canvas.tag_preset_dialog.open()
-        self._delete_but1.onclick = self._delete1
-        self._delete_but2.onclick = self._delete2
-        self.maindiv.addEventListener("click", self._autocomp_clear)
-
-        # Enable for some more info (e.g. during dev)
-        if False:
-            for x in [f"ID: {record.key}", f"Modified: {dt.time2localstr(record.mt)}"]:
-                el = document.createElement("div")
-                el.innerText = x
-                self.maindiv.appendChild(el)
-
-        # Almost done. Focus on ds if this looks like desktop; it's anoying on mobile
-        super().open(callback)
-        if utils.looks_like_desktop():
-            self._ds_input.focus()
-
-    def _set_mode(self, mode):
-        self._lmode = lmode = mode.lower()
-        self._title_div.innerText = f"{mode} record"
-        is_running = self._record.t1 == self._record.t2
-        # has_running = len(window.store.records.get_running_records()) > 0
-        # Set description placeholder
-        if lmode == "start":
-            self._ds_input.setAttribute("placeholder", "What are you going to do?")
-        elif lmode == "new":
-            self._ds_input.setAttribute("placeholder", "What have you done?")
-        elif lmode == "stop":
-            self._ds_input.setAttribute("placeholder", "What did you just do?")
-        elif is_running:
-            self._ds_input.setAttribute("placeholder", "What are you doing?")
-        else:
-            self._ds_input.setAttribute("placeholder", "What has been done?")
-        # Tweak the buttons at the bottom
-        if lmode == "start":
-            self._submit_but.innerHTML = "<i class='fas'>\uf04b</i>&nbsp;&nbsp;Start"
-            self._resume_but.style.display = "none"
-            self._delete_but1.style.display = "none"
-        elif lmode == "new":
-            self._submit_but.innerHTML = "<i class='fas'>\uf067</i>&nbsp;&nbsp;Create"
-            self._resume_but.style.display = "none"
-            self._delete_but1.style.display = "none"
-        elif lmode == "edit":
-            self._submit_but.innerHTML = "<i class='fas'>\uf304</i>&nbsp;&nbsp;Edit"
-            title_mode = "Edit running" if is_running else "Edit"
-            self._title_div.innerText = f"{title_mode} record"
-            self._submit_but.disabled = self._no_user_edit_yet
-            self._resume_but.style.display = "none" if is_running else "block"
-            self._delete_but1.style.display = "block"
-        elif lmode == "stop":
-            self._submit_but.innerHTML = "<i class='fas'>\uf04d</i>&nbsp;&nbsp;Stop"
-            self._resume_but.style.display = "none"
-            self._delete_but1.style.display = "block"
-        else:
-            console.warn("Unexpected record dialog mode " + mode)
-
-    def _get_autocomp_state(self):
-        """Get the partial tag that is being written."""
-        val = self._ds_input.value
-        i2 = self._ds_input.selectionStart
-        # Go
-        i = i2 - 1
-        while i >= 0:
-            c = val[i]
-            if c == "#":
-                return val, i, i2
-            elif not utils.is_valid_tag_charcode(ord(c)):
-                return val, i2, i2
-            i -= 1
-        return val, i2, i2
-
-    def _mark_as_edited(self):
-        if self._no_user_edit_yet:
-            self._no_user_edit_yet = False
-            self._submit_but.disabled = False
-
-    def _on_user_edit(self):
-        self._mark_as_edited()
-        self._autocomp_init()
-        self._show_tags_from_ds()
-        # If the str is too long, limit it
-        if len(self._ds_input.value) >= stores.STR_MAX:
-            self._ds_input.value = self._ds_input.value.slice(0, stores.STR_MAX)
-            if "max" not in self._ds_header.innerHTML:
-                self._ds_header.innerHTML += (
-                    f" <small>(max {stores.STR_MAX-1} chars)</small>"
-                )
-            self._ds_input.style.setProperty("outline", "dashed 2px red")
-            reset = lambda: self._ds_input.style.setProperty("outline", "")
-            window.setTimeout(reset, 2000)
-
-    def show_presets(self, e):
-        # Prevent that the click will hide the autocomp
-        if e and e.stopPropagation:
-            e.stopPropagation()
-        self.show_presets_and_recents(True, False)
-
-    def show_recents(self, e):
-        # Prevent that the click will hide the autocomp
-        if e and e.stopPropagation:
-            e.stopPropagation()
-        self.show_presets_and_recents(False, True)
-
-    def show_presets_and_recents(self, presets=True, recents=True):
-        suggestions = []
-        types = []
-        # Collect presets
-        if presets:
-            types.push("Presets")
-            for preset in self._get_suggested_tags_presets():
-                html = preset + "<span class='meta'>preset<span>"
-                suggestions.push((preset, html))
-        # Collect recents
-        if recents:
-            types.push("Recent tags")
-            now = dt.now()
-            for tag, tag_t2 in self._suggested_tags_recent:
-                date = max(0, int((now - tag_t2) / 86400))
-                date = {0: "today", 1: "yesterday"}.get(date, date + " days ago")
-                html = tag + "<span class='meta'>recent: " + date + "<span>"
-                suggestions.push((tag, html))
-        # Show
-        if not types:
-            self._autocomp_clear()
-        elif suggestions:
-            self._autocomp_state = self._get_autocomp_state()
-            self._autocomp_show(types.join(" & ") + ":", suggestions)
-        else:
-            self._autocomp_show("No " + types.join(" or ") + " ...", [])
-
-    def _autocomp_init(self):
+    def init(self):
         """Show tag suggestions in the autocompletion dialog."""
 
         # Get partial tag being written
-        self._autocomp_state = self._get_autocomp_state()
-        val, i1, i2 = self._autocomp_state
+        self._state = self._get_state()
+        val, i1, i2 = self._state
         tag_to_be = val[i1:i2].toLowerCase()
         if not tag_to_be:
-            self._autocomp_clear()
+            self.clear()
             return
 
         # We show presets if using double hashtags
@@ -1315,24 +1097,89 @@ class RecordDialog(BaseDialog):
         # Show
         if suggestions:
             if show_presets:
-                self._autocomp_show("Matching presets:", suggestions)
+                self._show("Matching presets:", suggestions)
             else:
-                self._autocomp_show("Matching recent tags:", suggestions)
+                self._show("Matching recent tags:", suggestions)
         else:
             if show_presets:
-                self._autocomp_show("No matching presets ...", suggestions)
+                self._show("No matching presets ...", suggestions)
             else:
-                self._autocomp_show("No matching recent tags ...", suggestions)
+                self._show("No matching recent tags ...", suggestions)
 
-    def _autocomp_show(self, headline, suggestions):
-        self._autocomp_clear()
+    def show_presets_and_recents(self, presets=True, recents=True):
+        suggestions = []
+        types = []
+        # Collect presets
+        if presets:
+            types.push("Presets")
+            for preset in self._get_suggested_tags_presets():
+                html = preset + "<span class='meta'>preset<span>"
+                suggestions.push((preset, html))
+        # Collect recents
+        if recents:
+            types.push("Recent tags")
+            now = dt.now()
+            for tag, tag_t2 in self._suggested_tags_recent:
+                date = max(0, int((now - tag_t2) / 86400))
+                date = {0: "today", 1: "yesterday"}.get(date, date + " days ago")
+                html = tag + "<span class='meta'>recent: " + date + "<span>"
+                suggestions.push((tag, html))
+        # Show
+        if not types:
+            self.clear()
+        elif suggestions:
+            self._state = self._get_state()
+            self._show(types.join(" & ") + ":", suggestions)
+        else:
+            self._show("No " + types.join(" or ") + " ...", [])
+
+    def on_key(self, e):
+        if not self._div.hidden:
+            key = e.key.lower()
+            if key == "enter" or key == "return" or key == "tab":
+                self._finish(self._active_tag)
+                e.preventDefault()
+                return True
+            elif key == "escape":
+                self.clear()
+                return True
+            elif key == "arrowdown":
+                self._make_active(self._index + 1)
+                e.preventDefault()
+                return True
+            elif key == "arrowup":
+                self._make_active(self._index - 1)
+                e.preventDefault()
+                return True
+            elif key == "#":
+                # Toggle between preset/recents by inserting/removing a '#'
+                val, i1, i2 = self._state
+                if i2 > i1:
+                    is_double = i1 > 0 and val[i1 - 1] == "#"
+                    if is_double:
+                        new_val = val[:i1] + val[i1 + 1 :]
+                        new_i = i2 - 1
+                    else:
+                        new_val = val[:i1] + "#" + val[i1:]
+                        new_i = i2 + 1
+                    self._input.value = new_val
+                    self._input.selectionStart = self._input.selectionEnd = new_i
+                    e.preventDefault()
+                    self.init()
+                    return True
+
+    def has_recent_tags(self):
+        return len(self._suggested_tags_recent) > 0
+
+    def _show(self, headline, suggestions):
+        self.clear()
         # Add title
         hint = "(type '#' to toggle recents / presets)"
         hint_html = "<span style='color:#999;'>" + hint + "</span>"
         item = document.createElement("div")
         item.classList.add("meta")
         item.innerHTML = headline + " &nbsp;&nbsp;&nbsp;" + hint_html
-        self._autocomp_div.appendChild(item)
+        self._div.appendChild(item)
         # Add suggestions
         self._suggested_tags_in_autocomp = []
         for text, html in suggestions:  # text is a tag or a preset
@@ -1340,46 +1187,38 @@ class RecordDialog(BaseDialog):
             item = document.createElement("div")
             item.classList.add("tag-suggestion")
             item.innerHTML = html
-            onclick = f'window._record_dialog_autocomp_finish("{text}");'
+            onclick = f'window._autocomp_finish("{text}");'
             item.setAttribute("onclick", onclick)
-            self._autocomp_div.appendChild(item)
+            self._div.appendChild(item)
         # Show
-        self._autocomp_div.hidden = False
-        self._autocomp_make_active(0)
+        self._div.hidden = False
+        self._make_active(0)
 
-    def _autocomp_make_active(self, index):
+    def _make_active(self, index):
         autocomp_count = len(self._suggested_tags_in_autocomp)
         # Correct index (wrap around)
         while index < 0:
             index += autocomp_count
-        self._autocomp_index = index % autocomp_count
+        self._index = index % autocomp_count
         if not autocomp_count:
             return
         # Apply
-        self._autocomp_active_tag = self._suggested_tags_in_autocomp[
-            self._autocomp_index
-        ]
+        self._active_tag = self._suggested_tags_in_autocomp[self._index]
         # Fix css class
-        for i in range(self._autocomp_div.children.length):
-            self._autocomp_div.children[i].classList.remove("active")
-        child_index = self._autocomp_index + 1
-        active_child = self._autocomp_div.children[child_index]
+        for i in range(self._div.children.length):
+            self._div.children[i].classList.remove("active")
+        child_index = self._index + 1
+        active_child = self._div.children[child_index]
         active_child.classList.add("active")
         # Make corresponding item visible
         active_child.scrollIntoView({"block": "nearest"})
 
-    def _autocomp_clear(self):
-        self._autocomp_index = 0
-        self._autocomp_active_tag = ""
-        self._autocomp_div.hidden = True
-        self._autocomp_div.innerHTML = ""
-
-    def _autocomp_finish(self, text):
-        self._autocomp_clear()
+    def _finish(self, text):
+        self.clear()
         if text:
             n_removed = 0
             # Compose new description and cursor pos
-            val, i1, i2 = self._autocomp_state
+            val, i1, i2 = self._state
             pre = val[:i1].rstrip("#")
             n_removed += len(val[:i1]) - len(pre)
             new_val = pre + text + val[i2:]
@@ -1389,12 +1228,281 @@ class RecordDialog(BaseDialog):
                 new_val = new_val.rstrip() + " "
                 i3 = new_val.length
             # Apply
-            self._ds_input.value = new_val
-            self._ds_input.selectionStart = self._ds_input.selectionEnd = i3
+            self._input.value = new_val
+            self._input.selectionStart = self._input.selectionEnd = i3
             if utils.looks_like_desktop():
-                self._ds_input.focus()
+                self._input.focus()
+        self._callback()
+
+    def _get_state(self):
+        """Get the partial tag that is being written."""
+        val = self._input.value
+        i2 = self._input.selectionStart
+        # Go
+        i = i2 - 1
+        while i >= 0:
+            c = val[i]
+            if c == "#":
+                return val, i, i2
+            elif not utils.is_valid_tag_charcode(ord(c)):
+                return val, i2, i2
+            i -= 1
+        return val, i2, i2
+
+    def _get_suggested_tags_presets(self):
+        """Get suggested tags based on the presets."""
+        item = window.store.settings.get_by_key("tag_presets")
+        presets = (None if item is None else item.value) or []
+        return [preset for preset in presets if preset]
+
+    def _collect_all_tags(self):
+        """Get *all* tags ever used."""
+        PSCRIPT_OVERLOAD = False  # noqa
+        global completer_all_tags
+        suggested_tags = {}
+        for r in window.store.records.get_dump():
+            tags, _ = utils.get_tags_and_parts_from_string(r.ds)
+            for tag in tags:
+                suggested_tags[tag] = max(r.t2, suggested_tags[tag] | 0)
+        completer_all_tags = suggested_tags
+
+    def _get_suggested_tags_recent(self):
+        """Get recent tags and order by their usage/recent-ness."""
+        # Get history of somewhat recent records
+        t2 = dt.now()
+        t1 = t2 - 12 * 7 * 24 * 3600  # 12 weeks, about a quarter year
+        records = window.store.records.get_records(t1, t2)
+        # Apply Score
+        tags_to_scores = {}
+        tags_to_t2 = {}
+        for r in records.values():
+            tags, _ = utils.get_tags_and_parts_from_string(r.ds)
+            score = 1 / (t2 - r.t1)
+            for tag in tags:
+                tags_to_t2[tag] = max(r.t2, tags_to_t2[tag] | 0)
+                tags_to_scores[tag] = (tags_to_scores[tag] | 0) + score
+        # Put in a list
+        score_tag_list = []
+        for tag in tags_to_scores.keys():
+            if tag == "#untagged":
+                continue
+            score_tag_list.push((tag, tags_to_t2[tag], tags_to_scores[tag]))
+        # Sort by score and trim names
+        score_tag_list.sort(key=lambda x: -x[2])
+        tag_list = [score_tag[:2] for score_tag in score_tag_list]
+        return tag_list
+
+    def _get_suggested_tags_all(self):
+        """Combine the full tag dict with the more recent tags."""
+        tags_dict = completer_all_tags.copy()
+        new_tags = self._suggested_tags_recent
+        for tag, tag_t2 in new_tags:
+            tags_dict[tag] = tag_t2
+        # Compose full tag suggestions list
+        tag_list = []
+        for tag, tag_t2 in tags_dict.items():
+            tag_list.push((tag, tag_t2))
+        tag_list.sort(key=lambda x: x[0])
+        return tag_list
+
+
+class RecordDialog(BaseDialog):
+    """Dialog to allow modifying a record (setting description and times)."""
+
+    def __init__(self, canvas):
+        super().__init__(canvas)
+        self._record = None
+        self._no_user_edit_yet = True
+
+    def open(self, mode, record, callback=None):
+        """Show/open the dialog for the given record. On submit, the
+        record will be pushed to the store and callback (if given) will
+        be called with the record. On close/cancel, the callback will
+        be called without arguments.
+        """
+        self._record = record.copy()
+        assert mode.lower() in ("start", "new", "edit", "stop")
+
+        html = f"""
+            <h1><i class='fas'>\uf682</i>&nbsp;&nbsp;<span>Record</span>
+                <button type='button'><i class='fas'>\uf00d</i></button>
+            </h1>
+            <h2><i class='fas'>\uf305</i>&nbsp;&nbsp;Description</h2>
+            <div class='container' style='position: relative;'>
+                <input type='text' style='width:100%;' spellcheck='true' />
+                <div class='tag-suggestions-autocomp'></div>
+            </div>
+            <div class='container' style='min-height:5px;'>
+                <button type='button' style='float:right; font-size:85%; margin-top:-4px;'>
+                    <i class='fas'>\uf044</i></button>
+                <button type='button' style='float:right; font-size:85%; margin-top:-4px;'>
+                    Presets <i class='fas'>\uf0d7</i></button>
+                <button type='button' style='float:right; font-size:85%; margin-top:-4px;'>
+                    Recent <i class='fas'>\uf0d7</i></button>
+            </div>
+            <div></div>
+            <div style='color:#777;'></div>
+            <h2><i class='fas'>\uf017</i>&nbsp;&nbsp;Time</h2>
+            <div></div>
+            <div style='margin-top:2em;'></div>
+            <div style='display: flex;justify-content: flex-end;'>
+                <button type='button' class='actionbutton'><i class='fas'>\uf00d</i>&nbsp;&nbsp;Cancel</button>
+                <button type='button' class='actionbutton'><i class='fas'>\uf1f8</i>&nbsp;&nbsp;Delete</button>
+                <button type='button' class='actionbutton'><i class='fas'>\uf24d</i>&nbsp;&nbsp;Resume</button>
+                <button type='button' class='actionbutton submit'>Submit</button>
+            </div>
+            <button type='button' style='float:right;' class='actionbutton'>Confirm deleting this record</button>
+        """
+        self.maindiv.innerHTML = html
+
+        # Unpack so we have all the components
+        (
+            h1,  # Dialog title
+            self._ds_header,
+            self._ds_container,
+            self._preset_container,
+            self._tags_div,
+            self._tag_hints_div,
+            _,  # Time header
+            self._time_node,
+            _,  # Splitter
+            self._buttons,
+            self._delete_but2,
+        ) = self.maindiv.children
+        #
+        self._ds_input = self._ds_container.children[0]
+        self._autocompleter_div = self._ds_container.children[1]
+        self._recent_but = self._preset_container.children[2]
+        self._preset_but = self._preset_container.children[1]
+        self._preset_edit = self._preset_container.children[0]
+        self._title_div = h1.children[1]
+        self._cancel_but1 = self.maindiv.children[0].children[-1]
+        (
+            self._cancel_but2,
+            self._delete_but1,
+            self._resume_but,
+            self._submit_but,
+        ) = self._buttons.children
+
+        # Create the startstop-edit
+        self._time_edit = StartStopEdit(
+            self._time_node, self._on_times_change, record.t1, record.t2, mode
+        )
+
+        # Prepare autocompletion
+        self._autocompleter = Autocompleter(
+            self._autocompleter_div, self._ds_input, self._autocomp_finished
+        )
+
+        # Set some initial values
+        self._ds_input.value = record.get("ds", "")
+        self._show_tags_from_ds()
+        self._delete_but2.style.display = "none"
+        self._no_user_edit_yet = True
+
+        # Show the right buttons
+        self._set_mode(mode)
+
+        # Connect things up
+        self._cancel_but1.onclick = self.close
+        self._cancel_but2.onclick = self.close
+        self._submit_but.onclick = self.submit
+        self._resume_but.onclick = self.resume_record
+        self._ds_input.oninput = self._on_user_edit
+        self._ds_input.onchange = self._on_user_edit_done
+        self._recent_but.onclick = self.show_recents
+        self._preset_but.onclick = self.show_presets
+        self._preset_edit.onclick = lambda: self._canvas.tag_preset_dialog.open()
+        self._delete_but1.onclick = self._delete1
+        self._delete_but2.onclick = self._delete2
+        self.maindiv.addEventListener("click", self._autocompleter.clear)
+
+        # Enable for some more info (e.g. during dev)
+        if False:
+            for x in [f"ID: {record.key}", f"Modified: {dt.time2localstr(record.mt)}"]:
+                el = document.createElement("div")
+                el.innerText = x
+                self.maindiv.appendChild(el)
+
+        # Almost done. Focus on ds if this looks like desktop; it's anoying on mobile
+        super().open(callback)
+        if utils.looks_like_desktop():
+            self._ds_input.focus()
+
+    def _autocomp_finished(self):
         self._show_tags_from_ds()
         self._mark_as_edited()
+
+    def _set_mode(self, mode):
+        self._lmode = lmode = mode.lower()
+        self._title_div.innerText = f"{mode} record"
+        is_running = self._record.t1 == self._record.t2
+        # has_running = len(window.store.records.get_running_records()) > 0
+        # Set description placeholder
+        if lmode == "start":
+            self._ds_input.setAttribute("placeholder", "What are you going to do?")
+        elif lmode == "new":
+            self._ds_input.setAttribute("placeholder", "What have you done?")
+        elif lmode == "stop":
+            self._ds_input.setAttribute("placeholder", "What did you just do?")
+        elif is_running:
+            self._ds_input.setAttribute("placeholder", "What are you doing?")
+        else:
+            self._ds_input.setAttribute("placeholder", "What has been done?")
+        # Tweak the buttons at the bottom
+        if lmode == "start":
+            self._submit_but.innerHTML = "<i class='fas'>\uf04b</i>&nbsp;&nbsp;Start"
+            self._resume_but.style.display = "none"
+            self._delete_but1.style.display = "none"
+        elif lmode == "new":
+            self._submit_but.innerHTML = "<i class='fas'>\uf067</i>&nbsp;&nbsp;Create"
+            self._resume_but.style.display = "none"
+            self._delete_but1.style.display = "none"
+        elif lmode == "edit":
+            self._submit_but.innerHTML = "<i class='fas'>\uf304</i>&nbsp;&nbsp;Edit"
+            title_mode = "Edit running" if is_running else "Edit"
+            self._title_div.innerText = f"{title_mode} record"
+            self._submit_but.disabled = self._no_user_edit_yet
+            self._resume_but.style.display = "none" if is_running else "block"
+            self._delete_but1.style.display = "block"
+        elif lmode == "stop":
+            self._submit_but.innerHTML = "<i class='fas'>\uf04d</i>&nbsp;&nbsp;Stop"
+            self._resume_but.style.display = "none"
+            self._delete_but1.style.display = "block"
+        else:
+            console.warn("Unexpected record dialog mode " + mode)
+
+    def _mark_as_edited(self):
+        if self._no_user_edit_yet:
+            self._no_user_edit_yet = False
+            self._submit_but.disabled = False
+
+    def _on_user_edit(self):
+        self._mark_as_edited()
+        self._autocompleter.init()
+        self._show_tags_from_ds()
+        # If the str is too long, limit it
+        if len(self._ds_input.value) >= stores.STR_MAX:
+            self._ds_input.value = self._ds_input.value.slice(0, stores.STR_MAX)
+            if "max" not in self._ds_header.innerHTML:
+                self._ds_header.innerHTML += (
+                    f" <small>(max {stores.STR_MAX-1} chars)</small>"
+                )
+            self._ds_input.style.setProperty("outline", "dashed 2px red")
+            reset = lambda: self._ds_input.style.setProperty("outline", "")
+            window.setTimeout(reset, 2000)
+
+    def show_presets(self, e):
+        # Prevent that the click will hide the autocomp
+        if e and e.stopPropagation:
+            e.stopPropagation()
+        self._autocompleter.show_presets_and_recents(True, False)
+
+    def show_recents(self, e):
+        # Prevent that the click will hide the autocomp
+        if e and e.stopPropagation:
+            e.stopPropagation()
+        self._autocompleter.show_presets_and_recents(False, True)
 
     def _add_tag(self, tag):
         self._ds_input.value = self._ds_input.value.rstrip() + " " + tag + " "
@@ -1440,7 +1548,7 @@ class RecordDialog(BaseDialog):
         tags_html += "&nbsp; &nbsp;".join(tags_list)
         # Get hints
         hint_html = ""
-        if len(self._suggested_tags_recent) == 0:
+        if not self._autocompleter.has_recent_tags():
             hint_html = "Use e.g. '&#35;meeting' to add one or more tags."
         # Detect duplicate tags
         tag_counts = {}
@@ -1456,101 +1564,17 @@ class RecordDialog(BaseDialog):
 
     def close(self, e=None):
         self._time_edit.close()
+        self._autocompleter.close()
         super().close(e)
 
     def _on_key(self, e):
         key = e.key.lower()
-        if not self._autocomp_div.hidden:
-            if key == "enter" or key == "return" or key == "tab":
-                self._autocomp_finish(self._autocomp_active_tag)
-                e.preventDefault()
-                return
-            elif key == "escape":
-                self._autocomp_clear()
-                return
-            elif key == "arrowdown":
-                self._autocomp_make_active(self._autocomp_index + 1)
-                e.preventDefault()
-                return
-            elif key == "arrowup":
-                self._autocomp_make_active(self._autocomp_index - 1)
-                e.preventDefault()
-                return
-            elif key == "#":
-                # Toggle between preset/recents by inserting/removing a '#'
-                val, i1, i2 = self._autocomp_state
-                if i2 > i1:
-                    is_double = i1 > 0 and val[i1 - 1] == "#"
-                    if is_double:
-                        new_val = val[:i1] + val[i1 + 1 :]
-                        new_i = i2 - 1
-                    else:
-                        new_val = val[:i1] + "#" + val[i1:]
-                        new_i = i2 + 1
-                    self._ds_input.value = new_val
-                    self._ds_input.selectionStart = self._ds_input.selectionEnd = new_i
-                    e.preventDefault()
-                    self._autocomp_init()
-                    return
+        if self._autocompleter.on_key(e):
+            return
         if key == "enter" or key == "return":
             self.submit()
         else:
             super()._on_key(e)
-
-    def _get_suggested_tags_all_dict(self):
-        """Get *all* tags ever used."""
-        PSCRIPT_OVERLOAD = False  # noqa
-        suggested_tags = {}
-        for r in window.store.records.get_dump():
-            tags, _ = utils.get_tags_and_parts_from_string(r.ds)
-            for tag in tags:
-                suggested_tags[tag] = max(r.t2, suggested_tags[tag] | 0)
-        return suggested_tags
-
-    def _get_suggested_tags_recent(self):
-        """Get recent tags and order by their usage/recent-ness."""
-        # Get history of somewhat recent records
-        t2 = dt.now()
-        t1 = t2 - 12 * 7 * 24 * 3600  # 12 weeks, about a quarter year
-        records = window.store.records.get_records(t1, t2)
-        # Apply Score
-        tags_to_scores = {}
-        tags_to_t2 = {}
-        for r in records.values():
-            tags, _ = utils.get_tags_and_parts_from_string(r.ds)
-            score = 1 / (t2 - r.t1)
-            for tag in tags:
-                tags_to_t2[tag] = max(r.t2, tags_to_t2[tag] | 0)
-                tags_to_scores[tag] = (tags_to_scores[tag] | 0) + score
-        # Put in a list
-        score_tag_list = []
-        for tag in tags_to_scores.keys():
-            if tag == "#untagged":
-                continue
-            score_tag_list.push((tag, tags_to_t2[tag], tags_to_scores[tag]))
-        # Sort by score and trim names
-        score_tag_list.sort(key=lambda x: -x[2])
-        tag_list = [score_tag[:2] for score_tag in score_tag_list]
-        return tag_list
-
-    def _get_suggested_tags_all(self):
-        """Combine the full tag dict with the more recent tags."""
-        tags_dict = self._suggested_tags_all_dict.copy()
-        new_tags = self._suggested_tags_recent
-        for tag, tag_t2 in new_tags:
-            tags_dict[tag] = tag_t2
-        # Compose full tag suggestions list
-        tag_list = []
-        for tag, tag_t2 in tags_dict.items():
-            tag_list.push((tag, tag_t2))
-        tag_list.sort(key=lambda x: x[0])
-        return tag_list
-
-    def _get_suggested_tags_presets(self):
-        """Get suggested tags based on the presets."""
-        item = window.store.settings.get_by_key("tag_presets")
-        presets = (None if item is None else item.value) or []
-        return [preset for preset in presets if preset]
 
     def _delete1(self):
         self._delete_but2.style.display = "block"
@@ -2178,25 +2202,11 @@ class TagManageDialog(BaseDialog):
             rename/remove/merge/split the tags in these records. See
             <a href="https://timetagger.app/articles/tags/#manage" target='new'>this article</a> for details.<br><br>
             </p>
-            <div class='formlayout'>
-                <div>Search mode:</div>
-                <div>
-                    <label style='user-select:none;'><input type='radio' name='searchmode' /> tags</label>
-                    <label style='user-select:none;'><input type='radio' name='searchmode' /> plain text</label>
-                </div>
-                <div>Tags:</div>
-                <input type='text' spellcheck='false' />
-                <div>Replacement:</div>
-                <input type='text' spellcheck='false' />
-                <div></div>
-                <button type='button'>Find records</button>
-                <div></div>
-                <button type='button'>Replace all ...</button>
-                <div></div>
-                <button type='button'>Confirm</button>
-                <div></div>
-                <div></div>
-            </div>
+            <input type='text' style='width:100%;' spellcheck='false' placeholder='Tags or text to search for ...'/>
+            <br>
+            <button type='button'>Search ...</button>
+            <br>
+            <button type='button'>Manage tags</button>
             <hr />
             <div class='record_grid'></div>
         """
@@ -2206,43 +2216,31 @@ class TagManageDialog(BaseDialog):
 
         self._records_node = self.maindiv.children[-1]
 
-        formdiv = self.maindiv.children[2]
-        self._radionode = formdiv.children[1]
-        self._search_header = formdiv.children[2]
-        self._radio_mode_tags = self._radionode.children[0].children[0]
-        self._radio_mode_text = self._radionode.children[1].children[0]
-        self._tagname1 = formdiv.children[3]
-        self._tagname2 = formdiv.children[5]
-        self._button_find = formdiv.children[7]
-        self._button_replace = formdiv.children[9]
-        self._button_replace_comfirm = formdiv.children[11]
-        self._taghelp = formdiv.children[13]
+        (
+            _,  # h1
+            _,  # p
+            self._search_input,
+            _,  # br
+            self._search_but,
+            _,  # br
+            self._tagmanage_but,
+        ) = self.maindiv.children[0]
 
-        self._radio_mode_tags.setAttribute("checked", True)
-        self._radio_mode_tags.onclick = self._on_mode_change
-        self._radio_mode_text.onclick = self._on_mode_change
-        self._tagname1.oninput = self._check_name1
-        self._tagname2.oninput = self._check_names
-        self._tagname1.onchange = self._fix_name1
-        self._tagname2.onchange = self._fix_name2
-        self._tagname1.onkeydown = self._on_key1
-        self._tagname2.onkeydown = self._on_key2
+        self._search_input.oninput = self._on_user_edit
+        self._search_input.onchange = self._on_user_edit_done
+        self._search_input.onkeydown = self._on_key
 
-        self._button_find.onclick = self._find_records
-        self._button_replace.onclick = self._replace_all
-        self._button_replace_comfirm.onclick = self._really_replace_all
-        window._tag_manage_dialog_open_record = self._open_record
+        self._search_but.onclick = self._find_records
+        self._tagmanage_but.onclick = self._open_tag_manager
 
-        self._button_find.disabled = True
-        self._button_replace.disabled = True
-        self._button_replace_comfirm.disabled = True
-        self._button_replace_comfirm.style.visibility = "hidden"
+        self._search_but.disabled = True
+        self._tagmanage_but.disabled = True
 
         self._records_uptodate = False
+        window._tag_manage_dialog_open_record = self._open_record
         self._records = []
 
         super().open(None)
-        self._on_mode_change()
         if utils.looks_like_desktop():
             self._tagname1.focus()
 
@@ -2251,19 +2249,7 @@ class TagManageDialog(BaseDialog):
         self._records_uptodate = False
         super().close()
 
-    def _on_mode_change(self):
-        self._tagname2.value = ""
-        if self._radio_mode_tags.checked:
-            self._search_header.innerText = "Tags:"
-            self._tagname1.placeholder = "One or more tags to search for"
-            self._tagname2.placeholder = "Replacement tag(s)"
-        else:
-            self._search_header.innerText = "Search:"
-            self._tagname1.placeholder = "Text to search for"
-            self._tagname2.placeholder = "Replacement text"
-        self._check_name1()
-
-    def _check_name1(self):
+    def _on_user_edit(self):
         self._records_uptodate = False
         self._check_names()
 
@@ -2381,81 +2367,6 @@ class TagManageDialog(BaseDialog):
                     <span>{ds}</span></a>"""
             )
         self._records_node.innerHTML = "<br />\n".join(lines)
-
-    def _replace_all(self):
-        if self._radio_mode_tags.checked:
-            replacement_tags, _ = utils.get_tags_and_parts_from_string(
-                self._tagname2.value
-            )
-            n = len(self._records)
-            if replacement_tags:
-                text = f"Confirm replacing tags in {n} records"
-            else:
-                text = f"Confirm removing tags in {n} records"
-        else:
-            n = len(self._records)
-            text = f"Confirm updating the description in {n} records"
-
-        self._button_replace_comfirm.innerText = text
-        self._button_replace_comfirm.disabled = False
-        self._button_replace_comfirm.style.visibility = "visible"
-
-    def _really_replace_all(self):
-
-        if self._radio_mode_tags.checked:
-
-            search_tags, _ = utils.get_tags_and_parts_from_string(self._tagname1.value)
-            replacement_tags, _ = utils.get_tags_and_parts_from_string(
-                self._tagname2.value
-            )
-
-            for key in self._records:
-                record = window.store.records.get_by_key(key)
-                _, parts = utils.get_tags_and_parts_from_string(record.ds)
-                # Get updated parts
-                new_parts = []
-                replacement_made = False
-                for part in parts:
-                    if part.startswith("#") and (
-                        part in search_tags or part in replacement_tags
-                    ):
-                        if not replacement_made:
-                            replacement_made = True
-                            new_parts.push(" ".join(replacement_tags))
-                    else:
-                        new_parts.push(part)
-                # Submit
-                record.ds = "".join(new_parts)
-                window.store.records.put(record)
-
-            # Also update tag info
-            if len(search_tags) == 1 and len(replacement_tags) == 1:
-                tag1, tag2 = search_tags[0], replacement_tags[0]
-                info = window.store.settings.get_tag_info(tag1)
-                window.store.settings.set_tag_info(tag1, {})
-                window.store.settings.set_tag_info(tag2, info)
-        else:
-            search_text = self._tagname1.value.strip().toLowerCase()
-            replacement_text = self._tagname2.value.strip()
-
-            for key in self._records:
-                record = window.store.records.get_by_key(key)
-                ds_lower = record.ds.toLowerCase()
-                pos = len(ds_lower)
-                while pos >= 0:
-                    pos = ds_lower.lastIndexOf(search_text, pos)
-                    if pos < 0:
-                        break
-                    pre = record.ds[:pos]
-                    post = record.ds[pos + len(search_text) :]
-                    record.ds = pre + replacement_text + post
-                    pos -= 1
-                window.store.records.put(record)
-
-        self._records_node.innerHTML = ""
-        self._show_records()
-        self._records_uptodate = False
-        self._check_names()
 
     def _open_record(self, key):
         record = window.store.records.get_by_key(key)
