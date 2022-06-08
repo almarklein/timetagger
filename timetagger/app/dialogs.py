@@ -1016,8 +1016,11 @@ class Autocompleter:
     def clear(self):
         self._index = 0
         self._active_tag = ""
-        self._div.hidden = True
-        self._div.innerHTML = ""
+        if self._div:
+            self._div.hidden = True
+            self._div.innerHTML = ""
+        else:
+            pass  # clear can be called when the completer has been closed
 
     def init(self):
         """Show tag suggestions in the autocompletion dialog."""
@@ -1439,7 +1442,6 @@ class RecordDialog(BaseDialog):
         self._preset_edit.onclick = lambda: self._canvas.tag_preset_dialog.open()
         self._delete_but1.onclick = self._delete1
         self._delete_but2.onclick = self._delete2
-        self.maindiv.addEventListener("click", self._autocompleter.clear)
 
         # Enable for some more info (e.g. during dev)
         if False:
@@ -1535,6 +1537,7 @@ class RecordDialog(BaseDialog):
             self._ds_input.focus()
 
     def _on_user_edit_done(self):
+        self._autocompleter.clear()
         ds = to_str(self._ds_input.value)
         _, parts = utils.get_tags_and_parts_from_string(ds)
         self._ds_input.value = parts.join("").strip()
