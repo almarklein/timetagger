@@ -399,7 +399,7 @@ class MenuDialog(BaseDialog):
             ("\uf059", True, "Get tips and help", "https://timetagger.app/support"),
             ("\uf0a1", True, whatsnew, whatsnew_url),
             (None, store_valid, "Manage", None),
-            ("\uf02c", store_valid, "Search & manage tags", self._manage_tags),
+            ("\uf002", store_valid, "Search records and tags", self._search),
             ("\uf56f", store_valid, "Import records", self._import),
             ("\uf56e", store_valid, "Export all records", self._export),
             (None, True, "User", None),
@@ -458,9 +458,9 @@ class MenuDialog(BaseDialog):
         prname = self._canvas.widgets["AnalyticsWidget"].selected_tag_name
         self._canvas.report_dialog.open(t1, t2, prname)
 
-    def _manage_tags(self):
+    def _search(self):
         self.close()
-        self._canvas.tag_manage_dialog.open()
+        self._canvas.search_dialog.open()
 
     def _export(self):
         self.close()
@@ -1594,8 +1594,9 @@ class RecordDialog(BaseDialog):
     def _on_key(self, e):
         key = e.key.lower()
         if self._autocompleter.on_key(e):
+            e.stopPropagation()
             return
-        if key == "enter" or key == "return":
+        elif key == "enter" or key == "return":
             self.submit()
         else:
             super()._on_key(e)
@@ -2213,18 +2214,17 @@ class TagRenameDialog(BaseDialog):
         window.setTimeout(self._hide_confirm_button, 500)
 
 
-class TagManageDialog(BaseDialog):
-    """Dialog to manage tags."""
+class SearchDialog(BaseDialog):
+    """Dialog to search for records and tags."""
 
     def open(self):
 
         self.maindiv.innerHTML = """
-            <h1><i class='fas'>\uf02b</i>&nbsp;&nbsp;Search & manage tags
+            <h1><i class='fas'>\uf002</i>&nbsp;&nbsp;Search records and tags
                 <button type='button'><i class='fas'>\uf00d</i></button>
                 </h1>
-            <p>This tool allows you to search records by tag name(s), and to
-            rename/remove/merge/split the tags in these records. See
-            <a href="https://timetagger.app/articles/tags/#manage" target='new'>this article</a> for details.<br><br>
+            <p>This tool allows you to search records by tags and plain text.
+            You can then edit the records in the list, or manage the selected tags.<br><br>
             </p>
             <div class='container' style='position: relative;'>
                 <input type='text' style='width:100%;' spellcheck='false' />
@@ -2268,8 +2268,7 @@ class TagManageDialog(BaseDialog):
             self._autocompleter_div, self._search_input, self._autocomp_finished, True
         )
 
-        self._records_uptodate = False
-        window._tag_manage_dialog_open_record = self._open_record
+        window._search_dialog_open_record = self._open_record
         self._records = []
         self._current_tags = []
 
@@ -2281,33 +2280,36 @@ class TagManageDialog(BaseDialog):
     def close(self):
         self._autocompleter.close()
         self._records = []
-        self._records_uptodate = False
         super().close()
 
     def _autocomp_finished(self):
-        pass
+        self._check_names()
 
     def _on_user_edit(self):
         self._autocompleter.init()
-        self._records_uptodate = False
         self._check_names()
+
+    def _on_user_edit_done(self):
+        self._autocompleter.clear()
 
     def _check_names(self):
         text = self._search_input.value
         tags, parts = utils.get_tags_and_parts_from_string(text)
 
-        words = []
+        strings = []
         for part in parts:
             if not part.startswith("#"):
-                words.push(part.lower())
+                part = part.strip()
+                if len(part) > 0:
+                    strings.push(part.lower())
 
-        ntags, nwords = len(tags), len(words)
+        ntags, nstrings = len(tags), len(strings)
         self._current_tags = tags
-        self._current_words = words
+        self._current_strings = strings
 
         # Process search button
-        if ntags > 0 or nwords > 0:
-            self._search_but.innerHTML = f"Search {ntags} tags and {nwords} words"
+        if ntags > 0 or nstrings > 0:
+            self._search_but.innerHTML = f"Search {ntags} tags and {nstrings} strings"
             self._search_but.disabled = False
         else:
             self._search_but.innerHTML = "Search"
@@ -2328,10 +2330,11 @@ class TagManageDialog(BaseDialog):
     def _on_key(self, e):
         key = e.key.lower()
         if self._autocompleter.on_key(e):
-            return
-        if key == "enter" or key == "return":
-            e.preventDefault()
             e.stopPropagation()
+            return
+        elif key == "enter" or key == "return":
+            e.stopPropagation()
+            e.preventDefault()
             self._find_records()
         else:
             super()._on_key(e)
@@ -2340,9 +2343,9 @@ class TagManageDialog(BaseDialog):
         records = []
 
         search_tags = self._current_tags
-        search_words = self._current_words
+        search_strings = self._current_strings
 
-        if len(search_tags) > 0 or len(search_words) > 0:
+        if len(search_tags) > 0 or len(search_strings) > 0:
             # Get list of records
             for record in window.store.records.get_dump():
                 # Check tags
@@ -2353,36 +2356,37 @@ class TagManageDialog(BaseDialog):
                         all_tags_ok = False
                         break
                 if not all_tags_ok:
-                    break
-                # Check words
+                    continue
+                # Check strings
                 ds = record.ds.lower()
-                all_words_ok = True
-                for word in search_words:
+                all_strings_ok = True
+                for word in search_strings:
                     if word not in ds:
-                        all_words_ok = False
+                        all_strings_ok = False
                         break
-                if not all_words_ok:
-                    break
+                if not all_strings_ok:
+                    continue
                 # All checks passed
                 records.push([record.t1, record.key])
 
-        records.sort(key=lambda x: x[0])
+        records.sort(key=lambda x: x[1])
         self._records = [x[1] for x in records]
-        self._records_uptodate = True
         self._show_records()
         self._check_names()
 
     def _show_records(self):
         # Generate html
         bold_tags = [f"<b>{tag}</b>" for tag in self._current_tags]
-        italic_words = [f"'<i>{tag}</i>'" for tag in self._current_words]
-        find_html = f"Finding records for"
+        italic_strings = [f"<i>'{tag}'</i>" for tag in self._current_strings]
+        find_html = f"Searching records for"
         if len(self._current_tags) > 0:
-            find_html += " tags " + ", ".join(bold_tags)
-        if len(self._current_tags) > 0 and len(self._current_words) > 0:
+            find_html += " tag" + ("s" if len(self._current_tags) > 1 else "")
+            find_html += " " + ", ".join(bold_tags)
+        if len(self._current_tags) > 0 and len(self._current_strings) > 0:
             find_html += " and "
-        if len(self._current_words) > 0:
-            find_html += " words " + italic_words + ".<br>"
+        if len(self._current_strings) > 0:
+            find_html += " string" + ("s" if len(self._current_strings) > 1 else "")
+            find_html += " " + ", ".join(italic_strings) + ".<br>"
         lines = [find_html, f"Found {self._records.length} records:<br>"]
         for key in self._records:
             record = window.store.records.get_by_key(key)
@@ -2390,7 +2394,7 @@ class TagManageDialog(BaseDialog):
             date = dt.time2str(record.t1).split("T")[0]
             lines.append(
                 f"""
-                <a onclick='window._tag_manage_dialog_open_record("{key}")'
+                <a onclick='window._search_dialog_open_record("{key}")'
                     style='cursor: pointer;'>
                     <i class='fas'>\uf682</i>
                     <span>{date}</span>
@@ -2405,10 +2409,10 @@ class TagManageDialog(BaseDialog):
     def _open_tag_dialog(self):
         if len(self._current_tags) == 1:
             tagz = self._current_tags[0]
-            self._canvas.tag_dialog.open(tagz)
+            self._canvas.tag_dialog.open(tagz, self._show_records)
         elif len(self._current_tags) > 1:
             tagz = " ".join(self._current_tags)
-            self._canvas.tag_combo_dialog.open(tagz)
+            self._canvas.tag_combo_dialog.open(tagz, self._show_records)
 
 
 class ReportDialog(BaseDialog):
