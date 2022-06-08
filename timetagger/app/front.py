@@ -176,7 +176,7 @@ class TimeTaggerCanvas(BaseCanvas):
         self.report_dialog = dialogs.ReportDialog(self)
         self.tag_preset_dialog = dialogs.TagPresetsDialog(self)
         self.tag_rename_dialog = dialogs.TagRenameDialog(self)
-        self.tag_manage_dialog = dialogs.TagManageDialog(self)
+        self.search_dialog = dialogs.SearchDialog(self)
         self.export_dialog = dialogs.ExportDialog(self)
         self.import_dialog = dialogs.ImportDialog(self)
         self.pomodoro_dialog = dialogs.PomodoroDialog(self)
