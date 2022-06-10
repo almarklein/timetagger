@@ -99,6 +99,8 @@ main .content {
     position: absolute;
     top: 0px; bottom: 0; left: 0; right: 0;
     padding: 1em; margin: 0;  /* override centering for static position */
+}
+main .content.app {
     overflow-x: hidden;
 }
 @media screen and (min-width: 1000px) {
