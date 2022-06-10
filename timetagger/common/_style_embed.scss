@@ -77,6 +77,7 @@ body {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
+    overflow-x: hidden;
 }
 
 main, header, footer {
@@ -85,7 +86,6 @@ main, header, footer {
     width: 100%;
     border: 0;
     margin: 0;
-    overflow-x: hidden;
 }
 main .content, header .content, footer .content {
     position: static;
@@ -99,7 +99,6 @@ main .content {
     position: absolute;
     top: 0px; bottom: 0; left: 0; right: 0;
     padding: 1em; margin: 0;  /* override centering for static position */
-    overflow-x: hidden;
 }
 @media screen and (min-width: 1000px) {
     main .content { /* width-auto */
