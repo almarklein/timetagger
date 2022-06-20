@@ -19,10 +19,16 @@ If you want another form of login, you will need to implement that yourself,
 using a modified version of this script.
 """
 
+import sys
+import hashlib
+import getpass
 import logging
 from pkg_resources import resource_filename
 
 import asgineer
+import itemdb
+import pscript
+import timetagger
 from timetagger import config
 from timetagger.server import (
     authenticate,
@@ -32,6 +38,28 @@ from timetagger.server import (
     create_assets_from_dir,
     enable_service_worker,
 )
+
+
+# Special hooks exit early
+if __name__ == "__main__":
+    if sys.argv[1] in ("--help", "help"):
+        print("Run the TimeTagger server")
+        print("python -m timetagger help to see this info")
+        print("python -m timetagger version to see version info")
+        print("python -m timetagger credentials to generate credentials")
+        exit(0)
+    elif sys.argv[1] in ("--version", "version"):
+        print("timetagger", timetagger.__version__)
+        print("asgineer", asgineer.__version__)
+        print("itemdb", itemdb.__version__)
+        print("pscript", pscript.__version__)
+        sys.exit(0)
+    elif sys.argv[1] == "credentials":
+        user = input("Username: ")
+        pw = getpass.getpass()
+        pwhash = hashlib.sha256(pw.encode()).hexdigest()
+        print(f"\nCredentials to put in env:\n  {user}:{pwhash}")
+        sys.exit(0)
 
 
 logger = logging.getLogger("asgineer")

@@ -44,9 +44,9 @@ Maybe I'll someday implement it in something that compiles down to Wasm :)
 
 ## Self-hosting your time tracker
 
-Running TimeTagger is as simple as installing it and running the default startup script.
-This repo is organised as a library, making it relatively easy to apply
-modifications by creating your own startup script. See [this article](https://timetagger.app/articles/selfhost/) for
+You're just two commands away from running your own TimeTagger server.
+It's also possible to apply modifications by creating your own startup script.
+See [this article](https://timetagger.app/articles/selfhost/) for
 details about self hosting.
 
 
@@ -57,22 +57,26 @@ maintaining a server, backups, and all that. An account costs just €3 per mont
 With that you'd also sponsor this project and open source in general.
 
 
-## Installation
+## Install and run
 
 TimeTagger is a Python library and requires Python 3.6 or higher. The dependencies are listed in `requirements.txt` - these are installed automatically when you install TimeTagger with Pip.
 
 ```
-# Latest release
+# Install
 pip install -U timetagger
 
-# Latest from Github
-pip install -U https://github.com/almarklein/timetagger/archive/main.zip
-
-# Uninstall
-pip uninstall timetagger
+# Run
+python -m timetagger
 ```
 
-After installation, run  `python -m timetagger` to get started. If the server runs on your local machine, you can use single-user mode out-of-the-box. Otherwise you may want to provide the server with user credentials (see the [docs on config](https://timetagger.readthedocs.io/en/latest/libapi/)).
+If the server runs on your local machine, you can use single-user mode
+out-of-the-box. Otherwise you may want to provide the server with user
+credentials using an environment variable or a command line arg
+(see the [docs on config](https://timetagger.readthedocs.io/en/latest/libapi/)).
+
+You can generate credentials using ``python -m timetagger credentials``.
+Passwords are stored in hashed form (SHA-256), but are sent verbatim to
+the server. It is recommended to use https to prevent password snooping.
 
 
 ## Copyright and license
