@@ -41,7 +41,7 @@ from timetagger.server import (
 
 
 # Special hooks exit early
-if __name__ == "__main__":
+if __name__ == "__main__" and len(sys.argv) >= 2:
     if sys.argv[1] in ("--help", "help"):
         print("Run the TimeTagger server")
         print("python -m timetagger help to see this info")
@@ -57,7 +57,7 @@ if __name__ == "__main__":
     elif sys.argv[1] == "credentials":
         user = input("Username: ")
         pw = getpass.getpass()
-        pwhash = hashlib.sha256(pw.encode()).hexdigest()
+        pwhash = hashlib.sha1(pw.encode()).hexdigest()
         print(f"\nCredentials to put in env:\n  {user}:{pwhash}")
         sys.exit(0)
 
@@ -149,11 +149,15 @@ async def webtoken_for_credentials(request):
     a handful of users. See `get_webtoken_unsafe()` for details.
     """
 
+    # Note that this approach is very similar to http Basic auth,
+    # except we implement our own login dialog and send
+    # credentials via the url instead of the header.
+
     # Get credentials from request
-    user = request.querydict["username"]
-    pwhash = request.querydict["pwhash"]
+    user = request.querydict.get("username", "").strip()
+    pw = request.querydict.get("pw", "").strip()
     # Check
-    key = user + ":" + pwhash
+    key = user + ":" + hashlib.sha1(pw.encode()).hexdigest()
     if user and key in CREDENTIALS:
         token = await get_webtoken_unsafe(user)
         return 200, {}, dict(token=token)

@@ -11,7 +11,7 @@ class Config:
     * `log_level (str)`: the log level for timetagger and asgineer
       (not the asgi server). Default "info".
     * `credentials (str)`: login credentials for one or more users, in the
-      form "user1:hash1,user2:hash2" where each hash is a SHA-256 hash of
+      form "user1:hash1,user2:hash2" where each hash is a SHA1 hash of
       the password. Used in the default startup script ``__main__.py``.
 
     The values can be configured using CLI arguments and environment variables.

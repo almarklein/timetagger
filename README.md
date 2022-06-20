@@ -75,7 +75,7 @@ credentials using an environment variable or a command line arg
 (see the [docs on config](https://timetagger.readthedocs.io/en/latest/libapi/)).
 
 You can generate credentials using ``python -m timetagger credentials``.
-Passwords are stored in hashed form (SHA-256), but are sent verbatim to
+Passwords are stored in hashed form (SHA1), but are sent verbatim to
 the server. It is recommended to use https to prevent password snooping.
 
 

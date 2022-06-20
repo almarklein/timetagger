@@ -6,11 +6,12 @@
 async function login(path) {
 
     let el = document.getElementById("result");
+    el.innerHTML = "Logging in ..."
+    await tools.sleepms(100);
 
     let url = tools.build_api_url(path);
     let init = {method: "GET", headers:{}};
     let res = await fetch(url, init);
-    console.log(res.status)
     if (res.status != 200) {
         let text = await res.text();
         el.innerText = "Could not get token: " + text;
@@ -33,18 +34,8 @@ async function login_localhost() {
 async function login_credentials() {
     let input_u = document.getElementById("input_u");
     let input_p = document.getElementById("input_p");
-    let pwhash = await digestMessage(input_p.value);
-    let params = "username=" + input_u.value + "&pwhash=" + pwhash;
+    let params = "username=" + input_u.value + "&pw=" + input_p.value;
     await login("webtoken_for_credentials" + "?" + params);
-}
-
-async function digestMessage(message) {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(message);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-    return hashHex;
 }
 
 async function load() {
