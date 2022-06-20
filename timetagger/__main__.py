@@ -1,8 +1,22 @@
 """
-Basic script to run timetagger.
+Default script to run timetagger.
 
-You can use this to run timetagger locally. If you want to run it
-online, you'd need to take care of authentication.
+The timetagger library behaves like a framework; it provides the
+building blocks to setup a timetracking app. This script puts things
+together in the "default way". You can also create your own script to
+customize/extend timetagger or embed in it a larger application.
+
+A major hurdle in deploying an app like this is user authentication.
+Timetagger implements its own token-based authentication, but it needs
+to be "bootstrapped": the server needs to provide the first webtoken
+when it has established trust in some way.
+
+This script implements two methods to do this:
+* A single-user login when client and server are on the same machine (localhost).
+* Authentication with credentials specified as config params.
+
+If you want another form of login, you will need to implement that yourself,
+using a modified version of this script.
 """
 
 import logging
@@ -103,9 +117,7 @@ CREDENTIALS = [x.strip() for x in config.credentials.replace(";", ",").split(","
 async def webtoken_for_credentials(request):
     """An authentication handler to exchange credentials for a webtoken.
     The credentials are set via the config and are intended to support
-    at max a handful of users. For more sophisticated authentication
-    roll your own `run.py` with your own authentication handler.
-    See `get_webtoken_unsafe()` for details.
+    a handful of users. See `get_webtoken_unsafe()` for details.
     """
 
     # Get credentials from request

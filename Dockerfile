@@ -28,11 +28,10 @@ RUN pip --no-cache-dir install pip --upgrade && pip --no-cache-dir install \
 # If this occasionally does not work (e.g. ramdom.org is out), simply comment.
 ADD "https://www.random.org/cgi-bin/randbyte?nbytes=10&format=h" skipcache
 
-# If you extend TimeTagger in your own app that uses TimeTagger as a library,
-# uncomment either of these to install the latest TimeTagger.
-# RUN pip install -U timetagger
+# Install the latest release, or the bleeding edge from GitHub
+RUN pip install -U timetagger
 # RUN pip install -U https://github.com/almarklein/timetagger/archive/main.zip
 
 WORKDIR /root
 COPY . .
-CMD ["python", "run.py"]
+CMD ["python", "-m", "timetagger"]

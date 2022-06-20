@@ -12,13 +12,13 @@ class Config:
       (not the asgi server). Default "info".
     * `credentials (str)`: login credentials for one or more users, in the
       form "user1:hash1,user2:hash2" where each hash is a SHA-256 hash of
-      the password. Used in the default ``run.py``.
+      the password. Used in the default startup script ``__main__.py``.
 
     The values can be configured using CLI arguments and environment variables.
     For CLI arguments, the following formats are supported:
     ```
-    python run.py --datadir=~/timedata
-    python run.py --datadir ~/timedata
+    python -m timetagger --datadir=~/timedata
+    python -m timetagger --datadir ~/timedata
     ```
 
     For environment variable, the key is uppercase and prefixed:

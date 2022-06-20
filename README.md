@@ -44,10 +44,9 @@ Maybe I'll someday implement it in something that compiles down to Wasm :)
 
 ## Self-hosting your time tracker
 
-This repo is organized as a library, making it quite flexible to apply
-tweaks. After installation, you create a script that runs the web app.
-See `run.py` (in this repo) for an example, and
-[this article](https://timetagger.app/articles/selfhost/) for
+Running TimeTagger is as simple as installing it and running the default startup script.
+This repo is organised as a library, making it relatively easy to apply
+modifications by creating your own startup script. See [this article](https://timetagger.app/articles/selfhost/) for
 details about self hosting.
 
 
@@ -73,10 +72,10 @@ pip install -U https://github.com/almarklein/timetagger/archive/main.zip
 pip uninstall timetagger
 ```
 
-After installation, copy `run.py` from this repo, and execute  `python run.py` to get started.
+After installation, run  `python -m timetagger` to get started. If the server runs on your local machine, you can use single-user mode out-of-the-box. Otherwise you may want to provide the server with user credentials (see the [docs on config](https://timetagger.readthedocs.io/en/latest/libapi/)).
 
 
-## Copright and license
+## Copyright and license
 
 As usual, copyright applies to whomever made a particular contribution in this repository,
 which can be inspected via e.g. git blame. The owner of the copyright (i.e. the author)
@@ -93,10 +92,21 @@ By making a contribution to this project, you agree to this CLA.
 
 ## Developers
 
-Additional developer dependencies:
+Clone the repo and install in development mode:
+
+```sh
+git clone https://github.com/almarklein/timetagger.git
+cd timetagger
+pip install -e .
+```
+
+Install additional developer dependencies:
+
 ```
 pip install invoke black flake8 pytest pytest-cov requests
 ```
+
+Then these commands can be used during development:
 
 * `invoke -l` to see available invoke tasks
 * `invoke clean` to remove temporary files
