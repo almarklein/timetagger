@@ -1,19 +1,15 @@
-# Dockerfile to run TimeTagger in a container.
+# Dockerfile to build/run TimeTagger in a container, by installing
+# timegagger using pip (from PyPi or GitHub) at build time.
 #
-# Note that the default authentication handler only works on localhost,
-# so when deploying remotely, only the demo and sandbox work. This file
-# serves two purposes:
-#
-# * It's an example to help users run TimeTagger in a Docker container.
-# * I may use this to quickly deploy temporary builds during testing.
-#
-# Below are the MyPaas paramaters that I use for deploying test builds.
-# You can ignore/remove these if you do not use MyPaas.
+# Below are the MyPaas parameters that I use for deploying test builds.
+# You can ignore/remove these if you do not use MyPaas. You're probably
+# more interested in the docker-compose.yml :)
 #
 # mypaas.service = timetagger.test1
 # mypaas.url = https://test1.timetagger.app
+# mypaas.volume = /root/_timetagger:/root/_timetagger
 # mypaas.maxmem = 256m
-
+# mypaas.env = TIMETAGGER_CREDENTIALS
 
 FROM python:3.10-slim-buster
 
@@ -33,5 +29,5 @@ RUN pip install -U timetagger
 # RUN pip install -U https://github.com/almarklein/timetagger/archive/main.zip
 
 WORKDIR /root
-COPY . .
+
 CMD ["python", "-m", "timetagger"]
