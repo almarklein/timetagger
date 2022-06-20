@@ -112,7 +112,7 @@ async def api_handler(request, path):
 
 
 CREDENTIALS = [x.strip() for x in config.credentials.replace(";", ",").split(",")]
-
+logger.warning(str(CREDENITIALS))
 
 async def webtoken_for_credentials(request):
     """An authentication handler to exchange credentials for a webtoken.
