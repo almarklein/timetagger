@@ -10,6 +10,9 @@ class Config:
       The user db's are stored in `datadir/users`.
     * `log_level (str)`: the log level for timetagger and asgineer
       (not the asgi server). Default "info".
+    * `credentials (str)`: login credentials for one or more users, in the
+      form "user1:hash1,user2:hash2" where each hash is a SHA-256 hash of
+      the password. Used in the default ``run.py``.
 
     The values can be configured using CLI arguments and environment variables.
     For CLI arguments, the following formats are supported:
@@ -28,6 +31,7 @@ class Config:
         ("bind", str, "0.0.0.0:80"),
         ("datadir", str, "~/_timetagger"),
         ("log_level", str, "info"),
+        ("credentials", str, ""),
     ]
     __slots__ = [name for name, _, _ in _ITEMS]
 

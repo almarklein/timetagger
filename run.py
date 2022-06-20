@@ -78,8 +78,14 @@ async def api_handler(request, path):
     # Some endpoints do not require authentication
     if not path and request.method == "GET":
         return 200, {}, "See https://timetagger.readthedocs.io"
-    elif path == "webtoken_for_localhost":
-        return await webtoken_for_localhost(request)
+    elif path.startswith("webtoken"):
+        # The client-side that requests these is in pages/login.md
+        if path == "webtoken_for_localhost":
+            return await webtoken_for_localhost(request)
+        elif path == "webtoken_for_credentials":
+            return await webtoken_for_credentials(request)
+        else:
+            404, {}, "unknown auth path"
 
     # Authenticate and get user db
     try:
@@ -91,11 +97,32 @@ async def api_handler(request, path):
     return await api_handler_triage(request, path, auth_info, db)
 
 
+CREDENTIALS = [x.strip() for x in config.credentials.replace(";", ",").split(",")]
+
+
+async def webtoken_for_credentials(request):
+    """An authentication handler to exchange credentials for a webtoken.
+    The credentials are set via the config and are intended to support
+    at max a handful of users. For more sophisticated authentication
+    roll your own `run.py` with your own authentication handler.
+    See `get_webtoken_unsafe()` for details.
+    """
+
+    # Get credentials from request
+    user = request.querydict["username"]
+    pwhash = request.querydict["pwhash"]
+    # Check
+    key = user + ":" + pwhash
+    if user and key in CREDENTIALS:
+        token = await get_webtoken_unsafe(user)
+        return 200, {}, dict(token=token)
+    else:
+        return 403, {}, "Invalid credentials"
+
+
 async def webtoken_for_localhost(request):
     """An authentication handler that provides a webtoken when the
-    hostname is localhost. If you run TimeTagger on the web, you must
-    implement your own authentication workflow to provide the client
-    with a TimeTagger webtoken. See `get_webtoken_unsafe()` for details.
+    hostname is localhost. See `get_webtoken_unsafe()` for details.
     """
 
     # Establish that we can trust the client
