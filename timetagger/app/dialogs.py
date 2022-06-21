@@ -239,6 +239,10 @@ class BaseDialog:
         stack.append(self)
         self.maindiv.focus()
 
+    def submit_soon(self, *args):
+        # Allow focusout and onchanged events to occur
+        window.setTimeout(self.submit, 100, *args)
+
     def submit(self, *args):
         # Close and call back
         callback = self._callback
@@ -882,6 +886,8 @@ class StartStopEdit:
         if not node:
             return
 
+        call_callback = True
+
         # Get the reference dates
         if self.date1input.value:
             year1, month1, day1 = self.date1input.value.split("-")
@@ -925,6 +931,8 @@ class StartStopEdit:
                 if hh is not None:
                     d1 = window.Date(year1, month1 - 1, day1, hh, mm, ss)
                     self.t1 = dt.to_time_int(d1)
+                else:
+                    call_callback = False
             else:
                 hh, mm, ss = self._get_time("time1")
                 if option == "more":
@@ -945,6 +953,8 @@ class StartStopEdit:
                 if hh is not None:
                     d2 = window.Date(year2, month2 - 1, day2, hh, mm, ss)
                     self.t2 = dt.to_time_int(d2)
+                else:
+                    call_callback = False
             else:
                 hh, mm, ss = self._get_time("time2")
                 if option == "more":
@@ -975,11 +985,13 @@ class StartStopEdit:
             else:
                 self.t2 = self.t1 + duration
 
+        # Invoke callback and rerender
+        if call_callback:
+            window.setTimeout(self.callback, 1)
+
         if action.endswith("fast"):
             self._update_duration(True)
         else:
-            # Invoke callback and rerender
-            window.setTimeout(self.callback, 1)
             return self.render()
 
 
@@ -1433,7 +1445,7 @@ class RecordDialog(BaseDialog):
         # Connect things up
         self._cancel_but1.onclick = self.close
         self._cancel_but2.onclick = self.close
-        self._submit_but.onclick = self.submit
+        self._submit_but.onclick = self.submit_soon
         self._resume_but.onclick = self.resume_record
         self._ds_input.oninput = self._on_user_edit
         self._ds_input.onchange = self._on_user_edit_done
@@ -1600,7 +1612,7 @@ class RecordDialog(BaseDialog):
             e.stopPropagation()
             return
         elif key == "enter" or key == "return":
-            self.submit()
+            self.submit_soon()
         else:
             super()._on_key(e)
 
