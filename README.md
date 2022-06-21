@@ -54,17 +54,15 @@ pip install -U timetagger
 python -m timetagger
 ```
 
-If the server runs on your local machine, you can use single-user mode
-out-of-the-box.
+If the server runs on your local machine, you can use single-user mode out-of-the-box.
 
 
 ## Self-hosting your time tracker
 
 A docker image is provided via the [Github container registry](https://github.com/almarklein/timetagger/pkgs/container/timetagger), so you can use e.g. Docker-compose to easily host your
-own server. See the example [docker-compose.yml](https://github.com/almarklein/timetagger/blob/main/deploy/docker-compose.yml).
-
-See [this article](https://timetagger.app/articles/selfhost/) for more
-information about self hosting.
+own server.
+See the example [docker-compose.yml](https://github.com/almarklein/timetagger/blob/main/deploy/docker-compose.yml).
+See [this article](https://timetagger.app/articles/selfhost2/) for more information about self hosting.
 
 
 ## Credentials
@@ -85,15 +83,11 @@ python -m timetagger
 
 You can generate credentials using https://timetagger.app/sha1.
 
-Passwords are stored in hashed form (SHA1), but are sent verbatim to
-the server. It is recommended that the server uses HTTPS to prevent
-password snooping.
-
 
 ## Using the hosted version
 
 You can also make use of https://timetagger.app so you don't have to worry about
-maintaining a server, backups, and all that. An account costs just €3 per month.
+maintaining a server, backups, and all that. An account is just €3 per month.
 With that you'd also sponsor this project and open source in general.
 
 
