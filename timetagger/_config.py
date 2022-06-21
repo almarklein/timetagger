@@ -13,6 +13,7 @@ class Config:
     * `credentials (str)`: login credentials for one or more users, in the
       form "user1:hash1,user2:hash2" where each hash is a SHA1 hash of
       the password. Used in the default startup script ``__main__.py``.
+      You can generate credentials with https://timetagger.app/sha1.
 
     The values can be configured using CLI arguments and environment variables.
     For CLI arguments, the following formats are supported:

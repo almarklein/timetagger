@@ -42,21 +42,6 @@ Python to JavaScript. This may be a bit idiosyncratic, but it's fun!
 Maybe I'll someday implement it in something that compiles down to Wasm :)
 
 
-## Self-hosting your time tracker
-
-You're just two commands away from running your own TimeTagger server.
-It's also possible to apply modifications by creating your own startup script.
-See [this article](https://timetagger.app/articles/selfhost/) for
-details about self hosting.
-
-
-## Using the hosted version
-
-You can also make use of https://timetagger.app so you don't have to worry about
-maintaining a server, backups, and all that. An account costs just €3 per month.
-With that you'd also sponsor this project and open source in general.
-
-
 ## Install and run
 
 TimeTagger is a Python library and requires Python 3.6 or higher. The dependencies are listed in `requirements.txt` - these are installed automatically when you install TimeTagger with Pip.
@@ -70,13 +55,46 @@ python -m timetagger
 ```
 
 If the server runs on your local machine, you can use single-user mode
-out-of-the-box. Otherwise you may want to provide the server with user
-credentials using an environment variable or a command line arg
-(see the [docs on config](https://timetagger.readthedocs.io/en/latest/libapi/)).
+out-of-the-box.
 
-You can generate credentials using ``python -m timetagger credentials``.
+
+## Self-hosting your time tracker
+
+A docker image is provided via the [Github container registry](https://github.com/almarklein/timetagger/pkgs/container/timetagger), so you can use e.g. Docker-compose to easily host your
+own server. See the example [docker-compose.yml](https://github.com/almarklein/timetagger/blob/main/deploy/docker-compose.yml).
+
+See [this article](https://timetagger.app/articles/selfhost/) for more
+information about self hosting.
+
+
+## Credentials
+
+If you want multiple users, or if the server is not on localhost, you
+may want to provide the server with user credentials using an
+environment variable or a command line arg (see the
+[docs on config](https://timetagger.readthedocs.io/en/latest/libapi/)).
+
+```
+# Using command-line args
+python -m timetagger --credentials=test:a94a8fe5ccb19ba61c4c0873d391e987982fbbd3
+
+# Using environment variables
+export TIMETAGGER_CREDENTIALS=test:a94a8fe5ccb19ba61c4c0873d391e987982fbbd3
+python -m timetagger
+```
+
+You can generate credentials using https://timetagger.app/sha1.
+
 Passwords are stored in hashed form (SHA1), but are sent verbatim to
-the server. It is recommended to use https to prevent password snooping.
+the server. It is recommended that the server uses HTTPS to prevent
+password snooping.
+
+
+## Using the hosted version
+
+You can also make use of https://timetagger.app so you don't have to worry about
+maintaining a server, backups, and all that. An account costs just €3 per month.
+With that you'd also sponsor this project and open source in general.
 
 
 ## Copyright and license

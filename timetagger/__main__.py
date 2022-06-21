@@ -21,7 +21,6 @@ using a modified version of this script.
 
 import sys
 import hashlib
-import getpass
 import logging
 from pkg_resources import resource_filename
 
@@ -42,23 +41,11 @@ from timetagger.server import (
 
 # Special hooks exit early
 if __name__ == "__main__" and len(sys.argv) >= 2:
-    if sys.argv[1] in ("--help", "help"):
-        print("Run the TimeTagger server")
-        print("python -m timetagger help to see this info")
-        print("python -m timetagger version to see version info")
-        print("python -m timetagger credentials to generate credentials")
-        exit(0)
-    elif sys.argv[1] in ("--version", "version"):
+    if sys.argv[1] in ("--version", "version"):
         print("timetagger", timetagger.__version__)
         print("asgineer", asgineer.__version__)
         print("itemdb", itemdb.__version__)
         print("pscript", pscript.__version__)
-        sys.exit(0)
-    elif sys.argv[1] == "credentials":
-        user = input("Username: ")
-        pw = getpass.getpass()
-        pwhash = hashlib.sha1(pw.encode()).hexdigest()
-        print(f"\nCredentials to put in env:\n  {user}:{pwhash}")
         sys.exit(0)
 
 
