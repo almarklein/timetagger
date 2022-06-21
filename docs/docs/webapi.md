@@ -6,7 +6,7 @@
 
 ### API base URL
 
-If you run your own instance of TimeTagger, you determine the API endpoint. The example `run.py` has it at:
+If you run your own instance of TimeTagger, you determine the API endpoint. By default the startup script has it at:
 
 ```
     http://localhost/timetagger/api/v2/
