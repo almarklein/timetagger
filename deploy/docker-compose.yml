@@ -3,6 +3,7 @@
 #
 # !! Make sure to apply your own credentials                       !!
 # !! You can use e.g. https://timetagger.app/cred to generate them !!
+# !! In docker-compose characters '$' should be escaped as '$$'    !!
 
 version: "3"
 services:
@@ -16,4 +17,4 @@ services:
       - TIMETAGGER_BIND=0.0.0.0:80
       - TIMETAGGER_DATADIR=/root/_timetagger
       - TIMETAGGER_LOG_LEVEL=info
-      - TIMETAGGER_CREDENTIALS=test:$2a$08$0CD1NFiIbancwWsu3se1v.RNR/b7YeZd71yg3cZ/3whGlyU6Iny5i  # test:test
+      - TIMETAGGER_CREDENTIALS=test:$$2a$$08$$0CD1NFiIbancwWsu3se1v.RNR/b7YeZd71yg3cZ/3whGlyU6Iny5i  # test:test
