@@ -124,7 +124,7 @@ async def api_handler(request, path):
 
 
 async def get_webtoken(request):
-    """ Exhange some form of trust for a webtoken."""
+    """Exhange some form of trust for a webtoken."""
 
     auth_info = json.loads(b64decode(await request.get_body()))
     method = auth_info.get("method", "unspecified")

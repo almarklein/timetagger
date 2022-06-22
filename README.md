@@ -74,14 +74,16 @@ environment variable or a command line arg (see the
 
 ```
 # Using command-line args
-python -m timetagger --credentials=test:a94a8fe5ccb19ba61c4c0873d391e987982fbbd3
+python -m timetagger --credentials=test:$2a$08$0CD1NFiIbancwWsu3se1v.RNR/b7YeZd71yg3cZ/3whGlyU6Iny5i
 
 # Using environment variables
-export TIMETAGGER_CREDENTIALS=test:a94a8fe5ccb19ba61c4c0873d391e987982fbbd3
+export TIMETAGGER_CREDENTIALS=test:$2a$08$0CD1NFiIbancwWsu3se1v.RNR/b7YeZd71yg3cZ/3whGlyU6Iny5i
 python -m timetagger
 ```
 
-You can generate credentials using https://timetagger.app/cred.
+The credentials take the form "<username>:<hash>", where the hash is a
+(salted) BCrypt hash of the password. You can generate credentials using
+e.g. https://timetagger.app/cred.
 
 
 ## Using the hosted version

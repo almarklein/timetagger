@@ -1,8 +1,8 @@
 # Example docker-compose file for TimeTagger that uses the published
 # Docker image. Shows all options settable via the environment.
 #
-# !! Make sure to apply your own credentials                  !!
-# !! You can use https://timetagger.app/cred to generate them !!
+# !! Make sure to apply your own credentials                       !!
+# !! You can use e.g. https://timetagger.app/cred to generate them !!
 
 version: "3"
 services:
