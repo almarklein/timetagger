@@ -20,10 +20,12 @@ using a modified version of this script.
 """
 
 import sys
-import hashlib
+import json
 import logging
+from base64 import b64decode
 from pkg_resources import resource_filename
 
+import bcrypt
 import asgineer
 import itemdb
 import pscript
@@ -107,14 +109,9 @@ async def api_handler(request, path):
     # Some endpoints do not require authentication
     if not path and request.method == "GET":
         return 200, {}, "See https://timetagger.readthedocs.io"
-    elif path.startswith("webtoken"):
+    elif path == "bootstrap_authentication":
         # The client-side that requests these is in pages/login.md
-        if path == "webtoken_for_localhost":
-            return await webtoken_for_localhost(request)
-        elif path == "webtoken_for_credentials":
-            return await webtoken_for_credentials(request)
-        else:
-            404, {}, "unknown auth path"
+        return await get_webtoken(request)
 
     # Authenticate and get user db
     try:
@@ -126,33 +123,42 @@ async def api_handler(request, path):
     return await api_handler_triage(request, path, auth_info, db)
 
 
-CREDENTIALS = [x.strip() for x in config.credentials.replace(";", ",").split(",")]
-logger.warning(str(CREDENTIALS))
+async def get_webtoken(request):
+    """ Exhange some form of trust for a webtoken."""
+
+    auth_info = json.loads(b64decode(await request.get_body()))
+    method = auth_info.get("method", "unspecified")
+
+    if method == "localhost":
+        return await get_webtoken_localhost(request, auth_info)
+    elif method == "usernamepassword":
+        return await get_webtoken_usernamepassword(request, auth_info)
+    else:
+        return 401, {}, f"Invalid authentication method: {method}"
 
 
-async def webtoken_for_credentials(request):
+async def get_webtoken_usernamepassword(request, auth_info):
     """An authentication handler to exchange credentials for a webtoken.
     The credentials are set via the config and are intended to support
     a handful of users. See `get_webtoken_unsafe()` for details.
     """
-
-    # Note that this approach is very similar to http Basic auth,
-    # except we implement our own login dialog and send
-    # credentials via the url instead of the header.
+    # This approach uses bcrypt to hash the passwords with a salt,
+    # and is therefore much safer than e.g. BasicAuth.
 
     # Get credentials from request
-    user = request.querydict.get("username", "").strip()
-    pw = request.querydict.get("pw", "").strip()
+    user = auth_info.get("username", "").strip()
+    pw = auth_info.get("password", "").strip()
+    # Get hash for this user
+    hash = CREDENTIALS.get(user, "")
     # Check
-    key = user + ":" + hashlib.sha1(pw.encode()).hexdigest()
-    if user and key in CREDENTIALS:
+    if user and hash and bcrypt.checkpw(pw.encode(), hash.encode()):
         token = await get_webtoken_unsafe(user)
         return 200, {}, dict(token=token)
     else:
         return 403, {}, "Invalid credentials"
 
 
-async def webtoken_for_localhost(request):
+async def get_webtoken_localhost(request, auth_info):
     """An authentication handler that provides a webtoken when the
     hostname is localhost. See `get_webtoken_unsafe()` for details.
     """
@@ -160,10 +166,20 @@ async def webtoken_for_localhost(request):
     # Establish that we can trust the client
     if request.host not in ("localhost", "127.0.0.1"):
         return 403, {}, "forbidden: must be on localhost"
-
     # Return the webtoken for the default user
     token = await get_webtoken_unsafe("defaultuser")
     return 200, {}, dict(token=token)
+
+
+def load_credentials():
+    d = {}
+    for s in config.credentials.replace(";", ",").split(","):
+        name, _, hash = s.partition(":")
+        d[name] = hash
+    return d
+
+
+CREDENTIALS = load_credentials()
 
 
 if __name__ == "__main__":
