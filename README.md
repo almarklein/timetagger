@@ -81,7 +81,7 @@ export TIMETAGGER_CREDENTIALS=test:a94a8fe5ccb19ba61c4c0873d391e987982fbbd3
 python -m timetagger
 ```
 
-You can generate credentials using https://timetagger.app/sha1.
+You can generate credentials using https://timetagger.app/cred.
 
 
 ## Using the hosted version
