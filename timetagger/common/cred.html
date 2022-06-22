@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+
+    <head>
+        <meta charset="utf-8">
+        <title>Generate credentials</title>
+        <meta name="description" content="Generate username:password with BCrypt hashing.">
+
+        <style>
+
+            main {
+                position: absolute;
+                top: 0px; bottom: 0; left: 0; right: 0;
+                padding: 1em;
+                background: #fafafa;
+            }
+            @media screen and (min-width: 800px) { main {
+                    left: calc(50% - 400px); right: calc(50% - 400px); width: 800;
+            }}
+
+            input {
+                margin: 4px;
+            }
+
+            #div_r {
+                position: relative;
+                background: #eee;
+                color: #000;
+                margin: 4px;
+                padding: 1em;
+                border-radius: 3px;
+                font-size: 100%;
+            }
+
+            #div_r > #but_copy {
+                position: absolute;
+                right: 1em;
+            }
+
+        </style>
+
+        <!-- the only dependency right here -->
+        <script src='bcrypt.js'></script>
+
+        <script>
+
+            async function load() {
+                let input_u = document.getElementById("input_u");
+                let input_p = document.getElementById("input_p");
+                let but_copy = document.getElementById("but_copy");
+
+                input_u.oninput = calculate_result;
+                input_p.oninput = calculate_result;
+                but_copy.onclick = copy_result;
+
+                window.result = "";
+            }
+            window.addEventListener('load', load);
+
+            async function calculate_result() {
+                let input_u = document.getElementById("input_u");
+                let input_p = document.getElementById("input_p");
+                let span_r = document.getElementById("span_r");
+                console.log("hey")
+                let hash = dcodeIO.bcrypt.hashSync(input_p.value, 8);
+                console.log("hash: " + hash)
+                window.result = input_u.value + ":" + hash;
+                span_r.innerText = window.result;
+            }
+
+            async function copy_result() {
+                navigator.clipboard.writeText(window.result);
+            }
+
+        </script>
+
+    </head>
+
+    <body>
+
+        <main>
+
+            <h1>Generate credentials</h1>
+
+            <p>Generate a credentials-string with BCrypt hashing.
+            This page is only intended to generate the hash. It does
+            not communicate with any server or log you in somewhere.
+            </p>
+
+            <input id='input_u' type='text' placeholder='username' /><br />
+            <input id='input_p' type='password' placeholder='password' /><br />
+            <div id='div_r'><span id='span_r''>username:hash</span><button id='but_copy'>Copy 📋</button></div>
+        </main>
+
+    </body>
+
+</html>
