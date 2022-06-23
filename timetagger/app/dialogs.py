@@ -1267,9 +1267,13 @@ class Autocompleter:
 
     def _get_state(self):
         """Get the partial tag that is being written."""
+        # Get value and position
         val = self._input.value
         i2 = self._input.selectionStart
-        # Go
+        # If the input element does not have focus, this is all we need
+        if window.document.activeElement is not self._input:
+            return val, i2, i2
+        # Otherwise we try to find the start of the written tag
         i = i2 - 1
         while i >= 0:
             c = val[i]
@@ -1448,12 +1452,13 @@ class RecordDialog(BaseDialog):
         self._submit_but.onclick = self.submit_soon
         self._resume_but.onclick = self.resume_record
         self._ds_input.oninput = self._on_user_edit
-        self._ds_input.onchange = self._on_user_edit_done
+        self._ds_input.onblur = self._on_user_edit_done
         self._recent_but.onclick = self.show_recents
         self._preset_but.onclick = self.show_presets
         self._preset_edit.onclick = lambda: self._canvas.tag_preset_dialog.open()
         self._delete_but1.onclick = self._delete1
         self._delete_but2.onclick = self._delete2
+        self.maindiv.addEventListener("click", self._autocompleter.clear)
 
         # Enable for some more info (e.g. during dev)
         if False:
@@ -1535,6 +1540,8 @@ class RecordDialog(BaseDialog):
         if e and e.stopPropagation:
             e.stopPropagation()
         self._autocompleter.show_presets_and_recents(True, False)
+        # Note: don't give ds_input focus, because that will pop up the
+        # keyboard on mobile devices
 
     def show_recents(self, e):
         # Prevent that the click will hide the autocomp
