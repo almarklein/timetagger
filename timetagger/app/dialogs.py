@@ -721,28 +721,39 @@ class StartStopEdit:
     def close(self):
         window.clearInterval(self._timer_handle)
 
+    def _get_sensible_start_time(self):
+        t2 = dt.now()
+        secs_earlier = 8 * 3600  # 8 hours
+        running = window.store.records.get_running_records()
+        records = window.store.records.get_records(t2 - secs_earlier, t2).values()
+        if running:
+            t1 = t2 - 300  # 5 min earlier
+        elif len(records) > 0:
+            records.sort(key=lambda r: r.t2)
+            t1 = records[-1].t2  # start time == last records stop time
+            t1 = min(t1, t2 - 1)
+        else:
+            t1 = t2 - 3600  # start time is an hour ago
+        return t1
+
     def _on_mode_change(self):
         if self.initialmode in ("start", "new"):
-            # Get sensible earlier time
             t2 = dt.now()
-            secs_earlier = 8 * 3600  # 8 hours
-            running = records = window.store.records.get_running_records()
-            records = window.store.records.get_records(t2 - secs_earlier, t2).values()
-            if running:
-                t1 = t2 - 300  # 5 min earlier
-            elif len(records) > 0:
-                records.sort(key=lambda r: r.t2)
-                t1 = records[-1].t2  # start time == last records stop time
-                t1 = min(t1, t2 - 1)
-            else:
-                t1 = t2 - 3600  # start time is an hour ago
-            # Apply
             if self.radio_startnow.checked:
                 self.reset(t2, t2)
-            elif self.radio_startrlr.checked:
-                self.reset(t1, t1)
             else:
-                self.reset(t1, t2)
+                # If the current start time is 5 min earlier, use that, otherwise
+                # calculate a sensible start time. The 5 min applies when a sensible
+                # start time has already been set, or when the dialog has been
+                # on "start now" for over 5 minutes (which is also OK I guess).
+                if self.t1 <= t2 - 300:
+                    t1 = self.t1
+                else:
+                    t1 = self._get_sensible_start_time()
+                if self.radio_startrlr.checked:
+                    self.reset(t1, t1)
+                else:
+                    self.reset(t1, t2)
         else:
             # Switch between "already running" and "finished".
             # Since this is an existing record, we should maintain initial values.
