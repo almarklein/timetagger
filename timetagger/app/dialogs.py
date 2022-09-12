@@ -2382,7 +2382,7 @@ class SearchDialog(BaseDialog):
                 if not all_tags_ok:
                     continue
                 # Check strings
-                ds = record.ds.lower()
+                ds = (record.ds or "").lower()
                 all_strings_ok = True
                 for word in search_strings:
                     if word not in ds:
