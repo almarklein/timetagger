@@ -4,6 +4,7 @@
 # !! Make sure to apply your own credentials                       !!
 # !! You can use e.g. https://timetagger.app/cred to generate them !!
 # !! In docker-compose characters '$' should be escaped as '$$'    !!
+# !! If you use a .env file, use single quotes instead of escaping !!
 
 version: "3"
 services:
