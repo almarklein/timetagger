@@ -104,7 +104,7 @@ def set_colors():
 
         COLORS.button_bg = "#FFFFFF"
         COLORS.button_tag_bg = "#FFFFFF"
-        COLORS.button_shadow = "rgba(0, 0, 0, 0.45)"
+        COLORS.button_shadow = "rgba(0, 0, 0, 0.3)"
 
         COLORS.button_text = COLORS.prim1_clr
         COLORS.button_tag_text = COLORS.prim1_clr
@@ -837,18 +837,20 @@ class Widget:
         if opt.body:
             ctx.fillStyle = opt.body
             for i in range(2):
-                dy = 2 if i == 0 else 0
                 ctx.beginPath()
-                ctx.arc(x1 + rn, y1 + dy + rn, rn, 1.0 * PI, 1.5 * PI)
-                ctx.arc(x2 - rn, y1 + dy + rn, rn, 1.5 * PI, 2.0 * PI)
-                ctx.arc(x2 - rn, y2 + dy - rn, rn, 0.0 * PI, 0.5 * PI)
-                ctx.arc(x1 + rn, y2 + dy - rn, rn, 0.5 * PI, 1.0 * PI)
+                ctx.arc(x1 + rn, y1 + rn, rn, 1.0 * PI, 1.5 * PI)
+                ctx.arc(x2 - rn, y1 + rn, rn, 1.5 * PI, 2.0 * PI)
+                ctx.arc(x2 - rn, y2 - rn, rn, 0.0 * PI, 0.5 * PI)
+                ctx.arc(x1 + rn, y2 - rn, rn, 0.5 * PI, 1.0 * PI)
                 ctx.closePath()
                 if i == 0:
-                    ctx.shadowBlur = 5 if hover else 3
+                    ctx.shadowBlur = 5 if hover else 2.5
                     ctx.shadowColor = COLORS.button_shadow
+                    ctx.shadowOffsetY = 1.75
+                else:
+                    ctx.shadowBlur = 0
+                    ctx.shadowOffsetY = 0
                 ctx.fill()
-                ctx.shadowBlur = 0
         elif hover:
             ctx.fillStyle = "rgba(255,255,255,0.1)"
             ctx.beginPath()
