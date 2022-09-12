@@ -85,8 +85,9 @@ async def main_handler(request):
         return 307, {"Location": "/timetagger/"}, b""  # Redirect
 
     elif request.path.startswith("/timetagger/"):
-
-        if request.path.startswith("/timetagger/api/v2/"):
+        if request.path == "/timetagger/status":
+            return 200, {}, "ok"
+        elif request.path.startswith("/timetagger/api/v2/"):
             path = request.path[19:].strip("/")
             return await api_handler(request, path)
         elif request.path.startswith("/timetagger/app/"):
