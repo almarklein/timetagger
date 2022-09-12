@@ -268,6 +268,8 @@ class BaseDialog:
                 break
         else:
             show_background_div(False)
+            window.canvas.node.focus()  # See #243
+
         # Fire callback
         if self._callback is not None:
             self._callback()
