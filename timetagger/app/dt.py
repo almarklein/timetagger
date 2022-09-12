@@ -113,14 +113,23 @@ def time2str(t, utc_offset=None):
     t = to_time_int(t)
     if this_is_js():  # pragma: no cover
         if utc_offset is None:
-            utc_offset = -(Date(t * 1000).getTimezoneOffset() // 60)
+            utc_offset = -(Date(t * 1000).getTimezoneOffset() / 60)
         t += utc_offset * 3600
         s = Date(t * 1000).toISOString()
         s = s.split(".")[0]
         if utc_offset == 0:
             s += "Z"
         else:
-            s += f"{utc_offset:+03.0f}"
+            sign = "+" if utc_offset >= 0 else "-"
+            utc_offset_unsigned = Math.abs(utc_offset)
+            h = Math.floor(utc_offset_unsigned)
+            m = utc_offset_unsigned - h
+            h, m = str(h), str(Math.floor(m * 60))
+            if len(m) == 1:
+                m = "0" + m
+            if len(h) == 1:
+                h = "0" + h
+            s += sign + h + m
     else:  # py
         import datetime
 
@@ -128,7 +137,7 @@ def time2str(t, utc_offset=None):
             utc_offset = (
                 datetime.datetime.fromtimestamp(t)
                 - datetime.datetime.utcfromtimestamp(t)
-            ).total_seconds() // 3600
+            ).total_seconds() / 3600
         tz = datetime.timezone(datetime.timedelta(hours=utc_offset))
         dt = datetime.datetime.fromtimestamp(t, tz)
         if utc_offset == 0:

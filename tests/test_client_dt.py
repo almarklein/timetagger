@@ -79,8 +79,9 @@ def test_time2str():
     s2 = time2str(t2, 0)
     s3 = time2str(t3, 2)
 
+    # Verify first. Exact output depends on timezone and summertime policy
+    assert s1.startswith(("2018-04-24T13:18:00", "2018-04-24T12:48:00"))
     # Verify output in Python
-    assert s1.startswith("2018-04-24T13:18:00")  # exact output depends on timezone
     assert s2 == "2018-04-24T13:18:00Z"
     assert s3 == "2018-04-24T13:18:00+0200"
 
@@ -93,9 +94,9 @@ def test_time2str():
     js1 = evaljs(js + f"time2str({t1})")
     js2 = evaljs(js + f"time2str({t2}, 0)")
     js3 = evaljs(js + f"time2str({t3}, 2)")
-    assert js1 == s1.rstrip("0")
-    assert js2 == s2.rstrip("0")
-    assert js3 == s3.rstrip("0")
+    assert js1 == s1
+    assert js2 == s2
+    assert js3 == s3
 
 
 if __name__ == "__main__":
