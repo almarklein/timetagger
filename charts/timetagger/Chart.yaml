@@ -1,0 +1,7 @@
+apiVersion: v2
+appVersion: v22.9.1
+version: 1.0.3
+name: timetagger
+home: https://timetagger.app/
+icon: https://timetagger.app/timetagger_wl.svg
+type: application

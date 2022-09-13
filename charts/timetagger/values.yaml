@@ -1,0 +1,60 @@
+
+## TimeTagger image configuration
+##
+image:
+  repository: ghcr.io/almarklein/timetagger
+  tag: v22.9.1
+  pullPolicy: IfNotPresent
+
+replicaCount: 1
+
+resources:
+  requests:
+    memory: 128Mi
+    cpu: 300m
+  limits:
+    memory: 1Gi
+    cpu: 500m
+
+persistence:
+  enabled: true
+  existingClaim:
+  size: 1Gi
+  storageClassName: default
+
+logLevel: info
+
+fullnameOverride:
+nameOverride:
+
+env:
+   - name: ""
+     value: ""
+
+secretEnv:
+   - name: TIMETAGGER_CREDENTIALS
+     value: test:$2a$08$0CD1NFiIbancwWsu3se1v.RNR/b7YeZd71yg3cZ/3whGlyU6Iny5i
+
+service:
+  type: NodePort
+  port: 8080
+  annotations: {}
+
+ingress:
+  enabled: true
+  annotations: {}
+    # cert-manager.io/cluster-issuer: letsencrypt-prod
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+  path: /
+  pathtype: ImplementationSpecific
+  hosts: [ timetagger.local ]
+  
+  tls: []
+  #  - secretName: timetagger-tls
+  #    hosts:
+  #      - timetagger.local
+
+deploymentLabels: {}
+
+podLabels: {}

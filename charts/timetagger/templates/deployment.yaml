@@ -1,0 +1,85 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ template "timetagger.fullname" . }}
+  labels:
+    app: {{ template "timetagger.name" . }}
+    chart: {{ template "timetagger.chart" . }}
+    component: timetagger
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+    {{- if .Values.deploymentLabels }}
+    {{- toYaml .Values.deploymentLabels | nindent 4 }}
+    {{- end }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  strategy: 
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: {{ template "timetagger.name" . }}
+      component: timetagger
+      release: {{ .Release.Name }}
+  template:
+    metadata:
+      annotations:
+      labels:
+        app: {{ template "timetagger.name" . }}
+        component: timetagger
+        release: {{ .Release.Name }}
+        {{- if .Values.podLabels }}
+        {{- toYaml .Values.podLabels | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- if .Values.persistence.enabled }}
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ template "timetagger.claimName" . }}
+      {{- end }}
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          terminationMessagePolicy: FallbackToLogsOnError
+          ports:
+            - name: http
+              containerPort: 80
+          env:
+            - name: TIMETAGGER_BIND
+              value: 0.0.0.0:80
+            - name: TIMETAGGER_LOG_LEVEL
+              value: {{ .Values.logLevel | quote }}
+            - name: TIMETAGGER_DATADIR
+              value: /root/_timetagger
+          {{- range $key := .Values.env }}
+          {{- if .value }}
+            - name: {{ .name }}
+              value: {{ .value | quote }}
+          {{- end }}
+          {{- end }}
+          {{- range $key := .Values.secretEnv }}
+          {{- if .value }}
+            - name: {{ .name }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ template "timetagger.fullname" $ }}-secret
+                  key: {{ .name }}
+          {{- end }}
+          {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+              scheme: HTTP
+            initialDelaySeconds: 20
+          {{- if .Values.persistence.enabled }}
+          volumeMounts:
+            - mountPath: /root/_timetagger
+              name: data
+          {{- end }}
+          resources:
+          {{ toYaml .Values.resources | nindent 12 }}

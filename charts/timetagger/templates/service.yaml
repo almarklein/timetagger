@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Service
+metadata:
+  {{- if .Values.service.annotations }}
+  annotations:
+{{ toYaml .Values.service.annotations | indent 4 }}
+  {{- end }}
+  name: {{ template "timetagger.fullname" . }}
+  labels:
+    app: {{ template "timetagger.name" . }}
+    chart: {{ template "timetagger.chart" . }}
+    component: timetagger
+    heritage: {{ .Release.Service }}
+    release: {{ .Release.Name }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app: {{ template "timetagger.name" . }}
+    component: timetagger
+    release: {{ .Release.Name }}
