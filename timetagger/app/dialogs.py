@@ -3523,10 +3523,7 @@ class SettingsDialog(BaseDialog):
         ) = self.maindiv.children
 
         # Set timezone info
-        offset, offset_winter, offset_summer = dt.get_timezone_info(dt.now())
-        s = f"UTC{offset:+0.2g}  /  GMT{offset_winter:+0.2g}"
-        s += " summertime" if offset == offset_summer else " wintertime"
-        self._timezone_div.innerText = s
+        self._timezone_div.innerText = "UTC" + dt.get_timezone_indicator(dt.now(), ":")
 
         # Unpack appearance
         self._darkmode_select = self._appearance_form.children[1]

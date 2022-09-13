@@ -105,11 +105,28 @@ def to_time_int(t):
     return int(t)
 
 
+def get_timezone_indicator(t, sep="", utc_offset=None):
+    PSCRIPT_OVERLOAD = False  # noqa
+    if utc_offset is None:
+        utc_offset = -(Date(t * 1000).getTimezoneOffset() / 60)
+    sign = "+" if utc_offset >= 0 else "-"
+    utc_offset_unsigned = Math.abs(utc_offset)
+    h = Math.floor(utc_offset_unsigned)
+    m = utc_offset_unsigned - h
+    h, m = str(h), str(Math.floor(m * 60))
+    if len(m) == 1:
+        m = "0" + m
+    if len(h) == 1:
+        h = "0" + h
+    return sign + h + sep + m
+
+
 def time2str(t, utc_offset=None):
     """Convert a time int into a textual representation. If utc_offset is None, the
     representation is in local time. Otherwise the given offset (in hours) is
     used. Use utc_offset=0 for UTC. In all cases the zone is explicit in the result.
     """
+    PSCRIPT_OVERLOAD = False  # noqa
     t = to_time_int(t)
     if this_is_js():  # pragma: no cover
         if utc_offset is None:
@@ -120,16 +137,7 @@ def time2str(t, utc_offset=None):
         if utc_offset == 0:
             s += "Z"
         else:
-            sign = "+" if utc_offset >= 0 else "-"
-            utc_offset_unsigned = Math.abs(utc_offset)
-            h = Math.floor(utc_offset_unsigned)
-            m = utc_offset_unsigned - h
-            h, m = str(h), str(Math.floor(m * 60))
-            if len(m) == 1:
-                m = "0" + m
-            if len(h) == 1:
-                h = "0" + h
-            s += sign + h + m
+            s += get_timezone_indicator(t, "", utc_offset)
     else:  # py
         import datetime
 
@@ -318,17 +326,6 @@ def get_weeknumber(t):
     """
     )
     return res  # noqa
-
-
-def get_timezone_info(t):
-    d = Date(t * 1000)
-    d_winter = Date(d.getFullYear(), 0, 1)
-    d_summer = Date(d.getFullYear(), 6, 1)
-    #
-    offset = -d.getTimezoneOffset() / 60
-    offset_winter = -d_winter.getTimezoneOffset() / 60
-    offset_summer = -d_summer.getTimezoneOffset() / 60
-    return offset, offset_winter, offset_summer
 
 
 if __name__ == "__main__":
