@@ -2471,9 +2471,7 @@ class ReportDialog(BaseDialog):
         if self._tags:
             filtertext = self._tags.join(" ")
         else:
-            filtertext = (
-                "<small>Select tags in overview panel</small>"
-            )
+            filtertext = "<small>Select tags in overview panel</small>"
         self._copybuttext = "Copy table"
         html = f"""
             <h1><i class='fas'>\uf15c</i>&nbsp;&nbsp;Report
