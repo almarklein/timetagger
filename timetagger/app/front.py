@@ -3338,12 +3338,13 @@ class AnalyticsWidget(Widget):
             ctx.fillRect(ex, y1, ew, y2 - y1)
         ex += ew
         # That coloured region is also a button
+        action = "configure_tag:" if len(colors) == 1 else "configure_tags:"
         self._picker.register(
             x1,
             y1,
             ex,
             y2,
-            {"button": True, "action": "configure_tags:" + bar.tagz},
+            {"button": True, "action": action + bar.tagz},
         )
         tt_text = "Color for " + bar.tagz + "\n(Click to change color)"
         hover = self._canvas.register_tooltip(
