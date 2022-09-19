@@ -3309,6 +3309,15 @@ class AnalyticsWidget(Widget):
         path.closePath()
         ctx.fill(path)
 
+        # Clicking the bar itself opens the selection of all tags on the bar
+        self._picker.register(
+            x1,
+            y1,
+            x2,
+            y2,
+            {"button": True, "action": "select:" + bar.tagz},
+        )
+
         ymid = y1 + 0.55 * npixels
         x_ref_duration = x2 - 30  # right side of minute
         x_ref_labels = x1 + 30  # start of labels
@@ -3338,12 +3347,13 @@ class AnalyticsWidget(Widget):
             ctx.fillRect(ex, y1, ew, y2 - y1)
         ex += ew
         # That coloured region is also a button
+        action = "configure_tag:" if len(colors) == 1 else "configure_tags:"
         self._picker.register(
             x1,
             y1,
             ex,
             y2,
-            {"button": True, "action": "configure_tags:" + bar.tagz},
+            {"button": True, "action": action + bar.tagz},
         )
         tt_text = "Color for " + bar.tagz + "\n(Click to change color)"
         hover = self._canvas.register_tooltip(
@@ -3404,7 +3414,7 @@ class AnalyticsWidget(Widget):
             ctx.textAlign = "left"
             ctx.font = FONT.size + "px " + FONT.default
             ctx.fillStyle = COLORS.record_text
-            if not tag:
+            if not tag:  # no tagz
                 text = "General"
                 ctx.fillText(text, tx, ty)
                 tx += ctx.measureText(text).width + 12
@@ -3437,10 +3447,11 @@ class AnalyticsWidget(Widget):
                     t1, t2 = self._canvas.range.get_range()
                     self._canvas.report_dialog.open(t1, t2, self.selected_tags)
                 elif picked.action.startswith("select:"):
-                    _, _, tag = picked.action.partition(":")
-                    if tag:
-                        if tag not in self.selected_tags:
-                            self.selected_tags.push(tag)
+                    _, _, tagz = picked.action.partition(":")
+                    if tagz:
+                        for tag in tagz.split(" "):
+                            if tag not in self.selected_tags:
+                                self.selected_tags.push(tag)
                     else:
                         self.selected_tags = []
                     self._tag_bars_dict = {}  # trigger animation
