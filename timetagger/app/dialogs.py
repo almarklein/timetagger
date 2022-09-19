@@ -1388,7 +1388,7 @@ class RecordDialog(BaseDialog):
                 <input type='text' style='width:100%;' spellcheck='true' />
                 <div class='tag-suggestions-autocomp'></div>
             </div>
-            <div class='container' style='min-height:5px;'>
+            <div class='container' style='min-height:20px;'>
                 <button type='button' style='float:right; font-size:85%; margin-top:-4px;'>
                     <i class='fas'>\uf044</i></button>
                 <button type='button' style='float:right; font-size:85%; margin-top:-4px;'>
@@ -2471,9 +2471,7 @@ class ReportDialog(BaseDialog):
         if self._tags:
             filtertext = self._tags.join(" ")
         else:
-            filtertext = (
-                "<small>(select tags in the overview panel to filter by them)</small>"
-            )
+            filtertext = "<small>Select tags in overview panel</small>"
         self._copybuttext = "Copy table"
         html = f"""
             <h1><i class='fas'>\uf15c</i>&nbsp;&nbsp;Report
@@ -2481,7 +2479,7 @@ class ReportDialog(BaseDialog):
                 </h1>
             <div class='formlayout'>
                 <div>Tags:</div> <div>{filtertext}</div>
-                <div>Date range:</div> <div></div>
+                <div>Date range:</div> <div style='font-size:smaller;'></div>
                 <div>Grouping:</div> <select>
                                         <option value='none'>none</option>
                                         <option value='tagz'>tags</option>
@@ -2493,11 +2491,11 @@ class ReportDialog(BaseDialog):
                 <div>Format:</div> <label><input type='checkbox' /> Hours in decimals</label>
                 <div>Details:</div> <label><input type='checkbox' checked /> Show records</label>
                 <button type='button'><i class='fas'>\uf328</i>&nbsp;&nbsp;{self._copybuttext}</button>
-                    <div>to paste in a spreadsheet</div>
+                    <div>paste in a spreadsheet</div>
                 <button type='button'><i class='fas'>\uf0ce</i>&nbsp;&nbsp;Save CSV</button>
-                    <div>to save as spreadsheet (with more details)</div>
+                    <div>save spreadsheet (more details)</div>
                 <button type='button'><i class='fas'>\uf1c1</i>&nbsp;&nbsp;Save PDF</button>
-                    <div>to archive or send to a client</div>
+                    <div>archive or send to a client</div>
             </div>
             <hr />
             <table id='report_table'></table>
