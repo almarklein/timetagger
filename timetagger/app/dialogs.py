@@ -1218,7 +1218,7 @@ class Autocompleter:
         # Add title
         hint_html = ""
         if self._mode_mask & 3 and self._mode_mask & 4:
-            hint = "(type '#' to toggle recents / presets)"
+            hint = "(type '#' again to toggle recents / presets)"
             hint_html = "<span style='color:#999;'>" + hint + "</span>"
         item = document.createElement("div")
         item.classList.add("meta")
