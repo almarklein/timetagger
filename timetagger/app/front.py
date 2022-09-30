@@ -1279,7 +1279,7 @@ class TopWidget(Widget):
         if self._favicon_recording == recording:
             return
         self._favicon_recording = recording
-        link = document.querySelector("link[rel~='icon']")
+        link = window.document.querySelector("link[rel~='icon']")
         extra = "_dot" if recording else ""
         link.href = "timetagger192_sf" + extra + ".png"
 
