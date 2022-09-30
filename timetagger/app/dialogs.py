@@ -1515,14 +1515,14 @@ class RecordDialog(BaseDialog):
             self._resume_but.style.display = "none"
             self._delete_but1.style.display = "none"
         elif lmode == "edit":
-            self._submit_but.innerHTML = "<i class='fas'>\uf304</i>&nbsp;&nbsp;Edit"
+            self._submit_but.innerHTML = "<i class='fas'>\uf304</i>&nbsp;&nbsp;Save"
             title_mode = "Edit running" if is_running else "Edit"
             self._title_div.innerText = f"{title_mode} record"
             self._submit_but.disabled = self._no_user_edit_yet
             self._resume_but.style.display = "none" if is_running else "block"
             self._delete_but1.style.display = "block"
         elif lmode == "stop":
-            self._submit_but.innerHTML = "<i class='fas'>\uf04d</i>&nbsp;&nbsp;Stop"
+            self._submit_but.innerHTML = "<i class='fas'>\uf04d</i>&nbsp;&nbsp;Save"
             self._resume_but.style.display = "none"
             self._delete_but1.style.display = "block"
         else:
