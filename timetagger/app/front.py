@@ -1208,6 +1208,8 @@ class TopWidget(Widget):
 
         x0 = x
 
+        self._update_favicon(has_running)
+
         # Start & stop button
         if has_running:
             dx = self._draw_button(
@@ -1272,6 +1274,14 @@ class TopWidget(Widget):
         ctx.fillText(running_summary, (x0 + x) / 2, y + h + 5)
 
         return x0 - x
+
+    def _update_favicon(self, recording):
+        if self._favicon_recording == recording:
+            return
+        self._favicon_recording = recording
+        link = window.document.querySelector("link[rel~='icon']")
+        extra = "_dot" if recording else ""
+        link.href = "timetagger192_sf" + extra + ".png"
 
     def _get_now_scale(self):
 
