@@ -1,14 +1,35 @@
 """
-Basic script to run timetagger.
+Default script to run timetagger.
 
-You can use this to run timetagger locally. If you want to run it
-online, you'd need to take care of authentication.
+The timetagger library behaves like a framework; it provides the
+building blocks to setup a timetracking app. This script puts things
+together in the "default way". You can also create your own script to
+customize/extend timetagger or embed in it a larger application.
+
+A major hurdle in deploying an app like this is user authentication.
+Timetagger implements its own token-based authentication, but it needs
+to be "bootstrapped": the server needs to provide the first webtoken
+when it has established trust in some way.
+
+This script implements two methods to do this:
+* A single-user login when client and server are on the same machine (localhost).
+* Authentication with credentials specified as config params.
+
+If you want another form of login, you will need to implement that yourself,
+using a modified version of this script.
 """
 
+import sys
+import json
 import logging
+from base64 import b64decode
 from pkg_resources import resource_filename
 
+import bcrypt
 import asgineer
+import itemdb
+import pscript
+import timetagger
 from timetagger import config
 from timetagger.server import (
     authenticate,
@@ -18,6 +39,16 @@ from timetagger.server import (
     create_assets_from_dir,
     enable_service_worker,
 )
+
+
+# Special hooks exit early
+if __name__ == "__main__" and len(sys.argv) >= 2:
+    if sys.argv[1] in ("--version", "version"):
+        print("timetagger", timetagger.__version__)
+        print("asgineer", asgineer.__version__)
+        print("itemdb", itemdb.__version__)
+        print("pscript", pscript.__version__)
+        sys.exit(0)
 
 
 logger = logging.getLogger("asgineer")
@@ -54,8 +85,9 @@ async def main_handler(request):
         return 307, {"Location": "/timetagger/"}, b""  # Redirect
 
     elif request.path.startswith("/timetagger/"):
-
-        if request.path.startswith("/timetagger/api/v2/"):
+        if request.path == "/timetagger/status":
+            return 200, {}, "ok"
+        elif request.path.startswith("/timetagger/api/v2/"):
             path = request.path[19:].strip("/")
             return await api_handler(request, path)
         elif request.path.startswith("/timetagger/app/"):
@@ -78,10 +110,9 @@ async def api_handler(request, path):
     # Some endpoints do not require authentication
     if not path and request.method == "GET":
         return 200, {}, "See https://timetagger.readthedocs.io"
-    elif path == "webtoken_for_localhost":
-        return await webtoken_for_localhost(request)
-    elif path == "webtoken_from_proxy":
-        return await webtoken_from_proxy(request)
+    elif path == "bootstrap_authentication":
+        # The client-side that requests these is in pages/login.md
+        return await get_webtoken(request)
 
     # Authenticate and get user db
     try:
@@ -93,41 +124,63 @@ async def api_handler(request, path):
     return await api_handler_triage(request, path, auth_info, db)
 
 
-async def webtoken_for_localhost(request):
+async def get_webtoken(request):
+    """Exhange some form of trust for a webtoken."""
+
+    auth_info = json.loads(b64decode(await request.get_body()))
+    method = auth_info.get("method", "unspecified")
+
+    if method == "localhost":
+        return await get_webtoken_localhost(request, auth_info)
+    elif method == "usernamepassword":
+        return await get_webtoken_usernamepassword(request, auth_info)
+    else:
+        return 401, {}, f"Invalid authentication method: {method}"
+
+
+async def get_webtoken_usernamepassword(request, auth_info):
+    """An authentication handler to exchange credentials for a webtoken.
+    The credentials are set via the config and are intended to support
+    a handful of users. See `get_webtoken_unsafe()` for details.
+    """
+    # This approach uses bcrypt to hash the passwords with a salt,
+    # and is therefore much safer than e.g. BasicAuth.
+
+    # Get credentials from request
+    user = auth_info.get("username", "").strip()
+    pw = auth_info.get("password", "").strip()
+    # Get hash for this user
+    hash = CREDENTIALS.get(user, "")
+    # Check
+    if user and hash and bcrypt.checkpw(pw.encode(), hash.encode()):
+        token = await get_webtoken_unsafe(user)
+        return 200, {}, dict(token=token)
+    else:
+        return 403, {}, "Invalid credentials"
+
+
+async def get_webtoken_localhost(request, auth_info):
     """An authentication handler that provides a webtoken when the
-    hostname is localhost. If you run TimeTagger on the web, you must
-    implement your own authentication workflow to provide the client
-    with a TimeTagger webtoken. See `get_webtoken_unsafe()` for details.
+    hostname is localhost. See `get_webtoken_unsafe()` for details.
     """
 
     # Establish that we can trust the client
     if request.host not in ("localhost", "127.0.0.1"):
         return 403, {}, "forbidden: must be on localhost"
-
     # Return the webtoken for the default user
     token = await get_webtoken_unsafe("defaultuser")
     return 200, {}, dict(token=token)
 
 
-async def webtoken_from_proxy(request):
-    """An authentication handler that provides a webtoken when the
-    user proxy header is set. See `get_webtoken_unsafe()` for details.
-    """
+def load_credentials():
+    d = {}
+    for s in config.credentials.replace(";", ",").split(","):
+        name, _, hash = s.partition(":")
+        d[name] = hash
+    return d
 
-    # TODO: Establish that we can trust the proxy
-    """
-    if request.host not in ("localhost", "127.0.0.1"):
-        return 403, {}, "forbidden: must be on localhost"
-    """
 
-    # Check if the x-remote-user header exists
-    user = request.headers.get("x-remote-user", "")
-    if not user:
-        return 403, {}, "forbidden: no proxy user provided"
-
-    # Return the webtoken for the proxy user
-    token = await get_webtoken_unsafe(user)
-    return 200, {}, dict(token=token)
+CREDENTIALS = load_credentials()
 
 
 if __name__ == "__main__":

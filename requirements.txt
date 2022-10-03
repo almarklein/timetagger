@@ -5,3 +5,4 @@ pscript>=0.7.6
 pyjwt
 jinja2
 markdown
+bcrypt

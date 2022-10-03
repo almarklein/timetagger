@@ -239,6 +239,10 @@ class BaseDialog:
         stack.append(self)
         self.maindiv.focus()
 
+    def submit_soon(self, *args):
+        # Allow focusout and onchanged events to occur
+        window.setTimeout(self.submit, 100, *args)
+
     def submit(self, *args):
         # Close and call back
         callback = self._callback
@@ -264,6 +268,8 @@ class BaseDialog:
                 break
         else:
             show_background_div(False)
+            window.canvas.node.focus()  # See #243
+
         # Fire callback
         if self._callback is not None:
             self._callback()
@@ -715,28 +721,39 @@ class StartStopEdit:
     def close(self):
         window.clearInterval(self._timer_handle)
 
+    def _get_sensible_start_time(self):
+        t2 = dt.now()
+        secs_earlier = 8 * 3600  # 8 hours
+        running = window.store.records.get_running_records()
+        records = window.store.records.get_records(t2 - secs_earlier, t2).values()
+        if running:
+            t1 = t2 - 300  # 5 min earlier
+        elif len(records) > 0:
+            records.sort(key=lambda r: r.t2)
+            t1 = records[-1].t2  # start time == last records stop time
+            t1 = min(t1, t2 - 1)
+        else:
+            t1 = t2 - 3600  # start time is an hour ago
+        return t1
+
     def _on_mode_change(self):
         if self.initialmode in ("start", "new"):
-            # Get sensible earlier time
             t2 = dt.now()
-            secs_earlier = 8 * 3600  # 8 hours
-            running = records = window.store.records.get_running_records()
-            records = window.store.records.get_records(t2 - secs_earlier, t2).values()
-            if running:
-                t1 = t2 - 300  # 5 min earlier
-            elif len(records) > 0:
-                records.sort(key=lambda r: r.t2)
-                t1 = records[-1].t2  # start time == last records stop time
-                t1 = min(t1, t2 - 1)
-            else:
-                t1 = t2 - 3600  # start time is an hour ago
-            # Apply
             if self.radio_startnow.checked:
                 self.reset(t2, t2)
-            elif self.radio_startrlr.checked:
-                self.reset(t1, t1)
             else:
-                self.reset(t1, t2)
+                # If the current start time is 5 min earlier, use that, otherwise
+                # calculate a sensible start time. The 5 min applies when a sensible
+                # start time has already been set, or when the dialog has been
+                # on "start now" for over 5 minutes (which is also OK I guess).
+                if self.t1 <= t2 - 300:
+                    t1 = self.t1
+                else:
+                    t1 = self._get_sensible_start_time()
+                if self.radio_startrlr.checked:
+                    self.reset(t1, t1)
+                else:
+                    self.reset(t1, t2)
         else:
             # Switch between "already running" and "finished".
             # Since this is an existing record, we should maintain initial values.
@@ -882,6 +899,8 @@ class StartStopEdit:
         if not node:
             return
 
+        call_callback = True
+
         # Get the reference dates
         if self.date1input.value:
             year1, month1, day1 = self.date1input.value.split("-")
@@ -925,6 +944,8 @@ class StartStopEdit:
                 if hh is not None:
                     d1 = window.Date(year1, month1 - 1, day1, hh, mm, ss)
                     self.t1 = dt.to_time_int(d1)
+                else:
+                    call_callback = False
             else:
                 hh, mm, ss = self._get_time("time1")
                 if option == "more":
@@ -945,6 +966,8 @@ class StartStopEdit:
                 if hh is not None:
                     d2 = window.Date(year2, month2 - 1, day2, hh, mm, ss)
                     self.t2 = dt.to_time_int(d2)
+                else:
+                    call_callback = False
             else:
                 hh, mm, ss = self._get_time("time2")
                 if option == "more":
@@ -975,11 +998,13 @@ class StartStopEdit:
             else:
                 self.t2 = self.t1 + duration
 
+        # Invoke callback and rerender
+        if call_callback:
+            window.setTimeout(self.callback, 1)
+
         if action.endswith("fast"):
             self._update_duration(True)
         else:
-            # Invoke callback and rerender
-            window.setTimeout(self.callback, 1)
             return self.render()
 
 
@@ -1193,7 +1218,7 @@ class Autocompleter:
         # Add title
         hint_html = ""
         if self._mode_mask & 3 and self._mode_mask & 4:
-            hint = "(type '#' to toggle recents / presets)"
+            hint = "(type '#' again to toggle recents / presets)"
             hint_html = "<span style='color:#999;'>" + hint + "</span>"
         item = document.createElement("div")
         item.classList.add("meta")
@@ -1255,9 +1280,13 @@ class Autocompleter:
 
     def _get_state(self):
         """Get the partial tag that is being written."""
+        # Get value and position
         val = self._input.value
         i2 = self._input.selectionStart
-        # Go
+        # If the input element does not have focus, this is all we need
+        if window.document.activeElement is not self._input:
+            return val, i2, i2
+        # Otherwise we try to find the start of the written tag
         i = i2 - 1
         while i >= 0:
             c = val[i]
@@ -1359,7 +1388,7 @@ class RecordDialog(BaseDialog):
                 <input type='text' style='width:100%;' spellcheck='true' />
                 <div class='tag-suggestions-autocomp'></div>
             </div>
-            <div class='container' style='min-height:5px;'>
+            <div class='container' style='min-height:20px;'>
                 <button type='button' style='float:right; font-size:85%; margin-top:-4px;'>
                     <i class='fas'>\uf044</i></button>
                 <button type='button' style='float:right; font-size:85%; margin-top:-4px;'>
@@ -1433,15 +1462,16 @@ class RecordDialog(BaseDialog):
         # Connect things up
         self._cancel_but1.onclick = self.close
         self._cancel_but2.onclick = self.close
-        self._submit_but.onclick = self.submit
+        self._submit_but.onclick = self.submit_soon
         self._resume_but.onclick = self.resume_record
         self._ds_input.oninput = self._on_user_edit
-        self._ds_input.onchange = self._on_user_edit_done
+        self._ds_input.onblur = self._on_user_edit_done
         self._recent_but.onclick = self.show_recents
         self._preset_but.onclick = self.show_presets
         self._preset_edit.onclick = lambda: self._canvas.tag_preset_dialog.open()
         self._delete_but1.onclick = self._delete1
         self._delete_but2.onclick = self._delete2
+        self.maindiv.addEventListener("click", self._autocompleter.clear)
 
         # Enable for some more info (e.g. during dev)
         if False:
@@ -1485,14 +1515,14 @@ class RecordDialog(BaseDialog):
             self._resume_but.style.display = "none"
             self._delete_but1.style.display = "none"
         elif lmode == "edit":
-            self._submit_but.innerHTML = "<i class='fas'>\uf304</i>&nbsp;&nbsp;Edit"
+            self._submit_but.innerHTML = "<i class='fas'>\uf304</i>&nbsp;&nbsp;Save"
             title_mode = "Edit running" if is_running else "Edit"
             self._title_div.innerText = f"{title_mode} record"
             self._submit_but.disabled = self._no_user_edit_yet
             self._resume_but.style.display = "none" if is_running else "block"
             self._delete_but1.style.display = "block"
         elif lmode == "stop":
-            self._submit_but.innerHTML = "<i class='fas'>\uf04d</i>&nbsp;&nbsp;Stop"
+            self._submit_but.innerHTML = "<i class='fas'>\uf04d</i>&nbsp;&nbsp;Save"
             self._resume_but.style.display = "none"
             self._delete_but1.style.display = "block"
         else:
@@ -1523,6 +1553,8 @@ class RecordDialog(BaseDialog):
         if e and e.stopPropagation:
             e.stopPropagation()
         self._autocompleter.show_presets_and_recents(True, False)
+        # Note: don't give ds_input focus, because that will pop up the
+        # keyboard on mobile devices
 
     def show_recents(self, e):
         # Prevent that the click will hide the autocomp
@@ -1600,7 +1632,7 @@ class RecordDialog(BaseDialog):
             e.stopPropagation()
             return
         elif key == "enter" or key == "return":
-            self.submit()
+            self.submit_soon()
         else:
             super()._on_key(e)
 
@@ -2361,7 +2393,7 @@ class SearchDialog(BaseDialog):
                 if not all_tags_ok:
                     continue
                 # Check strings
-                ds = record.ds.lower()
+                ds = (record.ds or "").lower()
                 all_strings_ok = True
                 for word in search_strings:
                     if word not in ds:
@@ -2439,9 +2471,7 @@ class ReportDialog(BaseDialog):
         if self._tags:
             filtertext = self._tags.join(" ")
         else:
-            filtertext = (
-                "<small>(select tags in the overview panel to filter by them)</small>"
-            )
+            filtertext = "<small>Select tags in overview panel</small>"
         self._copybuttext = "Copy table"
         html = f"""
             <h1><i class='fas'>\uf15c</i>&nbsp;&nbsp;Report
@@ -2449,7 +2479,7 @@ class ReportDialog(BaseDialog):
                 </h1>
             <div class='formlayout'>
                 <div>Tags:</div> <div>{filtertext}</div>
-                <div>Date range:</div> <div></div>
+                <div>Date range:</div> <div style='font-size:smaller;'></div>
                 <div>Grouping:</div> <select>
                                         <option value='none'>none</option>
                                         <option value='tagz'>tags</option>
@@ -2461,11 +2491,11 @@ class ReportDialog(BaseDialog):
                 <div>Format:</div> <label><input type='checkbox' /> Hours in decimals</label>
                 <div>Details:</div> <label><input type='checkbox' checked /> Show records</label>
                 <button type='button'><i class='fas'>\uf328</i>&nbsp;&nbsp;{self._copybuttext}</button>
-                    <div>to paste in a spreadsheet</div>
+                    <div>paste in a spreadsheet</div>
                 <button type='button'><i class='fas'>\uf0ce</i>&nbsp;&nbsp;Save CSV</button>
-                    <div>to save as spreadsheet (with more details)</div>
+                    <div>save spreadsheet (more details)</div>
                 <button type='button'><i class='fas'>\uf1c1</i>&nbsp;&nbsp;Save PDF</button>
-                    <div>to archive or send to a client</div>
+                    <div>archive or send to a client</div>
             </div>
             <hr />
             <table id='report_table'></table>
@@ -3491,10 +3521,7 @@ class SettingsDialog(BaseDialog):
         ) = self.maindiv.children
 
         # Set timezone info
-        offset, offset_winter, offset_summer = dt.get_timezone_info(dt.now())
-        s = f"UTC{offset:+0.2g}  /  GMT{offset_winter:+0.2g}"
-        s += " summertime" if offset == offset_summer else " wintertime"
-        self._timezone_div.innerText = s
+        self._timezone_div.innerText = "UTC" + dt.get_timezone_indicator(dt.now(), ":")
 
         # Unpack appearance
         self._darkmode_select = self._appearance_form.children[1]

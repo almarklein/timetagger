@@ -104,7 +104,7 @@ def set_colors():
 
         COLORS.button_bg = "#FFFFFF"
         COLORS.button_tag_bg = "#FFFFFF"
-        COLORS.button_shadow = "rgba(0, 0, 0, 0.45)"
+        COLORS.button_shadow = "rgba(0, 0, 0, 0.3)"
 
         COLORS.button_text = COLORS.prim1_clr
         COLORS.button_tag_text = COLORS.prim1_clr
@@ -837,18 +837,20 @@ class Widget:
         if opt.body:
             ctx.fillStyle = opt.body
             for i in range(2):
-                dy = 2 if i == 0 else 0
                 ctx.beginPath()
-                ctx.arc(x1 + rn, y1 + dy + rn, rn, 1.0 * PI, 1.5 * PI)
-                ctx.arc(x2 - rn, y1 + dy + rn, rn, 1.5 * PI, 2.0 * PI)
-                ctx.arc(x2 - rn, y2 + dy - rn, rn, 0.0 * PI, 0.5 * PI)
-                ctx.arc(x1 + rn, y2 + dy - rn, rn, 0.5 * PI, 1.0 * PI)
+                ctx.arc(x1 + rn, y1 + rn, rn, 1.0 * PI, 1.5 * PI)
+                ctx.arc(x2 - rn, y1 + rn, rn, 1.5 * PI, 2.0 * PI)
+                ctx.arc(x2 - rn, y2 - rn, rn, 0.0 * PI, 0.5 * PI)
+                ctx.arc(x1 + rn, y2 - rn, rn, 0.5 * PI, 1.0 * PI)
                 ctx.closePath()
                 if i == 0:
-                    ctx.shadowBlur = 5 if hover else 3
+                    ctx.shadowBlur = 5 if hover else 2.5
                     ctx.shadowColor = COLORS.button_shadow
+                    ctx.shadowOffsetY = 1.75
+                else:
+                    ctx.shadowBlur = 0
+                    ctx.shadowOffsetY = 0
                 ctx.fill()
-                ctx.shadowBlur = 0
         elif hover:
             ctx.fillStyle = "rgba(255,255,255,0.1)"
             ctx.beginPath()
@@ -1149,12 +1151,12 @@ class TopWidget(Widget):
         M = dict(
             pending="\uf067",  # uf067 uf055
             sync="\uf2f1",
-            ok="\uf560",  # uf560 uf00c
-            warn="\uf12a",
-            error="\uf00d",
+            ok="\uf00c",  # uf560 uf560 uf00c
+            warning="\uf071",
+            error="\uf12a",
         )
         state = window.store.state
-        text = M.get(state, "\uf00c")
+        text = M.get(state, "\uf1eb")
         if text:
             ctx.save()
             try:
@@ -1205,6 +1207,8 @@ class TopWidget(Widget):
                     running_summary = "Timer running"
 
         x0 = x
+
+        self._update_favicon(has_running)
 
         # Start & stop button
         if has_running:
@@ -1270,6 +1274,14 @@ class TopWidget(Widget):
         ctx.fillText(running_summary, (x0 + x) / 2, y + h + 5)
 
         return x0 - x
+
+    def _update_favicon(self, recording):
+        if self._favicon_recording == recording:
+            return
+        self._favicon_recording = recording
+        link = window.document.querySelector("link[rel~='icon']")
+        extra = "_dot" if recording else ""
+        link.href = "timetagger192_sf" + extra + ".png"
 
     def _get_now_scale(self):
 
@@ -3307,6 +3319,15 @@ class AnalyticsWidget(Widget):
         path.closePath()
         ctx.fill(path)
 
+        # Clicking the bar itself opens the selection of all tags on the bar
+        self._picker.register(
+            x1,
+            y1,
+            x2,
+            y2,
+            {"button": True, "action": "select:" + bar.tagz},
+        )
+
         ymid = y1 + 0.55 * npixels
         x_ref_duration = x2 - 30  # right side of minute
         x_ref_labels = x1 + 30  # start of labels
@@ -3336,12 +3357,13 @@ class AnalyticsWidget(Widget):
             ctx.fillRect(ex, y1, ew, y2 - y1)
         ex += ew
         # That coloured region is also a button
+        action = "configure_tag:" if len(colors) == 1 else "configure_tags:"
         self._picker.register(
             x1,
             y1,
             ex,
             y2,
-            {"button": True, "action": "configure_tags:" + bar.tagz},
+            {"button": True, "action": action + bar.tagz},
         )
         tt_text = "Color for " + bar.tagz + "\n(Click to change color)"
         hover = self._canvas.register_tooltip(
@@ -3402,7 +3424,7 @@ class AnalyticsWidget(Widget):
             ctx.textAlign = "left"
             ctx.font = FONT.size + "px " + FONT.default
             ctx.fillStyle = COLORS.record_text
-            if not tag:
+            if not tag:  # no tagz
                 text = "General"
                 ctx.fillText(text, tx, ty)
                 tx += ctx.measureText(text).width + 12
@@ -3435,10 +3457,11 @@ class AnalyticsWidget(Widget):
                     t1, t2 = self._canvas.range.get_range()
                     self._canvas.report_dialog.open(t1, t2, self.selected_tags)
                 elif picked.action.startswith("select:"):
-                    _, _, tag = picked.action.partition(":")
-                    if tag:
-                        if tag not in self.selected_tags:
-                            self.selected_tags.push(tag)
+                    _, _, tagz = picked.action.partition(":")
+                    if tagz:
+                        for tag in tagz.split(" "):
+                            if tag not in self.selected_tags:
+                                self.selected_tags.push(tag)
                     else:
                         self.selected_tags = []
                     self._tag_bars_dict = {}  # trigger animation

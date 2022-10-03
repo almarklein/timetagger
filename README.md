@@ -42,41 +42,58 @@ Python to JavaScript. This may be a bit idiosyncratic, but it's fun!
 Maybe I'll someday implement it in something that compiles down to Wasm :)
 
 
+## Install and run
+
+TimeTagger is a Python library and requires Python 3.6 or higher. The dependencies are listed in `requirements.txt` - these are installed automatically when you install TimeTagger with Pip.
+
+```
+# Install
+pip install -U timetagger
+
+# Run
+python -m timetagger
+```
+
+If the server runs on your local machine, you can use single-user mode out-of-the-box.
+
+
 ## Self-hosting your time tracker
 
-This repo is organized as a library, making it quite flexible to apply
-tweaks. After installation, you create a script that runs the web app.
-See `run.py` (in this repo) for an example, and
-[this article](https://timetagger.app/articles/selfhost/) for
-details about self hosting.
+A docker image is provided via the [Github container registry](https://github.com/almarklein/timetagger/pkgs/container/timetagger), so you can use e.g. Docker-compose to easily host your
+own server.
+See the example [docker-compose.yml](https://github.com/almarklein/timetagger/blob/main/deploy/docker-compose.yml).
+See [this article](https://timetagger.app/articles/selfhost2/) for more information about self hosting.
+
+
+## Credentials
+
+If you want multiple users, or if the server is not on localhost, you
+may want to provide the server with user credentials using an
+environment variable or a command line arg (see the
+[docs on config](https://timetagger.readthedocs.io/en/latest/libapi/)).
+
+```
+# Using command-line args
+python -m timetagger --credentials=test:$2a$08$0CD1NFiIbancwWsu3se1v.RNR/b7YeZd71yg3cZ/3whGlyU6Iny5i
+
+# Using environment variables
+export TIMETAGGER_CREDENTIALS=test:$2a$08$0CD1NFiIbancwWsu3se1v.RNR/b7YeZd71yg3cZ/3whGlyU6Iny5i
+python -m timetagger
+```
+
+The credentials take the form "<username>:<hash>", where the hash is a
+(salted) BCrypt hash of the password. You can generate credentials using
+e.g. https://timetagger.app/cred.
 
 
 ## Using the hosted version
 
 You can also make use of https://timetagger.app so you don't have to worry about
-maintaining a server, backups, and all that. An account costs just €3 per month.
+maintaining a server, backups, and all that. An account is just €3 per month.
 With that you'd also sponsor this project and open source in general.
 
 
-## Installation
-
-TimeTagger is a Python library and requires Python 3.6 or higher. The dependencies are listed in `requirements.txt` - these are installed automatically when you install TimeTagger with Pip.
-
-```
-# Latest release
-pip install -U timetagger
-
-# Latest from Github
-pip install -U https://github.com/almarklein/timetagger/archive/main.zip
-
-# Uninstall
-pip uninstall timetagger
-```
-
-After installation, copy `run.py` from this repo, and execute  `python run.py` to get started.
-
-
-## Copright and license
+## Copyright and license
 
 As usual, copyright applies to whomever made a particular contribution in this repository,
 which can be inspected via e.g. git blame. The owner of the copyright (i.e. the author)
@@ -93,10 +110,21 @@ By making a contribution to this project, you agree to this CLA.
 
 ## Developers
 
-Additional developer dependencies:
+Clone the repo and install in development mode:
+
+```sh
+git clone https://github.com/almarklein/timetagger.git
+cd timetagger
+pip install -e .
+```
+
+Install additional developer dependencies:
+
 ```
 pip install invoke black flake8 pytest pytest-cov requests
 ```
+
+Then these commands can be used during development:
 
 * `invoke -l` to see available invoke tasks
 * `invoke clean` to remove temporary files
