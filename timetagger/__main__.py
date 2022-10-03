@@ -152,8 +152,9 @@ async def get_webtoken_proxy(request, auth_info):
         return 403, {}, "forbidden: proxy auth is not enabled"
 
     # Check if the request comes from a trusted proxy
-    if request.host not in TRUSTED_PROXIES:
-        return 403, {}, "forbidden: the proxy host is not trusted"
+    client = request.scope["client"][0]
+    if client not in TRUSTED_PROXIES:
+        return 403, {}, "forbidden: the proxy is not trusted"
 
     # Get username from request header
     user = await get_username_from_proxy(request)
@@ -170,7 +171,7 @@ async def get_username_from_proxy(request):
     through the request headers.
     """
 
-    return request.headers.get(config.proxy_auth_header, "").strip()
+    return request.headers.get(config.proxy_auth_header.lower(), "").strip()
 
 
 async def get_webtoken_usernamepassword(request, auth_info):
