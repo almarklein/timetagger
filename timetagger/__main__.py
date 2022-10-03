@@ -117,6 +117,7 @@ async def api_handler(request, path):
     # Authenticate and get user db
     try:
         auth_info, db = await authenticate(request)
+        await validate_auth(request, auth_info)
     except AuthException as err:
         return 401, {}, f"unauthorized: {err}"
 
@@ -134,8 +135,42 @@ async def get_webtoken(request):
         return await get_webtoken_localhost(request, auth_info)
     elif method == "usernamepassword":
         return await get_webtoken_usernamepassword(request, auth_info)
+    elif method == "proxy":
+        return await get_webtoken_proxy(request, auth_info)
     else:
         return 401, {}, f"Invalid authentication method: {method}"
+
+
+async def get_webtoken_proxy(request, auth_info):
+    """An authentication handler that provides a webtoken when
+    the user is autheticated through a trusted reverse proxy
+    by a given header. See `get_webtoken_unsafe()` for details.
+    """
+
+    # Check if proxy auth is enabled
+    if not config.proxy_auth_enabled:
+        return 403, {}, "forbidden: proxy auth is not enabled"
+
+    # Check if the request comes from a trusted proxy
+    if request.host not in TRUSTED_PROXIES:
+        return 403, {}, "forbidden: the proxy host is not trusted"
+
+    # Get username from request header
+    user = await get_username_from_proxy(request)
+    if not user:
+        return 403, {}, "forbidden: no proxy user provided"
+
+    # Return the webtoken for proxy user
+    token = await get_webtoken_unsafe(user)
+    return 200, {}, dict(token=token)
+
+
+async def get_username_from_proxy(request):
+    """Returns the username that is provied by the reverse proxy
+    through the request headers.
+    """
+
+    return request.headers.get(config.proxy_auth_header, "").strip()
 
 
 async def get_webtoken_usernamepassword(request, auth_info):
@@ -164,12 +199,29 @@ async def get_webtoken_localhost(request, auth_info):
     hostname is localhost. See `get_webtoken_unsafe()` for details.
     """
 
+    # Don't allow localhost validation when proxy auth is enabled
+    if config.proxy_auth_enabled:
+        return 403, {}, "forbidden: disabled when proxy auth is available"
     # Establish that we can trust the client
     if request.host not in ("localhost", "127.0.0.1"):
         return 403, {}, "forbidden: must be on localhost"
     # Return the webtoken for the default user
     token = await get_webtoken_unsafe("defaultuser")
     return 200, {}, dict(token=token)
+
+
+async def validate_auth(request, auth_info):
+    """Validates that the autheticated user is still the same that
+    is provided by the reverse proxy.
+    """
+
+    # Skip validation if proxy auth is disabled
+    if not config.proxy_auth_enabled:
+        return
+    # Check that the proxy user is the same
+    proxy_user = await get_username_from_proxy(request)
+    if proxy_user and proxy_user != auth_info["username"]:
+        raise AuthException("Autheticated user does not match proxy user")
 
 
 def load_credentials():
@@ -180,7 +232,12 @@ def load_credentials():
     return d
 
 
+def load_trusted_proxies():
+    return [s.strip() for s in config.proxy_auth_trusted.replace(";", ",").split(",")]
+
+
 CREDENTIALS = load_credentials()
+TRUSTED_PROXIES = load_trusted_proxies()
 
 
 if __name__ == "__main__":

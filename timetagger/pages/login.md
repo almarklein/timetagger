@@ -3,11 +3,13 @@
 <script src='./app/tools.js'></script>
 
 <script>
-async function login(payload) {
+async function login(payload, trial_run) {
 
     // Reset status
     let el = document.getElementById("result");
-    el.innerHTML = "Logging in ..."
+    if (!trial_run) {
+        el.innerHTML = "Logging in ..."
+    }
     await tools.sleepms(100);
 
     // The body is obfuscated with base64, but not encrypted.
@@ -20,9 +22,11 @@ async function login(payload) {
 
     // Handle response
     if (res.status != 200) {
-        let text = await res.text();
-        el.innerText = "Could not get token: " + text;
-        el.innerHTML = el.innerHTML + "<br><a href='../'>TimeTagger home</a>";
+        if (!trial_run) {
+            let text = await res.text();
+            el.innerText = "Could not get token: " + text;
+            el.innerHTML = el.innerHTML + "<br><a href='../'>TimeTagger home</a>";
+        }
     } else {
         let token = JSON.parse(await res.text()).token;
         tools.set_auth_info_from_token(token);
@@ -54,6 +58,9 @@ async function load() {
     if (location.hostname == "localhost" || location.hostname == "127.0.0.1") {
         but2.style.display = "block";
     }
+
+    // Try to autheticate through a reverse proxy but ignore the unsuccessful result
+    await login({"method": "proxy"}, true);
 }
 
 window.addEventListener('load', load);
