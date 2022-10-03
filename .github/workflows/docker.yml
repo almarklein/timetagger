@@ -28,5 +28,6 @@ jobs:
       - name: Build and push docker image
         uses: docker/build-push-action@v2
         with:
+          file: deploy/repo.Dockerfile
           push: true
           tags: ${{ env.REGISTRY }}/${{ github.repository }}:latest
