@@ -22,10 +22,10 @@ class Config:
       form "user1:hash1,user2:hash2" where each hash is a salted hash (BCrypt)
       of the password. Used in the default startup script ``__main__.py``.
       You can generate credentials with https://timetagger.app/cred.
-    * `proxy_auth_enabled (bool)`: enables authentification from a reverse proxy
+    * `proxy_auth_enabled (bool)`: enables authentication from a reverse proxy
       (for example Authelia). Default "False".
-    * `proxy_auth_trusted (str)`: list of trusted proxy IPs or hostnames,
-      in the form "127.0.0.1,localhost". Default "127.0.0.1,localhost".
+    * `proxy_auth_trusted (str)`: list of trusted reverse proxy IPs, in the
+      form "127.0.0.1,10.0.0.1". Default "127.0.0.1".
     * `proxy_auth_header (str)`: name of the proxy header which contains the
       username of the logged in user. Default "X-Remote-User".
 
@@ -48,7 +48,7 @@ class Config:
         ("log_level", str, "info"),
         ("credentials", str, ""),
         ("proxy_auth_enabled", to_bool, False),
-        ("proxy_auth_trusted", str, "127.0.0.1,localhost"),
+        ("proxy_auth_trusted", str, "127.0.0.1"),
         ("proxy_auth_header", str, "X-Remote-User"),
     ]
     __slots__ = [name for name, _, _ in _ITEMS]
