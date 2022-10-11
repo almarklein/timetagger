@@ -117,7 +117,9 @@ async def api_handler(request, path):
     # Authenticate and get user db
     try:
         auth_info, db = await authenticate(request)
-        await validate_auth(request, auth_info)
+        # Only validate if proxy auth is enabled
+        if config.proxy_auth_enabled:
+            await validate_auth(request, auth_info)
     except AuthException as err:
         return 401, {}, f"unauthorized: {err}"
 
@@ -167,7 +169,7 @@ async def get_webtoken_proxy(request, auth_info):
 
 
 async def get_username_from_proxy(request):
-    """Returns the username that is provied by the reverse proxy
+    """Returns the username that is provided by the reverse proxy
     through the request headers.
     """
 
@@ -216,9 +218,6 @@ async def validate_auth(request, auth_info):
     is provided by the reverse proxy.
     """
 
-    # Skip validation if proxy auth is disabled
-    if not config.proxy_auth_enabled:
-        return
     # Check that the proxy user is the same
     proxy_user = await get_username_from_proxy(request)
     if proxy_user and proxy_user != auth_info["username"]:

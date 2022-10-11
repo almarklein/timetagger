@@ -3,11 +3,11 @@
 <script src='./app/tools.js'></script>
 
 <script>
-async function login(payload, trial_run) {
+async function login(payload, silent) {
 
     // Reset status
     let el = document.getElementById("result");
-    if (!trial_run) {
+    if (!silent) {
         el.innerHTML = "Logging in ..."
     }
     await tools.sleepms(100);
@@ -22,7 +22,7 @@ async function login(payload, trial_run) {
 
     // Handle response
     if (res.status != 200) {
-        if (!trial_run) {
+        if (!silent) {
             let text = await res.text();
             el.innerText = "Could not get token: " + text;
             el.innerHTML = el.innerHTML + "<br><a href='../'>TimeTagger home</a>";

@@ -5,7 +5,7 @@ import sys
 def to_bool(value):
     """Converts a string to a bool"""
     stringValue = str(value).lower()
-    if stringValue in ["true", "yes", "on"]:
+    if stringValue in ["true", "yes", "on", "1"]:
         return True
     return False
 
