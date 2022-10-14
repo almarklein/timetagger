@@ -86,6 +86,21 @@ The credentials take the form "<username>:<hash>", where the hash is a
 e.g. https://timetagger.app/cred.
 
 
+## Reverse proxy authentication
+
+If you have a reverse proxy which already authenticates users (e.g. [Authelia](https://www.authelia.com)) and provides the username through a HTTP header, you can tell TimeTagger to use this information. To configure it there are three environment variables and command line arguments (see the
+[docs on config](https://timetagger.readthedocs.io/en/latest/libapi/)).
+
+```
+# Using command-line args
+python -m timetagger --proxy_auth_enabled=True --proxy_auth_trusted=127.0.0.1 --proxy_auth_header=X-Remote-User
+
+# Using environment variables
+export TIMETAGGER_PROXY_AUTH_ENABLED=True TIMETAGGER_PROXY_AUTH_TRUSTED=127.0.0.1 TIMETAGGER_PROXY_AUTH_HEADER=X-Remote-User
+python -m timetagger
+```
+
+
 ## Using the hosted version
 
 You can also make use of https://timetagger.app so you don't have to worry about
