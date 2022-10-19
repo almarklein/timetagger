@@ -37,5 +37,7 @@ comply to the TimeTagger license (GPLv3).
 
 Also check [this article](https://timetagger.app/articles/selfhost/) about self-hosting TimeTagger.
 
+For more on autostarting TimeTagger on Linux systems, read [this article](https://tderflinger.com/en/using-systemd-to-start-a-python-application-with-virtualenv).
+
 If you're interested in including TimeTagger into a larger product,
 contact [me](https://almarklein.org) for information about an OEM license.
