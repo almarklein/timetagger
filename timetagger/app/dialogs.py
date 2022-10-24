@@ -3291,6 +3291,7 @@ class ImportDialog(BaseDialog):
             timemap[record.t1 + "_" + record.t2] = key
 
         # Now parse!
+        year_past_epoch = 31536000  # So we can test that a timestamp is not a hh.mm
         records = []
         new_record_count = 0
         index = 0
@@ -3314,23 +3315,28 @@ class ImportDialog(BaseDialog):
                 record_key = None
                 if raw.key:
                     record_key = raw.key  # dont store at record yet
+                if raw.date:
+                    # Prep date. Support both dd-mm-yyyy and yyy-mm-dd
+                    date = raw.date.replace(".", "-")  # Some tools use dots
+                    if len(date) == 10 and date.count("-") == 2:
+                        if len(date.split("-")[-1]) == 4:
+                            date = "-".join(reversed(date.split("-")))
+                        raw.date_ok = date
                 if True:  # raw.t1 always exists
                     record.t1 = float(raw.t1)
-                    if not isFinite(record.t1):
+                    if not (isFinite(record.t1) and record.t1 > year_past_epoch):
                         record.t1 = Date(raw.t1).getTime() / 1000
-                    if not isFinite(record.t1) and raw.date:
+                    if not isFinite(record.t1) and raw.date_ok:
                         # Try use date, Yast uses dots, reverse if needed
-                        date = raw.date.replace(".", "-")
-                        if "-" in date and len(date.split("-")[-1]) == 4:
-                            date = "-".join(reversed(date.split("-")))
-                        tme = raw.t1
-                        # Note: on IOS, Date needs to be "yyyy-mm-ddThh:mm:ss"
-                        # but people are unlikely to import on an ios device ... I hope.
-                        record.t1 = Date(date + " " + tme).getTime() / 1000
+                        tme = raw.t1.replace(".", ":")
+                        if 4 <= len(tme) <= 8 and 1 <= tme.count(":") <= 2:
+                            # Note: on IOS, Date needs to be "yyyy-mm-ddThh:mm:ss"
+                            # but people are unlikely to import on an ios device ... I hope.
+                            record.t1 = Date(raw.date_ok + " " + tme).getTime() / 1000
                     record.t1 = Math.floor(record.t1)
                 if True:  # raw.t2 or duration exists -
                     record.t2 = float(raw.t2)
-                    if not isFinite(record.t2):
+                    if not (isFinite(record.t2) and record.t2 > year_past_epoch):
                         record.t2 = Date(raw.t2).getTime() / 1000
                     if not isFinite(record.t2) and raw.duration:
                         # Try use duration
@@ -3345,6 +3351,11 @@ class ImportDialog(BaseDialog):
                                 duration += float(duration_parts[1]) * 60
                                 duration += float(duration_parts[2])
                         record.t2 = record.t1 + float(duration)
+                    if not isFinite(record.t2) and raw.date_ok:
+                        # Try use date
+                        tme = raw.t2.replace(".", ":")
+                        if 4 <= len(tme) <= 8 and 1 <= tme.count(":") <= 2:
+                            record.t2 = Date(raw.date_ok + " " + tme).getTime() / 1000
                     record.t2 = Math.ceil(record.t2)
                 if raw.tags:  # If tags are given, use that
                     raw_tags = raw.tags.replace(",", " ").split()
