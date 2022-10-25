@@ -2443,10 +2443,13 @@ class SearchDialog(BaseDialog):
 
         search_tags = self._current_tags
         search_strings = self._current_strings
+        is_hidden = window.stores.is_hidden
 
         if len(search_tags) > 0 or len(search_strings) > 0:
             # Get list of records
             for record in window.store.records.get_dump():
+                if is_hidden(record):
+                    continue
                 # Check tags
                 tags = window.store.records.tags_from_record(record)  # also #untagged
                 all_tags_ok = True
