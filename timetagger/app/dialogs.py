@@ -1020,11 +1020,11 @@ completer_all_tags = None
 class Autocompleter:
     """Helper class to autocomplete tags."""
 
-    def __init__(self, div, input, callback, mode_mask=7):
+    def __init__(self, div, input, callback, mode_mask=15):
         self._div = div
         self._input = input
         self._callback = callback
-        self._mode_mask = mode_mask  # 1: all, 2: tags, 4: presets
+        self._mode_mask = mode_mask  # 1: all, 2: tags, 4: presets, 8: descriptions
 
         self.clear()
         self._state = "", 0, 0
@@ -1071,7 +1071,7 @@ class Autocompleter:
             else:
                 show_tags = True
             needle = tag_to_be[1:]  # the tag without the '#'
-        elif len(val) >= 2 and " " not in val:
+        elif (8 & self._mode_mask) and len(val) >= 2 and " " not in val:
             show_descriptions = True
             needle = val.toLowerCase()
         else:
@@ -2364,7 +2364,7 @@ class SearchDialog(BaseDialog):
         self._tagmanage_but.disabled = True
 
         self._autocompleter = Autocompleter(
-            self._autocompleter_div, self._search_input, self._autocomp_finished, True
+            self._autocompleter_div, self._search_input, self._autocomp_finished, 1
         )
 
         window._search_dialog_open_record = self._open_record
