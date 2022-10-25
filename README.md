@@ -65,7 +65,7 @@ See the example [docker-compose.yml](https://github.com/almarklein/timetagger/bl
 See [this article](https://timetagger.app/articles/selfhost2/) for more information about self hosting.
 
 
-## Credentials
+### Authentication using credentials
 
 If you want multiple users, or if the server is not on localhost, you
 may want to provide the server with user credentials using an
@@ -86,7 +86,7 @@ The credentials take the form "<username>:<hash>", where the hash is a
 e.g. https://timetagger.app/cred.
 
 
-## Reverse proxy authentication
+### Authentication using a reverse proxy
 
 If you have a reverse proxy which already authenticates users (e.g. [Authelia](https://www.authelia.com)) and provides the username through a HTTP header, you can tell TimeTagger to use this information. To configure it there are three environment variables and command line arguments (see the
 [docs on config](https://timetagger.readthedocs.io/en/latest/libapi/)).
