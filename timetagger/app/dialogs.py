@@ -82,6 +82,12 @@ def str_date_to_time_int(d):
     return dt.to_time_int(window.Date(int(year), int(month) - 1, int(day)))
 
 
+def days_ago(t):
+    today = dt.floor(dt.now(), "1D")
+    the_day = dt.floor(t, "1D")
+    return max(0, int((today - the_day) / 86400))
+
+
 def _browser_history_popstate():
     """When we get into our "first state", we either close the toplevel
     dialog, or go back another step. We also prevent the user from
@@ -1018,13 +1024,15 @@ class Autocompleter:
         self._div = div
         self._input = input
         self._callback = callback
-        self._mode_mask = mode_mask  # 1: all, 2: recent, 4: presets
+        self._mode_mask = mode_mask  # 1: all, 2: tags, 4: presets
 
         self.clear()
         self._state = "", 0, 0
 
         # Suggested tags
-        self._suggested_tags_recent = self._get_suggested_tags_recent()
+        recent_ds, recent_tags = self._get_suggested_recents()
+        self._suggested_ds_recent = recent_ds  # descriptions
+        self._suggested_tags_recent = recent_tags
         self._suggested_tags_combined = self._get_suggested_tags_combined()
         self._suggested_tags_presets = []
 
@@ -1040,7 +1048,7 @@ class Autocompleter:
 
     def clear(self):
         self._index = 0
-        self._active_tag = ""
+        self._active_suggestion = ""
         if self._div:
             self._div.hidden = True
             self._div.innerHTML = ""
@@ -1054,24 +1062,32 @@ class Autocompleter:
         self._state = self._get_state()
         val, i1, i2 = self._state
         tag_to_be = val[i1:i2].toLowerCase()
-        if not tag_to_be:
+
+        # Get what to show
+        show_descriptions = show_tags = show_presets = False
+        if tag_to_be:
+            if i1 > 0 and val[i1 - 1] == "#" and (4 & self._mode_mask):
+                show_presets = True
+            else:
+                show_tags = True
+            needle = tag_to_be[1:]  # the tag without the '#'
+        elif len(val) >= 2 and " " not in val:
+            show_descriptions = True
+            needle = val.toLowerCase()
+        else:
             self.clear()
             return
 
         # We show presets if using double hashtags
-        show_presets = i1 > 0 and val[i1 - 1] == "#" and (4 & self._mode_mask)
-
         if tag_to_be == "#":
             if self._mode_mask == 1:
                 return
             elif show_presets:
-                return self.show_presets_and_recents(True, False)
+                return self.show_suggestions("presets")
             else:
-                return self.show_presets_and_recents(False, True)
+                return self.show_suggestions("tags")
 
         # Obtain suggestions
-        now = dt.now()
-        needle = tag_to_be[1:]  # the tag without the '#'
         matches1 = []
         matches2 = []
         if show_presets:
@@ -1102,12 +1118,12 @@ class Autocompleter:
                         )
                         html += "<span class='meta'>preset<span>"
                         matches2.push((preset, html))
-        else:
+        if show_tags:
             # Suggestions from recent tags
             for tag, tag_t2 in self._suggested_tags_combined:
                 i = tag.indexOf(needle)
                 if i > 0:
-                    date = max(0, int((now - tag_t2) / 86400))
+                    date = days_ago(tag_t2)
                     date = {0: "today", 1: "yesterday"}.get(date, date + " days ago")
                     if i == 1:
                         # The tag startswith the needle
@@ -1121,41 +1137,68 @@ class Autocompleter:
                         )
                         html += "<span class='meta'>last used " + date + "<span>"
                         matches2.push((tag, html))
+        if show_descriptions:
+            # Suggestions from recent descriptions
+            for ds, ds_t2 in self._suggested_ds_recent:
+                i = ds.toLowerCase().indexOf(needle)
+                if i >= 0:
+                    date = days_ago(ds_t2)
+                    date = {0: "today", 1: "yesterday"}.get(date, date + " days ago")
+                    html = (
+                        ds[:i]
+                        + "<b>"
+                        + ds[i : i + needle.length]
+                        + "</b>"
+                        + ds[i + needle.length :]
+                    )
+                    html += "<span class='meta'>last used " + date + "<span>"
+                    matches2.push((ds, html))
 
         suggestions = matches1
         suggestions.extend(matches2)
 
         # Show
         if suggestions:
-            if show_presets:
+            if show_descriptions:
+                self._show("Matching descriptions:", suggestions, False)
+            elif show_presets:
                 self._show("Matching presets:", suggestions)
             elif self._mode_mask & 2:
                 self._show("Matching recent tags:", suggestions)
             else:
                 self._show("Matching tags:", suggestions)
         else:
-            if show_presets:
+            if show_descriptions:
+                self.clear()
+            elif show_presets:
                 self._show("No matching presets ...", suggestions)
             elif self._mode_mask & 2:
                 self._show("No matching recent tags ...", suggestions)
             else:
                 self._show("No matching tags ...", suggestions)
 
-    def show_presets_and_recents(self, presets=True, recents=True):
+    def show_suggestions(self, kind=""):
         suggestions = []
         types = []
+        # Collect recent ds's
+        if "descriptions" in kind:
+            types.push("Recent descriptions")
+            for ds, ds_t2 in self._suggested_ds_recent:
+                date = days_ago(ds_t2)
+                date = {0: "today", 1: "yesterday"}.get(date, date + " days ago")
+                html = ds + "<span class='meta'>recent: " + date + "<span>"
+                suggestions.push((ds, html))
         # Collect presets
-        if presets:
+        if "presets" in kind:
             types.push("Presets")
             for preset in self._get_suggested_tags_presets():
                 html = preset + "<span class='meta'>preset<span>"
                 suggestions.push((preset, html))
-        # Collect recents
-        if recents:
+        # Collect tags
+        if "tags" in kind:
             types.push("Recent tags")
-            now = dt.now()
             for tag, tag_t2 in self._suggested_tags_recent:
-                date = max(0, int((now - tag_t2) / 86400))
+                date = days_ago(tag_t2)
                 date = {0: "today", 1: "yesterday"}.get(date, date + " days ago")
                 html = tag + "<span class='meta'>recent: " + date + "<span>"
                 suggestions.push((tag, html))
@@ -1164,15 +1207,15 @@ class Autocompleter:
             self.clear()
         elif suggestions:
             self._state = self._get_state()
-            self._show(types.join(" & ") + ":", suggestions)
+            self._show(types.join(" & ") + ":", suggestions, False)
         else:
-            self._show("No " + types.join(" or ") + " ...", [])
+            self._show("No " + types.join(" or ") + " ...", [], False)
 
     def on_key(self, e):
         if not self._div.hidden:
             key = e.key.lower()
             if key == "enter" or key == "return" or key == "tab":
-                self._finish(self._active_tag)
+                self._finish(self._active_suggestion)
                 e.preventDefault()
                 return True
             elif key == "escape":
@@ -1187,7 +1230,7 @@ class Autocompleter:
                 e.preventDefault()
                 return True
             elif key == "#":
-                # Toggle between preset/recents by inserting/removing a '#'
+                # Toggle between preset/tags by inserting/removing a '#'
                 val, i1, i2 = self._state
                 if i2 > i1:
                     is_double = i1 > 0 and val[i1 - 1] == "#"
@@ -1213,12 +1256,12 @@ class Autocompleter:
     def has_recent_tags(self):
         return len(self._suggested_tags_recent) > 0
 
-    def _show(self, headline, suggestions):
+    def _show(self, headline, suggestions, show_toggle=True):
         self.clear()
         # Add title
         hint_html = ""
-        if self._mode_mask & 3 and self._mode_mask & 4:
-            hint = "(type '#' again to toggle recents / presets)"
+        if show_toggle and self._mode_mask & 3 and self._mode_mask & 4:
+            hint = "(type '#' again to toggle tags / presets)"
             hint_html = "<span style='color:#999;'>" + hint + "</span>"
         item = document.createElement("div")
         item.classList.add("meta")
@@ -1247,7 +1290,7 @@ class Autocompleter:
         if not autocomp_count:
             return
         # Apply
-        self._active_tag = self._suggested_tags_in_autocomp[self._index]
+        self._active_suggestion = self._suggested_tags_in_autocomp[self._index]
         # Fix css class
         for i in range(self._div.children.length):
             self._div.children[i].classList.remove("active")
@@ -1260,20 +1303,27 @@ class Autocompleter:
     def _finish(self, text):
         self.clear()
         if text:
-            n_removed = 0
-            # Compose new description and cursor pos
-            val, i1, i2 = self._state
-            pre = val[:i1].rstrip("#")
-            n_removed += len(val[:i1]) - len(pre)
-            new_val = pre + text + val[i2:]
-            i3 = max(0, i1) - n_removed + len(text)
-            # Add a space if the text is added to the end
-            if len(val[i2:].strip()) == 0:
-                new_val = new_val.rstrip() + " "
-                i3 = new_val.length
-            # Apply
-            self._input.value = new_val
-            self._input.selectionStart = self._input.selectionEnd = i3
+            if " " in text:
+                # Preset or recent ds, just replace the whole thing
+                self._input.value = text
+                self._input.selectionStart = self._input.selectionEnd = len(text)
+            else:
+                # Single tag, needs more sublety
+                # Technically, presets or recents ds's with one word/tag get same treatment
+                n_removed = 0
+                # Compose new description and cursor pos
+                val, i1, i2 = self._state
+                pre = val[:i1].rstrip("#")
+                n_removed += len(val[:i1]) - len(pre)
+                new_val = pre + text + val[i2:]
+                i3 = max(0, i1) - n_removed + len(text)
+                # Add a space if the text is added to the end
+                if len(val[i2:].strip()) == 0:
+                    new_val = new_val.rstrip() + " "
+                    i3 = new_val.length
+                # Apply
+                self._input.value = new_val
+                self._input.selectionStart = self._input.selectionEnd = i3
             if utils.looks_like_desktop():
                 self._input.focus()
         self._callback()
@@ -1316,7 +1366,7 @@ class Autocompleter:
             completer_all_tags = suggested_tags
         return completer_all_tags
 
-    def _get_suggested_tags_recent(self):
+    def _get_suggested_recents(self):
         """Get recent tags and order by their usage/recent-ness."""
         # Get history of somewhat recent records
         t2 = dt.now()
@@ -1325,13 +1375,18 @@ class Autocompleter:
         # Apply Score
         tags_to_scores = {}
         tags_to_t2 = {}
+        descriptions = {}
         for r in records.values():
+            descriptions[r.ds] = max(r.t2, descriptions[r.ds] | 0)
             tags, _ = utils.get_tags_and_parts_from_string(r.ds)
             score = 1 / (t2 - r.t1)
             for tag in tags:
                 tags_to_t2[tag] = max(r.t2, tags_to_t2[tag] | 0)
                 tags_to_scores[tag] = (tags_to_scores[tag] | 0) + score
-        # Put in a list
+        # Put ds in a list
+        ds_list = list(descriptions.items())
+        ds_list.sort(key=lambda x: -x[1])
+        # Put tags in a list
         score_tag_list = []
         for tag in tags_to_scores.keys():
             if tag == "#untagged":
@@ -1340,7 +1395,7 @@ class Autocompleter:
         # Sort by score and trim names
         score_tag_list.sort(key=lambda x: -x[2])
         tag_list = [score_tag[:2] for score_tag in score_tag_list]
-        return tag_list
+        return ds_list, tag_list
 
     def _get_suggested_tags_combined(self):
         """Combine the full tag dict with the more recent tags."""
@@ -1389,11 +1444,13 @@ class RecordDialog(BaseDialog):
                 <div class='tag-suggestions-autocomp'></div>
             </div>
             <div class='container' style='min-height:20px;'>
-                <button type='button' style='float:right; font-size:85%; margin-top:-4px;'>
+                <button type='button' style='float:right; font-size:75%; margin-top:-4px;'>
                     <i class='fas'>\uf044</i></button>
-                <button type='button' style='float:right; font-size:85%; margin-top:-4px;'>
+                <button type='button' style='float:right; font-size:75%; margin-top:-4px;'>
                     Presets <i class='fas'>\uf0d7</i></button>
-                <button type='button' style='float:right; font-size:85%; margin-top:-4px;'>
+                <button type='button' style='float:right; font-size:75%; margin-top:-4px;'>
+                    Tags <i class='fas'>\uf0d7</i></button>
+                <button type='button' style='float:right; font-size:75%; margin-top:-4px;'>
                     Recent <i class='fas'>\uf0d7</i></button>
             </div>
             <div></div>
@@ -1428,7 +1485,8 @@ class RecordDialog(BaseDialog):
         #
         self._ds_input = self._ds_container.children[0]
         self._autocompleter_div = self._ds_container.children[1]
-        self._recent_but = self._preset_container.children[2]
+        self._recent_but = self._preset_container.children[3]
+        self._tags_but = self._preset_container.children[2]
         self._preset_but = self._preset_container.children[1]
         self._preset_edit = self._preset_container.children[0]
         self._title_div = h1.children[1]
@@ -1466,7 +1524,8 @@ class RecordDialog(BaseDialog):
         self._resume_but.onclick = self.resume_record
         self._ds_input.oninput = self._on_user_edit
         self._ds_input.onblur = self._on_user_edit_done
-        self._recent_but.onclick = self.show_recents
+        self._recent_but.onclick = self.show_recent_descriptions
+        self._tags_but.onclick = self.show_recent_tags
         self._preset_but.onclick = self.show_presets
         self._preset_edit.onclick = lambda: self._canvas.tag_preset_dialog.open()
         self._delete_but1.onclick = self._delete1
@@ -1552,15 +1611,20 @@ class RecordDialog(BaseDialog):
         # Prevent that the click will hide the autocomp
         if e and e.stopPropagation:
             e.stopPropagation()
-        self._autocompleter.show_presets_and_recents(True, False)
+        self._autocompleter.show_suggestions("presets")
         # Note: don't give ds_input focus, because that will pop up the
         # keyboard on mobile devices
 
-    def show_recents(self, e):
+    def show_recent_tags(self, e):
         # Prevent that the click will hide the autocomp
         if e and e.stopPropagation:
             e.stopPropagation()
-        self._autocompleter.show_presets_and_recents(False, True)
+        self._autocompleter.show_suggestions("tags")
+
+    def show_recent_descriptions(self, e):
+        if e and e.stopPropagation:
+            e.stopPropagation()
+        self._autocompleter.show_suggestions("descriptions")
 
     def _add_tag(self, tag):
         self._ds_input.value = self._ds_input.value.rstrip() + " " + tag + " "
