@@ -1130,7 +1130,7 @@ class TopWidget(Widget):
         color_progress = "rgba(255, 255, 255, 0.25)"
         color_text = COLORS.prim2_clr
         if state == "error" or state == "warning":
-            color_text = "#f00"
+            color_text = "#f99"
 
         # Clear bg
         ctx.beginPath()
