@@ -1681,6 +1681,16 @@ class RecordDialog(BaseDialog):
         duplicates = [tag for tag, count in tag_counts.items() if count > 1]
         if len(duplicates):
             hint_html += "<br>Duplicate tags: " + duplicates.join(" ")
+        # Detect URL's
+        urls = []
+        for part in parts:
+            for word in part.split():
+                if word.startsWith("http://") or word.startsWith("https://"):
+                    urls.append(word.strip("'").strip('"'))
+        if urls:
+            hint_html += "<br>Links:"
+            for url in urls:
+                hint_html += f"<br><a style='font-size:smaller;' href='{url}' target='_blank'>{url}</a>"
         # Apply
         self._tag_hints_div.innerHTML = hint_html
         self._tags_div.innerHTML = tags_html
