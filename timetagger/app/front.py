@@ -1118,6 +1118,8 @@ class TopWidget(Widget):
         ctx = self._canvas.node.getContext("2d")
         x, y, radius = self._sync_feedback_xy
 
+        state = window.store.state
+
         # Get factor 0..1
         factor = window.store.sync_time
         factor = max(0, (factor[1] - dt.now()) / (factor[1] - factor[0] + 0.0001))
@@ -1127,6 +1129,8 @@ class TopWidget(Widget):
         color_circle = "rgba(255, 255, 255, 0.15)"
         color_progress = "rgba(255, 255, 255, 0.25)"
         color_text = COLORS.prim2_clr
+        if state == "error" or state == "warning":
+            color_text = "#f99"
 
         # Clear bg
         ctx.beginPath()
@@ -1155,7 +1159,6 @@ class TopWidget(Widget):
             warning="\uf071",
             error="\uf12a",
         )
-        state = window.store.state
         text = M.get(state, "\uf1eb")
         if text:
             ctx.save()
