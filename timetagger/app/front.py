@@ -251,13 +251,12 @@ class TimeTaggerCanvas(BaseCanvas):
         x4 = self.grid_round(x4)
 
         y0 = 0
-        y1 = self.grid_round(110)
-        y2 = self.grid_round(140)
+        y1 = self.grid_round(140)
         y3 = self.grid_round(self.h - 15)
 
         self.widgets["TopWidget"].rect = x0, y0, x5, y1
-        self.widgets["RecordsWidget"].rect = x1, y2, x2, y3
-        self.widgets["AnalyticsWidget"].rect = x3, y2, x4, y3
+        self.widgets["RecordsWidget"].rect = x1, y1, x2, y3
+        self.widgets["AnalyticsWidget"].rect = x3, y1, x4, y3
 
         # Determine reference font
         FONT.default = FONT.condensed if self.w < 450 else FONT.wide
