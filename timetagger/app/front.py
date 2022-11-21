@@ -1718,17 +1718,35 @@ class RecordsWidget(Widget):
         ctx.textBaseline = "middle"
         ctx.textAlign = "right"
 
+        # Get time representation
+        time_repr = window.simplesettings.get("time_repr")
+        if time_repr == "auto":
+            time_repr = "24h"
+            x = window.Date().toLocaleTimeString().toLowerCase()
+            if "am" in x or "pm" in x:
+                time_repr = "ampm"
+
         # Draw tick texts
         for pos, t in ticks:
             text = dt.time2localstr(t)
             year, month, monthday = dt.get_year_month_day(t)
             if granularity == "mm":
                 text = text[11:16]
+                h = int(text[:2])
                 if text == "00:00":
                     text = dt.get_weekday_shortname(t) + " " + monthday
                     if monthday == 1:
                         text += " " + dt.get_month_shortname(t)
-                    text += " 0h"
+                    text += " 12h" if time_repr == "ampm" else " 0h"
+                elif time_repr == "ampm":  # am/pm is so weird!
+                    if h == 0:
+                        text = "12" + text[2:] + " am"
+                    elif h < 12:
+                        text = h + text[2:] + " am"
+                    elif h == 12:
+                        text = "12" + text[2:] + " pm"
+                    else:  # if h >= 13:
+                        text = (h - 12) + text[2:] + " pm"
             elif granularity == "hh":
                 text = text[11:13].lstrip("0") + "h"
                 if text == "h":
