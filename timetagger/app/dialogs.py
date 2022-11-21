@@ -3556,7 +3556,7 @@ class SettingsDialog(BaseDialog):
             </h1>
 
             <center style='font-size:80%'>User settings</center>
-            <h2><i class='fas'>\uf024</i>&nbsp;&nbsp;Time representation</h2>
+            <h2><i class='fas'>\uf4fd</i>&nbsp;&nbsp;Time representation</h2>
             <div class='formlayout'>
                 <div>Week starts on:</div>
                 <select>
@@ -3564,7 +3564,13 @@ class SettingsDialog(BaseDialog):
                     <option value='1'>Monday</option>
                     <option value='6'>Saturday</option>
                 </select>
-                <div>Durations:</div>
+                <div>Show time as:</div>
+                <select>
+                    <option value='auto'>Auto</option>
+                    <option value='24h'>23:20</option>
+                    <option value='ampm'>11:20 pm</option>
+                </select>
+                <div>Show duration as:</div>
                 <select>
                     <option value='hms'>1h20m</option>
                     <option value='colon'>01:20</option>
@@ -3611,7 +3617,7 @@ class SettingsDialog(BaseDialog):
             <hr style='margin-top: 1em;' />
 
             <center style='font-size:80%'>Static settings</center>
-            <h2><i class='fas'>\uf4fd</i>&nbsp;&nbsp;Time zone</h2>
+            <h2><i class='fas'>\uf0ac</i>&nbsp;&nbsp;Time zone</h2>
             <div></div>
             <h2><i class='fas'>\uf11c</i>&nbsp;&nbsp;Keyboard shortcuts</h2>
             <div class='formlayout'>{shortcuts_html}</div>
@@ -3650,15 +3656,21 @@ class SettingsDialog(BaseDialog):
         self._first_day_of_week.value = first_day_of_week
         self._first_day_of_week.onchange = self._on_first_day_of_week_change
 
-        # Duration mode
+        # Time representation
+        time_repr = window.simplesettings.get("time_repr")
+        self._time_repr = self._repr_form.children[3]
+        self._time_repr.value = time_repr
+        self._time_repr.onchange = self._on_time_repr_change
+
+        # Duration representation
         duration_repr = window.simplesettings.get("duration_repr")
-        self._duration_repr = self._repr_form.children[3]
+        self._duration_repr = self._repr_form.children[5]
         self._duration_repr.value = duration_repr
         self._duration_repr.onchange = self._on_duration_repr_change
 
         # Today snap time/offset
         today_snap_offset = window.simplesettings.get("today_snap_offset")
-        self._today_snap_offset = self._repr_form.children[5]
+        self._today_snap_offset = self._repr_form.children[7]
         self._today_snap_offset.value = today_snap_offset
         self._today_snap_offset.onchange = self._on_today_snap_offset_change
 
@@ -3698,6 +3710,10 @@ class SettingsDialog(BaseDialog):
     def _on_first_day_of_week_change(self):
         first_day_of_week = int(self._first_day_of_week.value)
         window.simplesettings.set("first_day_of_week", first_day_of_week)
+
+    def _on_time_repr_change(self):
+        time_repr = self._time_repr.value
+        window.simplesettings.set("time_repr", time_repr)
 
     def _on_duration_repr_change(self):
         duration_repr = self._duration_repr.value

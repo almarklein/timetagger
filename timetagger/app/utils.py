@@ -629,6 +629,7 @@ class SimpleSettings:
         }
         self._synced_keys = {
             "first_day_of_week": 1,
+            "time_repr": "auto",
             "duration_repr": "hms",
             "today_snap_offset": "",
             "show_stopwatch": True,
