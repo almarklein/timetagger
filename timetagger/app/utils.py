@@ -3,7 +3,15 @@ Utilities.
 """
 
 from pscript import this_is_js
-from pscript.stubs import window, perf_counter, localStorage, RawJS, Math, JSON, undefined
+from pscript.stubs import (
+    window,
+    perf_counter,
+    localStorage,
+    RawJS,
+    Math,
+    JSON,
+    undefined,
+)
 
 
 def looks_like_desktop():
