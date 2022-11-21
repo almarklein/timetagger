@@ -3,7 +3,15 @@ Utilities.
 """
 
 from pscript import this_is_js
-from pscript.stubs import window, perf_counter, localStorage, RawJS, Math, JSON
+from pscript.stubs import (
+    window,
+    perf_counter,
+    localStorage,
+    RawJS,
+    Math,
+    JSON,
+    undefined,
+)
 
 
 def looks_like_desktop():
@@ -598,39 +606,108 @@ class Picker:
                 return ob
 
 
-class LocalSettings:
-    """Settings stored in localstorage. Also easier API than the stores."""
+class SimpleSettings:
+    """Base API for storing settings. The "simple" refers to the API.
+    Key-value pairs are stored in a cache for fast getters.
+    The actual storage can be:
+    * None / session only: unknown keys are not stored across sessions.
+    * Local storagee: a prefefined set of keys are stored in local storaged,
+      which means that they are device-specific.
+    * Synced: synced to the server using the settings store.
+    """
 
     def __init__(self):
-        self._cache = self._load_settings()
+        # Define the settings and the defaults
+        self._local_keys = {
+            "darkmode": 1,
+            "width_mode": "auto",
+            "pomodoro_enabled": False,
+            "report_grouping": "date",
+            "report_hidesecondary": False,
+            "report_hourdecimals": False,
+            "report_showrecords": True,
+        }
+        self._synced_keys = {
+            "first_day_of_week": 1,
+            "show_stopwatch": True,
+        }
+        # The data store for synced source
+        self._store = None
+        # Init
+        self._cache = {}
+        self._load_local()
+        self._load_synced()  # wont do anything except init the cache
+        self._flush_local()
+        self._flush_synced()
 
-    def _load_settings(self):
+    def update_store(self, store):
+        """Called by the root store."""
+        self._store = store
+        self._load_synced()
+        self._flush_synced()
+
+    def _flush_local(self):
+        # Load default, then try loading from other source (in case we switched the source)
+        # and then load from the proper source.
+        for key in self._local_keys.keys():
+            value = self._local_keys[key]
+            value = self._synced_cache.get(key, value)
+            value = self._local_cache.get(key, value)
+            self._cache[key] = value
+
+    def _flush_synced(self):
+        for key in self._synced_keys.keys():
+            value = self._synced_keys[key]
+            value = self._local_cache.get(key, value)
+            value = self._synced_cache.get(key, value)
+            self._cache[key] = value
+
+    def _load_local(self):
+        self._local_cache = {}
         x = localStorage.getItem("timetagger_local_settings")
         if x:
             try:
-                return JSON.parse(x)
+                self._local_cache = JSON.parse(x)
             except Exception as err:
                 window.console.warn("Cannot parse local settings JSON: " + str(err))
-                return {}
-        else:
-            return {}
 
-    def _save_settings(self):
-        x = JSON.stringify(self._cache)
+    def _save_local(self, key):
+        x = JSON.stringify(self._local_cache)
         localStorage.setItem("timetagger_local_settings", x)
+
+    def _load_synced(self):
+        self._synced_cache = {}
+        if self._store:
+            for key in self._synced_keys.keys():
+                ob = self._store.get_by_key(key)
+                if ob is not None:
+                    self._synced_cache[key] = ob.value
+
+    def _save_synced(self, key):
+        if self._store:
+            value = self._synced_cache.get(key, self._synced_keys[key])
+            ob = self._store.create(key, value)
+            self._store.put(ob)
 
     def get(self, key, default_=None):
         """Get a settings item."""
-        return self._cache.get(key, default_)
+        value = self._cache[key]
+        return default_ if value is undefined else value
 
     def set(self, key, value):
         """Save a setting."""
         self._cache[key] = value
-        self._save_settings()
+        # Save
+        if key in self._local_keys.keys():
+            self._local_cache[key] = value
+            self._save_local(key)
+        elif key in self._synced_keys.keys():
+            self._synced_cache[key] = value
+            self._save_synced(key)
 
 
 if this_is_js():
-    window.localsettings = LocalSettings()
+    window.simplesettings = SimpleSettings()
 
 
 class BaseCanvas:

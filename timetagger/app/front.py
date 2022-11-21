@@ -63,7 +63,7 @@ def set_width_mode():
         if "width-" in entry:
             content_div.classList.remove(entry)
     # Apply
-    width_mode = window.localsettings.get("width_mode", "auto")
+    width_mode = window.simplesettings.get("width_mode")
     content_div.classList.add("width-" + width_mode)
 
 
@@ -71,7 +71,7 @@ def set_width_mode():
 def set_colors():
 
     # Dark vs light mode
-    mode = mode = window.localsettings.get("darkmode", 1)
+    mode = mode = window.simplesettings.get("darkmode")
     if mode == 1:
         light_mode = True
     elif mode == 2:
@@ -1200,7 +1200,7 @@ class TopWidget(Widget):
             if len(records) == 1:
                 tagz = window.store.records.tags_from_record(records[0]).join(" ")
                 stop_tt += " " + tagz
-                if window.localsettings.get("show_stopwatch", True):
+                if window.simplesettings.get("show_stopwatch"):
                     running_summary = dt.duration_string(now - records[0].t1, True)
                     pomo = self._canvas.pomodoro_dialog.time_left()
                     if pomo:
@@ -1253,7 +1253,7 @@ class TopWidget(Widget):
             x -= dx
 
         # Pomodoro button
-        if window.localsettings.get("pomodoro_enabled", False):
+        if window.simplesettings.get("pomodoro_enabled"):
             x -= 3
             dx = self._draw_button(
                 ctx,
@@ -1459,7 +1459,7 @@ class TopWidget(Widget):
                 for record in records:
                     record.t2 = max(record.t1 + 10, now)
                     window.store.records.put(record)
-                if window.localsettings.get("pomodoro_enabled", False):
+                if window.simplesettings.get("pomodoro_enabled"):
                     self._canvas.pomodoro_dialog.stop()
 
         elif action.startswith("nav_"):

@@ -1745,7 +1745,7 @@ class RecordDialog(BaseDialog):
         window.store.records.put(self._record)
         super().submit(self._record)
         # Start pomo?
-        if window.localsettings.get("pomodoro_enabled", False):
+        if window.simplesettings.get("pomodoro_enabled"):
             if self._lmode == "start":
                 self._canvas.pomodoro_dialog.start_work()
             elif self._lmode == "stop":
@@ -1768,7 +1768,7 @@ class RecordDialog(BaseDialog):
         # Close the dialog - don't apply local changes
         self.close()
         # Start pomo?
-        if window.localsettings.get("pomodoro_enabled", False):
+        if window.simplesettings.get("pomodoro_enabled"):
             self._canvas.pomodoro_dialog.start_work()
 
 
@@ -2597,13 +2597,13 @@ class ReportDialog(BaseDialog):
         close_but.onclick = self.close
         self._date_range.innerText = t1_date + "  -  " + t2_date
         #
-        grouping = window.localsettings.get("report_grouping", "date")
+        grouping = window.simplesettings.get("report_grouping")
         self._grouping_select.value = grouping
-        hidesecondary = window.localsettings.get("report_hidesecondary", False)
+        hidesecondary = window.simplesettings.get("report_hidesecondary")
         self._hidesecondary_but.checked = hidesecondary
-        hourdecimals = window.localsettings.get("report_hourdecimals", False)
+        hourdecimals = window.simplesettings.get("report_hourdecimals")
         self._hourdecimals_but.checked = hourdecimals
-        showrecords = window.localsettings.get("report_showrecords", True)
+        showrecords = window.simplesettings.get("report_showrecords")
         self._showrecords_but.checked = showrecords
         #
         self._grouping_select.onchange = self._on_setting_changed
@@ -2619,12 +2619,12 @@ class ReportDialog(BaseDialog):
         super().open(None)
 
     def _on_setting_changed(self):
-        window.localsettings.set("report_grouping", self._grouping_select.value)
-        window.localsettings.set(
+        window.simplesettings.set("report_grouping", self._grouping_select.value)
+        window.simplesettings.set(
             "report_hidesecondary", self._hidesecondary_but.checked
         )
-        window.localsettings.set("report_hourdecimals", self._hourdecimals_but.checked)
-        window.localsettings.set("report_showrecords", self._showrecords_but.checked)
+        window.simplesettings.set("report_hourdecimals", self._hourdecimals_but.checked)
+        window.simplesettings.set("report_showrecords", self._showrecords_but.checked)
         self._update_table()
 
     def _update_table(self):
@@ -3554,6 +3554,24 @@ class SettingsDialog(BaseDialog):
             <h1><i class='fas'>\uf013</i>&nbsp;&nbsp;Settings
                 <button type='button'><i class='fas'>\uf00d</i></button>
             </h1>
+
+            <center style='font-size:80%'>User settings</center>
+            <h2><i class='fas'>\uf4fd</i>&nbsp;&nbsp;Time display</h2>
+            <div class='formlayout'>
+                <div>Week starts on:</div>
+                <select>
+                    <option value='0'>Sunday</option>
+                    <option value='1'>Monday</option>
+                    <option value='6'>Saturday</option>
+                </select>
+            </div>
+            <h2><i class='fas'>\uf085</i>&nbsp;&nbsp;Misc</h2>
+            <label>
+                <input type='checkbox' checked='true'></input>
+                Show elapsed time below start-button</label>
+
+            <hr style='margin-top: 1em;' />
+
             <center style='font-size:80%'>Settings for this device</center>
             <h2><i class='fas'>\uf3fa</i>&nbsp;&nbsp;Appearance</h2>
             <div class='formlayout'>
@@ -3575,12 +3593,10 @@ class SettingsDialog(BaseDialog):
             <label>
                 <input type='checkbox' checked='false'></input>
                 Enable pomodoro (experimental) </label>
-            <h2><i class='fas'>\uf085</i>&nbsp;&nbsp;Misc</h2>
-            <label>
-                <input type='checkbox' checked='true'></input>
-                Show elapsed time below start-button</label>
+
             <hr style='margin-top: 1em;' />
-            <center style='font-size:80%'>Other settings</center>
+
+            <center style='font-size:80%'>Static settings</center>
             <h2><i class='fas'>\uf4fd</i>&nbsp;&nbsp;Time zone</h2>
             <div></div>
             <h2><i class='fas'>\uf11c</i>&nbsp;&nbsp;Keyboard shortcuts</h2>
@@ -3593,13 +3609,17 @@ class SettingsDialog(BaseDialog):
         self._close_but.onclick = self.close
         (
             _,  # Dialog title
+            _,  # Section: user settings
+            _,  # Time repr header
+            self._repr_form,
+            _,  # Misc header
+            self._stopwatch_label,
+            _,  # hr
             _,  # Section: per device
             _,  # Appearance header
             self._appearance_form,
             _,  # Pomodoro header
             self._pomodoro_label,
-            _,  # Misc header
-            self._stopwatch_label,
             _,  # hr
             _,  # Section: info
             _,  # Timezone header
@@ -3608,57 +3628,71 @@ class SettingsDialog(BaseDialog):
             self._shortcuts_div,
         ) = self.maindiv.children
 
-        # Set timezone info
-        self._timezone_div.innerText = "UTC" + dt.get_timezone_indicator(dt.now(), ":")
+        # User settings
 
-        # Unpack appearance
-        self._darkmode_select = self._appearance_form.children[1]
-        self._width_mode_select = self._appearance_form.children[3]
-
-        # Dark mode
-        self._darkmode_select.onchange = self._on_darkmode_change
-        darkmode = window.localsettings.get("darkmode", 1)
-        self._darkmode_select.value = darkmode
-
-        # Width mode
-        self._width_mode_select.onchange = self._on_width_mode_change
-        width_mode = window.localsettings.get("width_mode", "auto")
-        self._width_mode_select.value = width_mode
-
-        # Pomodoro
-        self._pomodoro_check = self._pomodoro_label.children[0]
-        self._pomodoro_check.onchange = self._on_pomodoro_check
-        pomo_enabled = window.localsettings.get("pomodoro_enabled", False)
-        self._pomodoro_check.checked = pomo_enabled
+        # Unpack repr
+        first_day_of_week = window.simplesettings.get("first_day_of_week")
+        self._first_day_of_week = self._repr_form.children[1]
+        self._first_day_of_week.value = first_day_of_week
+        self._first_day_of_week.onchange = self._on_first_day_of_week_change
 
         # Stopwatch
+        show_stopwatch = window.simplesettings.get("show_stopwatch")
         self._stopwatch_check = self._stopwatch_label.children[0]
-        self._stopwatch_check.onchange = self._on_stopwatch_check
-        show_stopwatch = window.localsettings.get("show_stopwatch", True)
         self._stopwatch_check.checked = show_stopwatch
+        self._stopwatch_check.onchange = self._on_stopwatch_check
+
+        # Device settings
+
+        # Dark mode
+        darkmode = window.simplesettings.get("darkmode")
+        self._darkmode_select = self._appearance_form.children[1]
+        self._darkmode_select.value = darkmode
+        self._darkmode_select.onchange = self._on_darkmode_change
+
+        # Width mode
+        width_mode = window.simplesettings.get("width_mode")
+        self._width_mode_select = self._appearance_form.children[3]
+        self._width_mode_select.value = width_mode
+        self._width_mode_select.onchange = self._on_width_mode_change
+
+        # Pomodoro
+        pomo_enabled = window.simplesettings.get("pomodoro_enabled")
+        self._pomodoro_check = self._pomodoro_label.children[0]
+        self._pomodoro_check.checked = pomo_enabled
+        self._pomodoro_check.onchange = self._on_pomodoro_check
+
+        # Static settings
+
+        # Set timezone info
+        self._timezone_div.innerText = "UTC" + dt.get_timezone_indicator(dt.now(), ":")
 
         super().open(callback)
 
     def _on_darkmode_change(self):
         darkmode = int(self._darkmode_select.value)
-        window.localsettings.set("darkmode", darkmode)
+        window.simplesettings.set("darkmode", darkmode)
         if window.front:
             window.front.set_colors()
 
     def _on_width_mode_change(self):
         width_mode = self._width_mode_select.value
-        window.localsettings.set("width_mode", width_mode)
+        window.simplesettings.set("width_mode", width_mode)
         if window.front:
             window.front.set_width_mode(width_mode)
             self._canvas._on_js_resize_event()  # private method, but ah well
 
+    def _on_first_day_of_week_change(self):
+        first_day_of_week = int(self._first_day_of_week.value)
+        window.simplesettings.set("first_day_of_week", first_day_of_week)
+
     def _on_pomodoro_check(self):
         pomo_enabled = bool(self._pomodoro_check.checked)
-        window.localsettings.set("pomodoro_enabled", pomo_enabled)
+        window.simplesettings.set("pomodoro_enabled", pomo_enabled)
 
     def _on_stopwatch_check(self):
         show_stopwatch = bool(self._stopwatch_check.checked)
-        window.localsettings.set("show_stopwatch", show_stopwatch)
+        window.simplesettings.set("show_stopwatch", show_stopwatch)
 
 
 class PomodoroDialog(BaseDialog):
@@ -3888,7 +3922,7 @@ class PomodoroDialog(BaseDialog):
         event = message_event.data
         if event.type != "notificationclick":
             return
-        if not window.localsettings.get("pomodoro_enabled", False):
+        if not window.simplesettings.get("pomodoro_enabled"):
             return
         if event.action == "work":
             self._set_state("work")
