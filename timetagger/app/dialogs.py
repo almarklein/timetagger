@@ -2333,12 +2333,14 @@ class SearchDialog(BaseDialog):
                 <button type='button'><i class='fas'>\uf00d</i></button>
                 </h1>
             <p>This tool allows you to search records by tags and plain text.
-            You can then edit the records in the list, or manage the selected tags.<br><br>
+            Prepend tags/words with "!" to exclude records that match it.
+            <br><br>
             </p>
             <div class='container' style='position: relative;'>
                 <input type='text' style='width:100%;' spellcheck='false' />
                 <div class='tag-suggestions-autocomp'></div>
             </div>
+            <div style='font-size: smaller;'></div>
             <br>
             <button type='button'>Search</button>
             <button type='button'>Manage tags</button>
@@ -2355,6 +2357,7 @@ class SearchDialog(BaseDialog):
             _,  # h1
             _,  # p
             search_container,
+            self._info_div,
             _,  # br
             self._search_but,
             self._tagmanage_but,
@@ -2379,7 +2382,11 @@ class SearchDialog(BaseDialog):
 
         window._search_dialog_open_record = self._open_record
         self._records = []
-        self._current_tags = []
+
+        self._current_pos_tags = []
+        self._current_neg_tags = []
+        self._current_pos_words = []
+        self._current_neg_words = []
 
         super().open(None)
         self._check_names()
@@ -2403,38 +2410,59 @@ class SearchDialog(BaseDialog):
 
     def _check_names(self):
         text = self._search_input.value
-        tags, parts = utils.get_tags_and_parts_from_string(text)
 
-        strings = []
+        _, parts = utils.get_tags_and_parts_from_string(text)
+
+        pos_tags = []
+        neg_tags = []
+        pos_words = []
+        neg_words = []
+
+        nex_tag_is_neg = False
         for part in parts:
-            if not part.startswith("#"):
-                part = part.strip()
-                if len(part) > 0:
-                    strings.push(part.lower())
+            this_tag_is_neg = nex_tag_is_neg
+            nex_tag_is_neg = False
+            if part.startswith("#"):
+                if this_tag_is_neg:
+                    neg_tags.append(part.lower())
+                else:
+                    pos_tags.append(part.lower())
+            else:
+                for word in part.split(" "):
+                    word = word.strip()
+                    if not word:
+                        pass
+                    elif word == "!":
+                        nex_tag_is_neg = True
+                    elif word.startswith("!"):
+                        neg_words.append(word[1:])
+                    else:
+                        pos_words.append(word)
 
-        ntags, nstrings = len(tags), len(strings)
-        self._current_tags = tags
-        self._current_strings = strings
+        self._current_pos_tags = pos_tags
+        self._current_neg_tags = neg_tags
+        self._current_pos_words = pos_words
+        self._current_neg_words = neg_words
 
         # Process search button
-        if ntags > 0 or nstrings > 0:
-            self._search_but.innerHTML = f"Search {ntags} tags and {nstrings} strings"
+        if pos_tags or neg_tags or pos_words or neg_words:
             self._search_but.disabled = False
         else:
-            self._search_but.innerHTML = "Search"
             self._search_but.disabled = True
 
         # Process tags button
-        if ntags > 0:
-            if ntags == 1:
+        if len(pos_tags) > 0:
+            if len(pos_tags) == 1:
                 icon = "<i class='fas'>\uf02b</i>&nbsp;&nbsp;"
             else:
                 icon = "<i class='fas'>\uf02c</i>&nbsp;&nbsp;"
-            self._tagmanage_but.innerHTML = f"{icon} Manage {tags.join(' ')}"
+            self._tagmanage_but.innerHTML = f"{icon} Manage {pos_tags.join(' ')}"
             self._tagmanage_but.disabled = False
         else:
             self._tagmanage_but.innerHTML = "Manage tags"
             self._tagmanage_but.disabled = True
+
+        self._show_what_would_be_searched()
 
     def _on_key(self, e):
         key = e.key.lower()
@@ -2451,11 +2479,19 @@ class SearchDialog(BaseDialog):
     def _find_records(self):
         records = []
 
-        search_tags = self._current_tags
-        search_strings = self._current_strings
+        pos_tags = self._current_pos_tags
+        neg_tags = self._current_neg_tags
+        pos_words = self._current_pos_words
+        neg_words = self._current_neg_words
+
         is_hidden = window.stores.is_hidden
 
-        if len(search_tags) > 0 or len(search_strings) > 0:
+        if (
+            len(pos_tags) > 0
+            or len(neg_tags) > 0
+            or len(pos_words) > 0
+            or len(neg_words) > 0
+        ):
             # Get list of records
             for record in window.store.records.get_dump():
                 if is_hidden(record):
@@ -2463,8 +2499,12 @@ class SearchDialog(BaseDialog):
                 # Check tags
                 tags = window.store.records.tags_from_record(record)  # also #untagged
                 all_tags_ok = True
-                for tag in search_tags:
+                for tag in pos_tags:
                     if tag not in tags:
+                        all_tags_ok = False
+                        break
+                for tag in neg_tags:
+                    if tag in tags:
                         all_tags_ok = False
                         break
                 if not all_tags_ok:
@@ -2472,8 +2512,12 @@ class SearchDialog(BaseDialog):
                 # Check strings
                 ds = (record.ds or "").lower()
                 all_strings_ok = True
-                for word in search_strings:
+                for word in pos_words:
                     if word not in ds:
+                        all_strings_ok = False
+                        break
+                for word in neg_words:
+                    if word in ds:
                         all_strings_ok = False
                         break
                 if not all_strings_ok:
@@ -2486,20 +2530,42 @@ class SearchDialog(BaseDialog):
         self._show_records()
         self._check_names()
 
+    def _show_what_would_be_searched(self):
+        any = False
+        find_html = f"Search rules:<ul>"
+        if len(self._current_pos_tags) > 0:
+            any = True
+            bold_tags = [f"<b>{tag}</b>" for tag in self._current_pos_tags]
+            find_html += "<li>Including tag" + (
+                "s" if len(self._current_pos_tags) > 1 else ""
+            )
+            find_html += " " + ", ".join(bold_tags) + "</li>"
+        if len(self._current_neg_tags) > 0:
+            any = True
+            bold_tags = [f"<b>{tag}</b>" for tag in self._current_neg_tags]
+            find_html += "<li>Excluding tag" + (
+                "s" if len(self._current_neg_tags) > 1 else ""
+            )
+            find_html += " " + ", ".join(bold_tags) + "</li>"
+        if len(self._current_pos_words) > 0:
+            any = True
+            italic_words = [f"<i>'{word}'</i>" for word in self._current_pos_words]
+            find_html += " <li>Including word" + (
+                "s" if len(self._current_pos_words) > 1 else ""
+            )
+            find_html += " " + ", ".join(italic_words) + "</li>"
+        if len(self._current_neg_words) > 0:
+            any = True
+            italic_words = [f"<i>'{word}'</i>" for word in self._current_neg_words]
+            find_html += " <li>Excluding word" + (
+                "s" if len(self._current_neg_words) > 1 else ""
+            )
+            find_html += " " + ", ".join(italic_words) + "</li>"
+        find_html += "</ul>"
+        self._info_div.innerHTML = find_html if any else ""
+
     def _show_records(self):
-        # Generate html
-        bold_tags = [f"<b>{tag}</b>" for tag in self._current_tags]
-        italic_strings = [f"<i>'{tag}'</i>" for tag in self._current_strings]
-        find_html = f"Searching records for"
-        if len(self._current_tags) > 0:
-            find_html += " tag" + ("s" if len(self._current_tags) > 1 else "")
-            find_html += " " + ", ".join(bold_tags)
-        if len(self._current_tags) > 0 and len(self._current_strings) > 0:
-            find_html += " and "
-        if len(self._current_strings) > 0:
-            find_html += " string" + ("s" if len(self._current_strings) > 1 else "")
-            find_html += " " + ", ".join(italic_strings) + ".<br>"
-        lines = [find_html, f"Found {self._records.length} records:<br>"]
+        lines = [f"Found {self._records.length} records:<br>"]
         for key in self._records:
             record = window.store.records.get_by_key(key)
             ds = record.ds or ""
@@ -2519,11 +2585,11 @@ class SearchDialog(BaseDialog):
         self._canvas.record_dialog.open("Edit", record, self._show_records)
 
     def _open_tag_dialog(self):
-        if len(self._current_tags) == 1:
-            tagz = self._current_tags[0]
+        if len(self._current_pos_tags) == 1:
+            tagz = self._current_pos_tags[0]
             self._canvas.tag_dialog.open(tagz, self._show_records)
-        elif len(self._current_tags) > 1:
-            tagz = " ".join(self._current_tags)
+        elif len(self._current_pos_tags) > 1:
+            tagz = " ".join(self._current_pos_tags)
             self._canvas.tag_combo_dialog.open(tagz, self._show_records)
 
 
