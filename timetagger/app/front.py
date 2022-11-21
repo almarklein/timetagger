@@ -2227,8 +2227,8 @@ class RecordsWidget(Widget):
         else:
             duration = now - record.t1
             duration_text_full = dt.duration_string(duration, True)
-            duration_text, _, duration_sec = duration_text_full.rpartition(":")
-            duration_sec = ":" + duration_sec
+            duration_text = dt.duration_string(duration, False)
+            duration_sec = duration_text_full[len(duration_text) :]
         ctx.fillStyle = COLORS.record_text if tags_selected else faded_clr
         ctx.textAlign = "right"
         ctx.fillText(duration_text, x5 + 30, text_ypos)
@@ -3393,10 +3393,11 @@ class AnalyticsWidget(Widget):
 
         # Get duration text
         if is_running:
-            duration, _, duration_sec = dt.duration_string(bar.t, True).rpartition(":")
-            duration_sec = ":" + duration_sec
+            duration_text_full = dt.duration_string(bar.t, True)
+            duration_text = dt.duration_string(bar.t, False)
+            duration_sec = duration_text_full[len(duration_text) :]
         else:
-            duration = dt.duration_string(bar.t, False)
+            duration_text = dt.duration_string(bar.t, False)
             duration_sec = ""
 
         # Draw content
@@ -3409,7 +3410,7 @@ class AnalyticsWidget(Widget):
         ctx.font = FONT.size + "px " + FONT.default
         ctx.textAlign = "right"
         ctx.fillStyle = COLORS.record_text
-        ctx.fillText(duration, x_ref_duration, ty)
+        ctx.fillText(duration_text, x_ref_duration, ty)
         if duration_sec:
             ctx.textAlign = "left"
             ctx.fillStyle = COLORS.prim2_clr
