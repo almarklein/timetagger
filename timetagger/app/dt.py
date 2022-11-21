@@ -265,15 +265,38 @@ def add(t, delta):
     return Date(tup[0], tup[1], tup[2], tup[3], tup[4], tup[5]).getTime() / 1000
 
 
-def duration_string(t, show_secs=False):
+def duration_string_colon(t, show_secs=False):
+    PSCRIPT_OVERLOAD = False  # noqa
     # Note the floor-rounding for all but the last element
     if show_secs:
-        # return f"{t//3600:.0f}h{(t//60)%60:.0f}m{t%60:.0f}s"
         return f"{t//3600:.0f}:{(t//60)%60:02.0f}:{t%60:02.0f}"
     else:
         m = Math.round(t / 60)
-        # return f"{m//60:.0f}h{m%60:.0f}m"
         return f"{m//60:.0f}:{m%60:02.0f}"
+
+
+def duration_string(t, show_secs=False):
+    PSCRIPT_OVERLOAD = False  # noqa
+    repr = "hms"
+    if window.simplesettings:
+        repr = window.simplesettings.get("duration_repr", "hms")
+    if repr == "hms":
+        if show_secs:
+            m = (t // 60) % 60
+            h = t // 3600
+            if h:
+                return f"{h:.0f}h{m:02.0f}m{t%60:02.0f}s"
+            else:
+                return f"{m:.0f}m{t%60:02.0f}s"
+        else:
+            m = Math.round(t / 60)
+            h = m // 60
+            if h:
+                return f"{h:.0f}h{m%60:02.0f}m"
+            else:
+                return f"{m%60:.0f}m"
+    else:
+        return duration_string_colon(t, show_secs)
 
 
 # %% Functions to query time props

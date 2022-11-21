@@ -2661,7 +2661,7 @@ class ReportDialog(BaseDialog):
         if self._hourdecimals_but.checked:
             duration2str = lambda t: f"{t / 3600:0.2f}"
         else:
-            duration2str = lambda t: dt.duration_string(t, False)
+            duration2str = lambda t: dt.duration_string_colon(t, False)
 
         # Get stats and sorted records, this already excludes hidden records
         stats = window.store.records.get_stats(t1, t2).copy()
@@ -3556,13 +3556,18 @@ class SettingsDialog(BaseDialog):
             </h1>
 
             <center style='font-size:80%'>User settings</center>
-            <h2><i class='fas'>\uf4fd</i>&nbsp;&nbsp;Time display</h2>
+            <h2><i class='fas'>\uf024</i>&nbsp;&nbsp;Time display</h2>
             <div class='formlayout'>
                 <div>Week starts on:</div>
                 <select>
                     <option value='0'>Sunday</option>
                     <option value='1'>Monday</option>
                     <option value='6'>Saturday</option>
+                </select>
+                <div>Durations:</div>
+                <select>
+                    <option value='hms'>1h20m</option>
+                    <option value='colon'>01:20</option>
                 </select>
             </div>
             <h2><i class='fas'>\uf085</i>&nbsp;&nbsp;Misc</h2>
@@ -3630,11 +3635,17 @@ class SettingsDialog(BaseDialog):
 
         # User settings
 
-        # Unpack repr
+        # Weeks starts on
         first_day_of_week = window.simplesettings.get("first_day_of_week")
         self._first_day_of_week = self._repr_form.children[1]
         self._first_day_of_week.value = first_day_of_week
         self._first_day_of_week.onchange = self._on_first_day_of_week_change
+
+        # Duration mode
+        duration_repr = window.simplesettings.get("duration_repr")
+        self._duration_repr = self._repr_form.children[3]
+        self._duration_repr.value = duration_repr
+        self._duration_repr.onchange = self._on_duration_repr_change
 
         # Stopwatch
         show_stopwatch = window.simplesettings.get("show_stopwatch")
@@ -3669,6 +3680,14 @@ class SettingsDialog(BaseDialog):
 
         super().open(callback)
 
+    def _on_first_day_of_week_change(self):
+        first_day_of_week = int(self._first_day_of_week.value)
+        window.simplesettings.set("first_day_of_week", first_day_of_week)
+
+    def _on_duration_repr_change(self):
+        duration_repr = self._duration_repr.value
+        window.simplesettings.set("duration_repr", duration_repr)
+
     def _on_darkmode_change(self):
         darkmode = int(self._darkmode_select.value)
         window.simplesettings.set("darkmode", darkmode)
@@ -3681,10 +3700,6 @@ class SettingsDialog(BaseDialog):
         if window.front:
             window.front.set_width_mode(width_mode)
             self._canvas._on_js_resize_event()  # private method, but ah well
-
-    def _on_first_day_of_week_change(self):
-        first_day_of_week = int(self._first_day_of_week.value)
-        window.simplesettings.set("first_day_of_week", first_day_of_week)
 
     def _on_pomodoro_check(self):
         pomo_enabled = bool(self._pomodoro_check.checked)

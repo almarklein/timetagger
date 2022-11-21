@@ -629,6 +629,7 @@ class SimpleSettings:
         }
         self._synced_keys = {
             "first_day_of_week": 1,
+            "duration_repr": "hms",
             "show_stopwatch": True,
         }
         # The data store for synced source

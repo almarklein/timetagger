@@ -8,11 +8,10 @@ from timetagger.app import dt
 from timetagger.app.dt import to_time_int, time2str
 
 
-def evaljs(code):
-    # Reduce the code a bit. Just enough to keep it below 2**14 bytes
-    code = code.replace("    ", "\t").replace("\n\n", "\n").replace("\n\n", "\n")
-    code = code.replace(", ", ",").replace(" / ", "/").replace(" - ", "-")
-    return _evaljs(code)
+def evaljs(code, final=None):
+    if final:
+        code += "\n\nconsole.log(" + final + ");"
+    return _evaljs(code, print_result=False)
 
 
 try:
@@ -48,17 +47,17 @@ def test_to_time_int():
 
     # Verify that JS and Python produce the same results
     js = py2js(open(dt.__file__, "rb").read().decode(), docstrings=False)
-    js1 = evaljs(js + "to_time_int('2018-04-24 13:18:00')")
-    js2 = evaljs(js + "to_time_int('2018-04-24 13:18:00Z')")
-    js3 = evaljs(js + "to_time_int('2018-04-24 13:18:00+0200')")
+    js1 = evaljs(js, "to_time_int('2018-04-24 13:18:00')")
+    js2 = evaljs(js, "to_time_int('2018-04-24 13:18:00Z')")
+    js3 = evaljs(js, "to_time_int('2018-04-24 13:18:00+0200')")
     assert js1 == str(t1)
     assert js2 == str(t2)
     assert js3 == str(t3)
 
     # Again with T
-    js1 = evaljs(js + "to_time_int('2018-04-24T13:18:00')")
-    js2 = evaljs(js + "to_time_int('2018-04-24T13:18:00Z')")
-    js3 = evaljs(js + "to_time_int('2018-04-24T13:18:00+0200')")
+    js1 = evaljs(js, "to_time_int('2018-04-24T13:18:00')")
+    js2 = evaljs(js, "to_time_int('2018-04-24T13:18:00Z')")
+    js3 = evaljs(js, "to_time_int('2018-04-24T13:18:00+0200')")
     assert js1 == str(t1)
     assert js2 == str(t2)
     assert js3 == str(t3)
@@ -91,12 +90,45 @@ def test_time2str():
 
     # Verify that JS and Python produce the same results
     js = py2js(open(dt.__file__, "rb").read().decode(), docstrings=False)
-    js1 = evaljs(js + f"time2str({t1})")
-    js2 = evaljs(js + f"time2str({t2}, 0)")
-    js3 = evaljs(js + f"time2str({t3}, 2)")
+    js1 = evaljs(js, f"time2str({t1})")
+    js2 = evaljs(js, f"time2str({t2}, 0)")
+    js3 = evaljs(js, f"time2str({t3}, 2)")
     assert js1 == s1
     assert js2 == s2
     assert js3 == s3
+
+
+def test_duration_string():
+    js = py2js(open(dt.__file__, "rb").read().decode(), docstrings=False)
+    js += "\n\nwindow = {};"
+
+    js1 = evaljs(js, f"duration_string(5, false)")
+    js2 = evaljs(js, f"duration_string(5, true)")
+    js3 = evaljs(js, f"duration_string(65, false)")
+    js4 = evaljs(js, f"duration_string(65, true)")
+    js5 = evaljs(js, f"duration_string(7265, false)")
+    js6 = evaljs(js, f"duration_string(7265, true)")
+
+    assert js1 == "0m"
+    assert js2 == "0m05s"
+    assert js3 == "1m"
+    assert js4 == "1m05s"
+    assert js5 == "2h01m"
+    assert js6 == "2h01m05s"
+
+    js1 = evaljs(js, f"duration_string_colon(5, false)")
+    js2 = evaljs(js, f"duration_string_colon(5, true)")
+    js3 = evaljs(js, f"duration_string_colon(65, false)")
+    js4 = evaljs(js, f"duration_string_colon(65, true)")
+    js5 = evaljs(js, f"duration_string_colon(7265, false)")
+    js6 = evaljs(js, f"duration_string_colon(7265, true)")
+
+    assert js1 == "0:00"
+    assert js2 == "0:00:05"
+    assert js3 == "0:01"
+    assert js4 == "0:01:05"
+    assert js5 == "2:01"
+    assert js6 == "2:01:05"
 
 
 if __name__ == "__main__":
