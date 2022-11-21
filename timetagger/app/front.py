@@ -944,7 +944,7 @@ class TopWidget(Widget):
         self._draw_header_text(ctx, x1 + 85, y1, x2 - 55, y2)
 
         now_scale, now_clr = self._get_now_scale()
-        if now_scale != "1D":
+        if now_scale != "1D" or window.simplesettings.get("today_snap_offset"):
             now_clr = COLORS.button_text
 
         # Draw buttons below the dark banner
@@ -1013,8 +1013,8 @@ class TopWidget(Widget):
             None,
             h,
             "Today",
-            "nav_snap_now1D",  # "nav_snap_now" + now_scale,
-            "Snap to now [d]",  # "Snap to now [Home]",
+            "nav_snap_today",  # "nav_snap_now" + now_scale,
+            "Snap to today [d]",  # "Snap to now [Home]",
             {"ref": "topright", "color": now_clr, "font": FONT.condensed},
         )
 
@@ -1387,7 +1387,7 @@ class TopWidget(Widget):
             self._handle_button_press("nav_snap_now" + self._current_scale["now"])
         #
         elif e.key.lower() == "d":
-            self._handle_button_press("nav_snap_now1D")
+            self._handle_button_press("nav_snap_today")
         elif e.key.lower() == "w":
             self._handle_button_press("nav_snap_now1W")
         elif e.key.lower() == "m":
@@ -1467,7 +1467,15 @@ class TopWidget(Widget):
             if action.startswith("nav_snap_"):
                 res = action.split("_")[-1]
                 t1, t2 = self._canvas.range.get_target_range()
-                if res.startswith("now"):
+                current_t1 = t1
+                if res == "today":
+                    t1 = dt.floor(now, "1D")
+                    t2 = dt.add(t1, "1D")
+                    today_snap_offset = window.simplesettings.get("today_snap_offset")
+                    if t1 == current_t1 and today_snap_offset:
+                        t1 = dt.add(t1, today_snap_offset)
+                        t2 = dt.add(t2, today_snap_offset)
+                elif res.startswith("now"):
                     res = res[3:]
                     if len(res) == 0:
                         nsecs = t2 - t1
