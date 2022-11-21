@@ -266,6 +266,7 @@ def add(t, delta):
 
 
 def duration_string_colon(t, show_secs=False):
+    PSCRIPT_OVERLOAD = False  # noqa
     # Note the floor-rounding for all but the last element
     if show_secs:
         return f"{t//3600:.0f}:{(t//60)%60:02.0f}:{t%60:02.0f}"
@@ -275,6 +276,7 @@ def duration_string_colon(t, show_secs=False):
 
 
 def duration_string(t, show_secs=False):
+    PSCRIPT_OVERLOAD = False  # noqa
     repr = "hms"
     if window.simplesettings:
         repr = window.simplesettings.get("duration_repr", "hms")
