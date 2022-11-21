@@ -715,6 +715,9 @@ class BaseDataStore:
         self._to_push = {"settings": {}, "records": {}}
         window.clearTimeout(self._sync_timeout)
         window.clearTimeout(self._state_timeout)
+        # Sync the settings API
+        if window.simplesettings:
+            window.simplesettings.update_store(self.settings)
         # Set if off!
         self.sync_soon(1.0)
 
@@ -837,6 +840,9 @@ class ConnectedDataStore(BaseDataStore):
                 await storage.setItem(dump)
             except Exception as err:
                 console.warn(err)
+        # Sync the settings API
+        if window.simplesettings:
+            window.simplesettings.update_store(self.settings)
 
     async def _sync(self):
         # Ignore sync if there is no auth info

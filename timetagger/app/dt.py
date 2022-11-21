@@ -3,7 +3,7 @@ PScript implementation of datetime utilities.
 """
 
 from pscript import this_is_js, RawJS
-from pscript.stubs import Date, isNaN, Math
+from pscript.stubs import Date, isNaN, Math, window
 
 
 DAYS_SHORT = [
@@ -198,8 +198,9 @@ def floor(t, res):
         tup = tup[:3]
         tup[-1] = int((tup[-1] - 1) / resFactor) * resFactor + 1  # days are 1-based
     elif resName == "W":
+        day_offset = 7 - get_first_day_of_week()
         d.setHours(0, 0, 0, 0)
-        daysoff = (d.getDay() + 6) % 7  # Align to a monday
+        daysoff = (d.getDay() + day_offset) % 7  # Align to a sunday/monday
         d = Date(d.getTime() - 86_400_000 * daysoff)
         tup = d.getFullYear(), d.getMonth(), d.getDate()
     elif resName == "M":
@@ -306,18 +307,27 @@ def get_weekday_longname(t):
 
 def is_first_day_of_week(t):
     d = Date(t * 1000)
-    return d.getDay() == 1  # Monday
+    return d.getDay() == get_first_day_of_week()  # 0: Sunday, 1: Monday
+
+
+def get_first_day_of_week():
+    PSCRIPT_OVERLOAD = False  # noqa
+    if window.simplesettings:
+        return window.simplesettings.get("first_day_of_week", 1)
+    else:
+        return 1
 
 
 def get_weeknumber(t):
     """Get the ISO 8601 week number."""
     # From https://weeknumber.net/how-to/javascript
     date = Date(t * 1000)  # noqa
+    day_offfset = 7 - get_first_day_of_week()  # noqa
     RawJS(
         """
     date.setHours(0, 0, 0, 0);
     // Thursday in current week decides the year.
-    date.setDate(date.getDate() + 3 - (date.getDay() + 6) % 7);
+    date.setDate(date.getDate() + 3 - (date.getDay() + day_offfset) % 7);
     // January 4 is always in week 1.
     var week1 = new Date(date.getFullYear(), 0, 4);
     // Adjust to Thursday in week 1 and count number of weeks from date to week1.
