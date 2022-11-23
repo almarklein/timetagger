@@ -1275,7 +1275,7 @@ class Autocompleter:
             item = document.createElement("div")
             item.classList.add("tag-suggestion")
             item.innerHTML = html
-            onclick = f'window._autocomp_finish({i});'
+            onclick = f"window._autocomp_finish({i});"
             item.setAttribute("onmousedown", onclick)
             self._div.appendChild(item)
         # Show
