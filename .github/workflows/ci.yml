@@ -35,9 +35,6 @@ jobs:
     strategy:
       matrix:
         include:
-          - name: Linux py36
-            os: ubuntu-latest
-            pyversion: '3.6'
           - name: Linux py37
             os: ubuntu-latest
             pyversion: '3.7'
@@ -50,6 +47,9 @@ jobs:
           - name: Linux py310
             os: ubuntu-latest
             pyversion: '3.10'
+          - name: Linux py311
+            os: ubuntu-latest
+            pyversion: '3.11'
           - name: Linux pypy3
             os: ubuntu-latest
             pyversion: 'pypy3'
@@ -60,9 +60,9 @@ jobs:
             os: macos-latest
             pyversion: '3.8'
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Set up Python ${{ matrix.pyversion }}
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.pyversion }}
       - name: Install dependencies
