@@ -52,7 +52,7 @@ jobs:
             pyversion: '3.11'
           - name: Linux pypy3
             os: ubuntu-latest
-            pyversion: 'pypy3'
+            pyversion: 'pypy3.9'
           - name: Windows py39
             os: windows-latest
             pyversion: '3.8'
