@@ -1039,7 +1039,7 @@ class Autocompleter:
         # Current suggestion
         self._suggested_tags_in_autocomp = []
 
-        window._autocomp_finish = self._finish
+        window._autocomp_finish = self._finish_cb
 
     def close(self):
         self._div = None
@@ -1271,10 +1271,11 @@ class Autocompleter:
         self._suggested_tags_in_autocomp = []
         for text, html in suggestions:  # text is a tag or a preset
             self._suggested_tags_in_autocomp.push(text)
+            i = len(self._suggested_tags_in_autocomp) - 1
             item = document.createElement("div")
             item.classList.add("tag-suggestion")
             item.innerHTML = html
-            onclick = f'window._autocomp_finish("{text}");'
+            onclick = f"window._autocomp_finish({i});"
             item.setAttribute("onmousedown", onclick)
             self._div.appendChild(item)
         # Show
@@ -1299,6 +1300,9 @@ class Autocompleter:
         active_child.classList.add("active")
         # Make corresponding item visible
         active_child.scrollIntoView({"block": "nearest"})
+
+    def _finish_cb(self, i):
+        self._finish(self._suggested_tags_in_autocomp[i])
 
     def _finish(self, text):
         self.clear()
