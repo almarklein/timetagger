@@ -1469,12 +1469,14 @@ class TopWidget(Widget):
                 t1, t2 = self._canvas.range.get_target_range()
                 current_t1 = t1
                 if res == "today":
-                    t1 = dt.floor(now, "1D")
-                    t2 = dt.add(t1, "1D")
+                    t1_actual = dt.floor(now, "1D")
                     today_snap_offset = window.simplesettings.get("today_snap_offset")
-                    if t1 == current_t1 and today_snap_offset:
-                        t1 = dt.add(t1, today_snap_offset)
-                        t2 = dt.add(t2, today_snap_offset)
+                    if today_snap_offset:
+                        t1_offset = dt.add(t1_actual, today_snap_offset)
+                        t1 = t1_actual if current_t1 == t1_offset else t1_offset
+                    else:
+                        t1 = t1_actual
+                    t2 = dt.add(t1, "1D")
                 elif res.startswith("now"):
                     res = res[3:]
                     if len(res) == 0:
