@@ -2914,7 +2914,7 @@ class ReportDialog(BaseDialog):
                             sd1,
                             st1,
                             st2,
-                            record.get("ds", ""),
+                            to_str(record.get("ds", "")),  # strip tabs and newlines
                             window.store.records.tags_from_record(record).join(" "),
                         ]
                     )
@@ -2960,12 +2960,19 @@ class ReportDialog(BaseDialog):
         )
 
     def _save_as_csv(self):
+        # This is all pretty straightforward. The most tricky bit it
+        # the ds (description). It can have any Unicode, so it should
+        # surrounded by double quotes. Any double-quotes inside the ds
+        # must be escaped by doubling them. And finally, don't put space
+        # after comma's, or tools like Excel may not be able to parse
+        # the quoted string correctly. Note that in _generate_table_rows
+        # the ds is stipped from \t\r\n.
 
         rows = self._generate_table_rows(self._last_t1, self._last_t2)
 
         lines = []
         lines.append(
-            "subtotals, tag_groups, duration, date, start, stop, description, user, tags"
+            "subtotals,tag_groups,duration,date,start,stop,description,user,tags"
         )
         lines.append("")
 
@@ -2979,13 +2986,13 @@ class ReportDialog(BaseDialog):
             if row[0] == "blank":
                 lines.append(",,,,,,,,")
             elif row[0] == "head":
-                lines.append(RawJS('row[1] + ", " + row[2] + ",,,,,,,"'))
+                lines.append(RawJS('row[1] + "," + row[2] + ",,,,,,,"'))
             elif row[0] == "record":
                 _, key, duration, sd1, st1, st2, ds, tagz = row
-                ds = '"' + ds + '"'
+                ds = '"' + ds.replace('"', '""') + '"'
                 lines.append(
                     RawJS(
-                        """',,' + duration + ', ' + sd1 + ', ' + st1 + ', ' + st2 + ', ' + ds + ', ' + user + ', ' + tagz"""
+                        """',,' + duration + ',' + sd1 + ',' + st1 + ',' + st2 + ',' + ds + ',' + user + ',' + tagz"""
                     )
                 )
 
@@ -3205,7 +3212,7 @@ class ExportDialog(BaseDialog):
         lines.append("<tr><th>" + lineparts.join("</th><th>") + "</th></tr>")
 
         # Parse all items
-        # Take care that description does not have newlines or tabs.
+        # Take care that description does not have newlines or tabs, using to_str
         # With tab-separated values it is not common to surround values in quotes.
         for key in itemsdict.keys():
             item = itemsdict[key]
