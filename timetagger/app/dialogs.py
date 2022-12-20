@@ -3115,17 +3115,36 @@ class ReportDialog(BaseDialog):
                     doc.rect(margin, y, width - 2 * margin, rowheight, "F")
                     doc.setTextColor("#000")
                     # _, key, duration, sd1, st1, st2, ds, tagz = row
-                    rowvalues = row[2:]
                     # The duration is right-aligned
                     x = margin + coloffsets[0]
                     doc.text(row[2], x, y + rowheight2, right_middle)
-                    # The rest is left-aligned
-                    for i in range(1, 5):
+                    # The rest (sd1, st1, st2) is left-aligned
+                    for i in (1, 2, 3):
                         x += coloffsets[i]
-                        if i == 3:
+                        s = row[i + 2]
+                        if i == 3:  # st2
                             doc.text("-", x - 1, y + rowheight2, right_middle)
-                        doc.text(rowvalues[i], x, y + rowheight2, left_middle)
-
+                        doc.text(s, x, y + rowheight2, left_middle)
+                    # The description may be so long we need to split it
+                    x += coloffsets[4]
+                    min_x = x
+                    max_x = width - margin
+                    ds = row[6]
+                    if x + doc.getTextWidth(ds) <= max_x:
+                        doc.text(ds, x, y + rowheight2, left_middle)
+                    else:
+                        w_space = doc.getTextWidth(" ")
+                        for word in ds.split(" "):
+                            w = doc.getTextWidth(word)
+                            if x + w <= max_x:
+                                doc.text(word, x, y + rowheight2, left_middle)
+                                x += w + w_space
+                            else:
+                                x = min_x
+                                y += rowheight
+                                doc.setFillColor("#f3f3f3" if rownr % 2 else "#eaeaea")
+                                doc.rect(margin, y, width - 2 * margin, rowheight, "F")
+                                doc.setTextColor("#000")
                 else:
                     doc.setFillColor("#ffeeee")
                     doc.rect(margin, y, width - 2 * margin, rowheight, "F")
