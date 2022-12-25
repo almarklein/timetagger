@@ -29,6 +29,7 @@ import bcrypt
 import asgineer
 import itemdb
 import pscript
+import iptools
 import timetagger
 from timetagger import config
 from timetagger.server import (
@@ -233,7 +234,7 @@ def load_credentials():
 
 
 def load_trusted_proxies():
-    return [s.strip() for s in config.proxy_auth_trusted.replace(";", ",").split(",")]
+    return iptools.IpRangeList(*[s.strip() for s in config.proxy_auth_trusted.replace(";", ",").split(",")])
 
 
 CREDENTIALS = load_credentials()
