@@ -234,7 +234,8 @@ def load_credentials():
 
 
 def load_trusted_proxies():
-    return iptools.IpRangeList(*[s.strip() for s in config.proxy_auth_trusted.replace(";", ",").split(",")])
+    ips = [s.strip() for s in config.proxy_auth_trusted.replace(";", ",").split(",")]
+    return iptools.IpRangeList(*ips)
 
 
 CREDENTIALS = load_credentials()
