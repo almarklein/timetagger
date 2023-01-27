@@ -3923,7 +3923,10 @@ class PomodoroDialog(BaseDialog):
         audio = self._sounds[sound]
         if audio.currentTime:
             audio.currentTime = 0
-        audio.play()
+        promise = audio.play()
+        # Catch when playing the sound failed, to avoid "nhandled Promise Rejection"
+        if promise:
+            promise.catch(lambda err: None)
 
     def _set_state(self, state):
         if state == "pre-work":
@@ -4010,11 +4013,11 @@ class PomodoroDialog(BaseDialog):
         if state == "pre-work":
             self._label.innerHTML = "Work (25:00)"
         elif state == "work":
-            self._label.innerHTML = "Working: " + dt.duration_string(left, True)[2:]
+            self._label.innerHTML = "Working: " + dt.duration_string(left, True)
         elif state == "pre-break":
             self._label.innerHTML = "Break (5:00)"
         elif state == "break":
-            self._label.innerHTML = "Break: " + dt.duration_string(left, True)[2:]
+            self._label.innerHTML = "Break: " + dt.duration_string(left, True)
         else:
             self._set_state("pre-work")
 
