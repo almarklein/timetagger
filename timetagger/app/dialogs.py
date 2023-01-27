@@ -1307,27 +1307,23 @@ class Autocompleter:
     def _finish(self, text):
         self.clear()
         if text:
-            if " " in text:
-                # Preset or recent ds, just replace the whole thing
+            if not text.startswith("#"):
+                # Recent ds, just replace the whole thing
                 self._input.value = text
                 self._input.selectionStart = self._input.selectionEnd = len(text)
             else:
-                # Single tag, needs more sublety
-                # Technically, presets or recents ds's with one word/tag get same treatment
-                n_removed = 0
-                # Compose new description and cursor pos
+                # Append/insert the tag/preset
+                # Get pre and post part, in between which we put the new text
                 val, i1, i2 = self._state
-                pre = val[:i1].rstrip("#")
-                n_removed += len(val[:i1]) - len(pre)
-                new_val = pre + text + val[i2:]
-                i3 = max(0, i1) - n_removed + len(text)
-                # Add a space if the text is added to the end
-                if len(val[i2:].strip()) == 0:
-                    new_val = new_val.rstrip() + " "
-                    i3 = new_val.length
-                # Apply
-                self._input.value = new_val
-                self._input.selectionStart = self._input.selectionEnd = i3
+                pre = val[:i1].rstrip("#").rstrip(" ")
+                post = val[i2:].lstrip(" ")
+                if pre:
+                    pre = pre + " "
+                # Compose new value
+                self._input.value = pre + text + " " + post
+                # Put selection at the end of the inserted text
+                cursor_pos = len(pre) + len(text) + 1
+                self._input.selectionStart = self._input.selectionEnd = cursor_pos
             if utils.looks_like_desktop():
                 self._input.focus()
         self._callback()
