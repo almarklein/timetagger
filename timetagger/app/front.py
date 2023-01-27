@@ -2310,6 +2310,8 @@ class RecordsWidget(Widget):
         ry2 = y0 + npixels * (record.t2 - t1) / nsecs
         if record.t1 == record.t2:
             ry2 = y0 + npixels * (self._canvas.now() - t1) / nsecs
+        if ry1 > ry2:
+            ry1, ry2 = ry2, ry1
         ry1 = grid_round(ry1)
         ry2 = grid_round(ry2)
 
