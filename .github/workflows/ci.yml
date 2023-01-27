@@ -13,11 +13,11 @@ jobs:
     name: linting
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - name: Set up Python 3.9
-        uses: actions/setup-python@v2
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
         with:
-          python-version: 3.9
+          python-version: 3.11
       - name: Install dependencies
         shell: bash
         run: |
@@ -55,10 +55,10 @@ jobs:
             pyversion: 'pypy3.9'
           - name: Windows py39
             os: windows-latest
-            pyversion: '3.8'
+            pyversion: '3.9'
           - name: MacOS py39
             os: macos-latest
-            pyversion: '3.8'
+            pyversion: '3.9'
     steps:
       - uses: actions/checkout@v3
       - name: Set up Python ${{ matrix.pyversion }}
