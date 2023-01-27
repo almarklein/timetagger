@@ -77,7 +77,7 @@ environment variable or a command line arg (see the
 python -m timetagger --credentials=test:$2a$08$0CD1NFiIbancwWsu3se1v.RNR/b7YeZd71yg3cZ/3whGlyU6Iny5i
 
 # Using environment variables
-export TIMETAGGER_CREDENTIALS=test:$2a$08$0CD1NFiIbancwWsu3se1v.RNR/b7YeZd71yg3cZ/3whGlyU6Iny5i
+export TIMETAGGER_CREDENTIALS='test:$2a$08$0CD1NFiIbancwWsu3se1v.RNR/b7YeZd71yg3cZ/3whGlyU6Iny5i'
 python -m timetagger
 ```
 
