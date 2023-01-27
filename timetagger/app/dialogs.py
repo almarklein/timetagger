@@ -3144,15 +3144,14 @@ class ReportDialog(BaseDialog):
                         w_space = doc.getTextWidth(" ")
                         for word in ds.split(" "):
                             w = doc.getTextWidth(word)
-                            if x + w <= max_x:
-                                doc.text(word, x, y + rowheight2, left_middle)
-                                x += w + w_space
-                            else:
+                            if x + w > max_x:  # need new line
                                 x = min_x
                                 y += rowheight
                                 doc.setFillColor("#f3f3f3" if rownr % 2 else "#eaeaea")
                                 doc.rect(margin, y, width - 2 * margin, rowheight, "F")
                                 doc.setTextColor("#000")
+                            doc.text(word, x, y + rowheight2, left_middle)
+                            x += w + w_space
                 else:
                     doc.setFillColor("#ffeeee")
                     doc.rect(margin, y, width - 2 * margin, rowheight, "F")
