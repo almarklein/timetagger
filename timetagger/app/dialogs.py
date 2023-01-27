@@ -2959,6 +2959,14 @@ class ReportDialog(BaseDialog):
             f"<i class='fas'>\uf328</i>&nbsp;&nbsp;{self._copybuttext}"
         )
 
+    def _get_export_filename(self, ext):
+        date1 = self._t1_date.replace("-", "")
+        date2 = self._t2_date.replace("-", "")
+        if date1 == date2:
+            return f"timetagger-{date1}.{ext}"
+        else:
+            return f"timetagger-{date1}-{date2}.{ext}"
+
     def _save_as_csv(self):
         # This is all pretty straightforward. The most tricky bit it
         # the ds (description). It can have any Unicode, so it should
@@ -3003,7 +3011,7 @@ class ReportDialog(BaseDialog):
         # Create a element to attach the download to
         a = document.createElement("a")
         a.style.display = "none"
-        a.setAttribute("download", "timetagger-records.csv")
+        a.setAttribute("download", self._get_export_filename("csv"))
         a.href = obj_url
         document.body.appendChild(a)
         # Trigger the download by simulating click
@@ -3051,14 +3059,14 @@ class ReportDialog(BaseDialog):
         # )
 
         tagname = self._tags.join(" ") if self._tags else "all"
-        d1 = reversed(dt.time2localstr(self._last_t1)[:10].split("-")).join("-")
-        d2 = reversed(dt.time2localstr(self._last_t2)[:10].split("-")).join("-")
+        d1 = reversed(self._t1_date.split("-")).join("-")
+        d2 = reversed(self._t2_date.split("-")).join("-")
         doc.setFontSize(11)
         doc.text("Tags:  ", margin + 20, margin + 15, {"align": "right"})
         doc.text(tagname, margin + 20, margin + 15)
         doc.text("From:  ", margin + 20, margin + 20, {"align": "right"})
         doc.text(d1, margin + 20, margin + 20)
-        doc.text("To:  ", margin + 20, margin + 25, {"align": "right"})
+        doc.text("Until:  ", margin + 20, margin + 25, {"align": "right"})
         doc.text(d2, margin + 20, margin + 25)
 
         # Prepare drawing table
@@ -3161,7 +3169,7 @@ class ReportDialog(BaseDialog):
             x, y = width - 0.5 * margin, 0.5 * margin
             doc.text(f"{pagenr}/{npages}", x, y, {"align": "right", "baseline": "top"})
 
-        doc.save("timetagger-records.pdf")
+        doc.save(self._get_export_filename("pdf"))
         # doc.output('dataurlnewwindow')  # handy during dev
 
 
