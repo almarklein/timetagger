@@ -8,7 +8,6 @@ from pytest import raises
 
 
 def test_user2filename_and_filename2user():
-
     fnamechars = "".join(utils.ok_chars) + "=~."
 
     examples = [

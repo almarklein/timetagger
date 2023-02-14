@@ -117,9 +117,7 @@ def test_auth():
 
 
 def test_fails():
-
     with MockTestServer(our_api_handler) as p:
-
         # Invalid API version
         r = p.get("http://localhost/api/v99/", headers=HEADERS)
         assert r.status == 404
@@ -159,7 +157,6 @@ def test_settings():
     clear_test_db()
 
     with MockTestServer(our_api_handler) as p:
-
         # Initially the settings list is empty
         r = p.get("http://localhost/api/v2/settings", headers=HEADERS)
         assert r.status == 200
@@ -276,7 +273,6 @@ def test_records():
     clear_test_db()
 
     with MockTestServer(our_api_handler) as p:
-
         # Currently no records
         r = p.get("http://localhost/api/v2/updates?since=0", headers=HEADERS)
         assert r.status == 200
@@ -442,7 +438,6 @@ def test_records_get():
     clear_test_db()
 
     with MockTestServer(our_api_handler) as p:
-
         # Get current records
         r = p.get("http://localhost/api/v2/records?timerange=0-999", headers=HEADERS)
         assert r.status == 200
@@ -570,7 +565,6 @@ def test_updates():
     clear_test_db()
 
     with MockTestServer(our_api_handler) as p:
-
         # Get updates
         r = p.get("http://localhost/api/v2/updates?since=0", headers=HEADERS)
         assert r.status == 200
@@ -690,7 +684,6 @@ def test_webtoken():
     headers = HEADERS.copy()
 
     with MockTestServer(our_api_handler) as p:
-
         # Get fresh webtoken
         r = p.get("http://localhost/api/v2/webtoken", headers=headers)
         assert r.status == 200
@@ -738,7 +731,6 @@ def test_apitoken():
     headers = HEADERS.copy()
 
     with MockTestServer(our_api_handler) as p:
-
         # Get fresh apitoken
         r = p.get("http://localhost/api/v2/apitoken", headers=HEADERS)
         assert r.status == 200

@@ -8,7 +8,6 @@ class DataStoreStub:
 
 
 def test_record_store1():
-
     datastore = DataStoreStub()
     rs = RecordStore(datastore)
 
@@ -78,7 +77,6 @@ def test_record_store1():
 
 
 def test_record_store_untagged():
-
     datastore = DataStoreStub()
     rs = RecordStore(datastore)
 
@@ -100,7 +98,6 @@ def test_record_store_untagged():
 
 
 def test_record_spanning_multiple_bins():
-
     datastore = DataStoreStub()
     rs = RecordStore(datastore)
 
@@ -178,7 +175,6 @@ def test_record_spanning_multiple_bins():
 
 
 def test_record_mutations():
-
     datastore = DataStoreStub()
     rs = RecordStore(datastore)
 
@@ -244,7 +240,6 @@ def test_record_mutations():
 
 
 def test_invalid_records():
-
     datastore = DataStoreStub()
     rs = RecordStore(datastore)
 
@@ -271,7 +266,6 @@ def test_invalid_records():
 
 
 def test_record_running():
-
     datastore = DataStoreStub()
     rs1 = RecordStore(datastore)
 
@@ -304,7 +298,6 @@ def test_record_running():
 
 
 def test_deleting_records():
-
     datastore = DataStoreStub()
     rs = RecordStore(datastore)
 

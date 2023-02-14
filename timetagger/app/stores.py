@@ -334,7 +334,6 @@ class SettingsStore(BaseStore):
         self.put(ob)
 
     def get_tag_info(self, tagz):
-
         info = {"targets": {}}
 
         # Load color the old way. We can remove this in about a year or so (2023)
@@ -868,7 +867,6 @@ class ConnectedDataStore(BaseDataStore):
         await window.fetch(url, init)
 
     async def _push(self, kind, authtoken):
-
         # Take items, only proceed if nonempty
         items = self._to_push[kind]
         if len(items.keys()) == 0:
@@ -914,7 +912,6 @@ class ConnectedDataStore(BaseDataStore):
                 console.warn(f"Server dropped a {kind}: {err}")
 
     async def _pull(self, authtoken):
-
         # Fetch and wait for response
         url = tools.build_api_url("updates?since=" + self._server_time)
         init = dict(method="GET", headers={"authtoken": authtoken})
@@ -1030,7 +1027,6 @@ class DemoDataStore(BaseDataStore):
             self.settings.set_tag_info(tag, {"color": color})
 
     def _create_tags(self):
-
         self._tag_groups1 = [
             ["#admin", "#reading"],
             ["#admin", "#traveling"],

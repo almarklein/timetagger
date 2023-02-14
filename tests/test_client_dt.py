@@ -22,7 +22,6 @@ except Exception:  # pragma: no cover
 
 
 def test_to_time_int():
-
     t1 = to_time_int("2018-04-24 13:18:00")
     t2 = to_time_int("2018-04-24 13:18:00Z")
     t3 = to_time_int("2018-04-24 13:18:00+0200")
@@ -64,7 +63,6 @@ def test_to_time_int():
 
 
 def test_time2str():
-
     t1 = to_time_int("2018-04-24 13:18:00")
     t2 = to_time_int("2018-04-24 13:18:00Z")
     t3 = to_time_int("2018-04-24 13:18:00+0200")
