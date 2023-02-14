@@ -471,9 +471,7 @@ class MenuDialog(BaseDialog):
 
     def _open_report(self):
         self.close()
-        t1, t2 = self._canvas.range.get_range()
-        prname = self._canvas.widgets["AnalyticsWidget"].selected_tag_name
-        self._canvas.report_dialog.open(t1, t2, prname)
+        self._canvas.report_dialog.open()
 
     def _search(self):
         self.close()
@@ -494,7 +492,7 @@ class TimeSelectionDialog(BaseDialog):
     EXIT_ON_CLICK_OUTSIDE = True
     TRANSPARENT_BG = True
 
-    def open(self):
+    def open(self, callback=None):
         """Show/open the dialog ."""
 
         # Transform time int to dates.
@@ -561,7 +559,7 @@ class TimeSelectionDialog(BaseDialog):
         close_but.onclick = self.close
 
         self.maindiv.classList.add("verticalmenu")
-        super().open(None)
+        super().open(callback)
 
     def _apply_quicknav(self, text):
         scalestep = +1 if "out" in text.lower() else -1
@@ -2608,8 +2606,13 @@ class SearchDialog(BaseDialog):
 class ReportDialog(BaseDialog):
     """A dialog that shows a report of records, and allows exporting."""
 
-    def open(self, t1, t2, tags=None):
+    def open(self, t1=None, t2=None, tags=None):
         """Show/open the dialog ."""
+
+        if t1 is None or t2 is None:
+            t1, t2 = self._canvas.range.get_target_range()
+        if tags is None:
+            tags = self._canvas.widgets.AnalyticsWidget.selected_tags
 
         self._tags = tags or []
 
@@ -2673,7 +2676,14 @@ class ReportDialog(BaseDialog):
         # Connect input elements
         close_but = self.maindiv.children[0].children[-1]
         close_but.onclick = self.close
-        self._date_range.innerText = t1_date + "  -  " + t2_date
+        self._date_range.innerHTML = (
+            t1_date + "&nbsp;&nbsp;&ndash;&nbsp;&nbsp;" + t2_date
+        )
+        self._date_range.innerHTML += (
+            "&nbsp;&nbsp;<button type='button'><i class='fas'>\uf073</i></button>"
+        )
+        date_button = self._date_range.children[0]
+        date_button.onclick = self._user_chose_date
         #
         grouping = window.simplesettings.get("report_grouping")
         self._grouping_select.value = grouping
@@ -2695,6 +2705,10 @@ class ReportDialog(BaseDialog):
 
         window.setTimeout(self._update_table)
         super().open(None)
+
+    def _user_chose_date(self):
+        self.close()
+        self._canvas.timeselection_dialog.open(self.open)
 
     def _on_setting_changed(self):
         window.simplesettings.set("report_grouping", self._grouping_select.value)
