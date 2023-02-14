@@ -72,7 +72,8 @@ def handle_background_div_event(e):
 
 def handle_window_blur_event(e):
     if len(stack) > 0:
-        looks_like_menu = stack[-1].TRANSPARENT_BG and stack[-1].EXIT_ON_CLICK_OUTSIDE
+        d = stack[-1]
+        looks_like_menu = d.TRANSPARENT_BG and d.EXIT_ON_CLICK_OUTSIDE and d.allow_blur
         if looks_like_menu:
             stack[-1].close()
 
@@ -234,6 +235,7 @@ class BaseDialog:
 
     def open(self, callback=None):
         self._callback = callback
+        self.allow_blur = True
         # Disable main app and any "parent" dialogs
         if self.MODAL:
             show_background_div(True, self.TRANSPARENT_BG)
@@ -284,6 +286,9 @@ class BaseDialog:
     def _on_key(self, e):
         if e.key.lower() == "escape":
             self.close()
+
+    def _prevent_blur(self):
+        self.allow_blur = False
 
 
 class DemoInfoDialog(BaseDialog):
@@ -466,9 +471,7 @@ class MenuDialog(BaseDialog):
 
     def _open_report(self):
         self.close()
-        t1, t2 = self._canvas.range.get_range()
-        prname = self._canvas.widgets["AnalyticsWidget"].selected_tag_name
-        self._canvas.report_dialog.open(t1, t2, prname)
+        self._canvas.report_dialog.open()
 
     def _search(self):
         self.close()
@@ -489,7 +492,7 @@ class TimeSelectionDialog(BaseDialog):
     EXIT_ON_CLICK_OUTSIDE = True
     TRANSPARENT_BG = True
 
-    def open(self):
+    def open(self, callback=None):
         """Show/open the dialog ."""
 
         # Transform time int to dates.
@@ -524,7 +527,10 @@ class TimeSelectionDialog(BaseDialog):
                 <input type="date" step="1" />
                 <div style='flex: 0.5 0.5 auto;'></div>
             </div>
-            <div style='min-height: 8px;'></div>
+            <div style='margin-top:1em;'></div>
+            <div style='display: flex;justify-content: flex-end;'>
+                <button type='button' class='actionbutton'>Done</button>
+            </div>
         """
 
         self.maindiv.innerHTML = html
@@ -543,12 +549,17 @@ class TimeSelectionDialog(BaseDialog):
             but.onclick = lambda e: self._apply_preset(e.target.innerText)
 
         self._t1_input.value = t1_date
+        self._t1_input.onpointerdown = self._prevent_blur
         self._t1_input.oninput = self._update_range
         self._t2_input.value = t2_date
+        self._t2_input.onpointerdown = self._prevent_blur
         self._t2_input.oninput = self._update_range
 
+        close_but = self.maindiv.children[6].children[0]
+        close_but.onclick = self.close
+
         self.maindiv.classList.add("verticalmenu")
-        super().open(None)
+        super().open(callback)
 
     def _apply_quicknav(self, text):
         scalestep = +1 if "out" in text.lower() else -1
@@ -587,7 +598,6 @@ class TimeSelectionDialog(BaseDialog):
         self._t1_input.value = dt.time2localstr(t1).split(" ")[0]
         self._t2_input.value = dt.time2localstr(t2).split(" ")[0]
         self._update_range()
-        self.close()
 
     def _update_range(self):
         t1_date = self._t1_input.value
@@ -2596,8 +2606,13 @@ class SearchDialog(BaseDialog):
 class ReportDialog(BaseDialog):
     """A dialog that shows a report of records, and allows exporting."""
 
-    def open(self, t1, t2, tags=None):
+    def open(self, t1=None, t2=None, tags=None):
         """Show/open the dialog ."""
+
+        if t1 is None or t2 is None:
+            t1, t2 = self._canvas.range.get_target_range()
+        if tags is None:
+            tags = self._canvas.widgets.AnalyticsWidget.selected_tags
 
         self._tags = tags or []
 
@@ -2661,7 +2676,14 @@ class ReportDialog(BaseDialog):
         # Connect input elements
         close_but = self.maindiv.children[0].children[-1]
         close_but.onclick = self.close
-        self._date_range.innerText = t1_date + "  -  " + t2_date
+        self._date_range.innerHTML = (
+            t1_date + "&nbsp;&nbsp;&ndash;&nbsp;&nbsp;" + t2_date
+        )
+        self._date_range.innerHTML += (
+            "&nbsp;&nbsp;<button type='button'><i class='fas'>\uf073</i></button>"
+        )
+        date_button = self._date_range.children[0]
+        date_button.onclick = self._user_chose_date
         #
         grouping = window.simplesettings.get("report_grouping")
         self._grouping_select.value = grouping
@@ -2683,6 +2705,10 @@ class ReportDialog(BaseDialog):
 
         window.setTimeout(self._update_table)
         super().open(None)
+
+    def _user_chose_date(self):
+        self.close()
+        self._canvas.timeselection_dialog.open(self.open)
 
     def _on_setting_changed(self):
         window.simplesettings.set("report_grouping", self._grouping_select.value)

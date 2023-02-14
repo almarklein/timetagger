@@ -1415,9 +1415,7 @@ class TopWidget(Widget):
             window.store.sync_soon(0.2)
 
         elif action == "report":
-            t1, t2 = self._canvas.range.get_range()
-            tags = self._canvas.widgets.AnalyticsWidget.selected_tags
-            self._canvas.report_dialog.open(t1, t2, tags)
+            self._canvas.report_dialog.open()
 
         elif action == "pomo":
             self._canvas.pomodoro_dialog.open()
@@ -3475,8 +3473,7 @@ class AnalyticsWidget(Widget):
                     self._canvas.on_resize()
                     self.update()
                 elif picked.action == "report":
-                    t1, t2 = self._canvas.range.get_range()
-                    self._canvas.report_dialog.open(t1, t2, self.selected_tags)
+                    self._canvas.report_dialog.open()
                 elif picked.action.startswith("select:"):
                     _, _, tagz = picked.action.partition(":")
                     if tagz:
