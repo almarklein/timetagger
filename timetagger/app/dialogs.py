@@ -1275,7 +1275,7 @@ class Autocompleter:
             item = document.createElement("div")
             item.classList.add("tag-suggestion")
             item.innerHTML = html
-            onclick = f"window._autocomp_finish({i});"
+            onclick = f"window._autocomp_finish(event, {i});"
             item.setAttribute("onmousedown", onclick)
             self._div.appendChild(item)
         # Show
@@ -1301,8 +1301,12 @@ class Autocompleter:
         # Make corresponding item visible
         active_child.scrollIntoView({"block": "nearest"})
 
-    def _finish_cb(self, i):
+    def _finish_cb(self, e, i):
+        # Called when the autocomp item is clicked
         self._finish(self._suggested_tags_in_autocomp[i])
+        if e and e.stopPropagation:
+            e.stopPropagation()
+            e.preventDefault()
 
     def _finish(self, text):
         self.clear()
