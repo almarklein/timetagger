@@ -1279,6 +1279,7 @@ class Autocompleter:
             item.setAttribute("onmousedown", onclick)
             self._div.appendChild(item)
         # Show
+        self._select_does_replace = "descriptions" in headline
         self._div.hidden = False
         self._make_active(0)
 
@@ -1311,7 +1312,7 @@ class Autocompleter:
     def _finish(self, text):
         self.clear()
         if text:
-            if not text.startswith("#"):
+            if self._select_does_replace:
                 # Recent ds, just replace the whole thing
                 self._input.value = text
                 self._input.selectionStart = self._input.selectionEnd = len(text)
