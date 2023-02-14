@@ -6,7 +6,6 @@ from timetagger._config import set_config
 
 
 def test_config():
-
     # Defaults
     default_bind = "0.0.0.0:80"
     set_config([], {})

@@ -14,7 +14,6 @@ from timetagger.app.utils import (
 
 
 def test_convert_text_to_valid_tag():
-
     # this function does not lowercase
     assert convert_text_to_valid_tag("#hi") == "#hi"
     assert convert_text_to_valid_tag("#HI") == "#HI"
@@ -47,7 +46,6 @@ def test_convert_text_to_valid_tag():
 
 
 def test_get_tags_and_parts_from_string():
-
     f = get_tags_and_parts_from_string
 
     # It gets sorted tags, and parts

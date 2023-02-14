@@ -104,7 +104,6 @@ def color_from_name(name):
 
 
 def create_palettes():
-
     # The Github color palette, consisting of 8 strong colors and 8 lighter variants.
     # The difference between these variants is pretty big.
     # gh_colors = (
@@ -739,7 +738,6 @@ class BaseCanvas:
         self._draw_tick()
 
     def _init_events(self):
-
         # Disable context menu so we can handle RMB clicks
         # Firefox is particularly stuborn with Shift+RMB, and RMB dbl click
         for ev_name in ("contextmenu", "click", "dblclick"):

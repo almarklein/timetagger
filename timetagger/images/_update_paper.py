@@ -25,7 +25,6 @@ rgb[rgb > clim[1]] = clim[1]
 
 
 def generate(fname, opacity, base_clr):
-
     square = rgba.copy()
 
     # Apply linear degrading opacity at the edges

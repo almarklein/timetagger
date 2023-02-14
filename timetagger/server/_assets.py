@@ -106,7 +106,6 @@ def create_assets_from_dir(dirname, template=None):
     template = jinja2.Template(thtml)
 
     for fname in sorted(os.listdir(dirname)):
-
         if fname.startswith("_"):
             continue
         elif fname.endswith(".md"):

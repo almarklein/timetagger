@@ -75,7 +75,6 @@ def _reset_config_to_defaults():
 
 
 def _update_config_from_argv(argv):
-
     for i in range(len(argv)):
         arg = argv[i]
         for name, conv, _ in Config._ITEMS:
@@ -96,7 +95,6 @@ def _update_config_from_argv(argv):
 
 
 def _update_config_from_env(env):
-
     for name, conv, _ in Config._ITEMS:
         env_name = f"TIMETAGGER_{name.upper()}"
         raw_value = env.get(env_name, None)

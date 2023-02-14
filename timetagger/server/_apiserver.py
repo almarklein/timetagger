@@ -292,7 +292,6 @@ async def get_webtoken_unsafe(username, reset=False):
 
 
 async def get_updates(request, auth_info, db):
-
     # Parse since
     since_str = request.querydict.get("since", "").strip()
     if not since_str:
@@ -346,7 +345,6 @@ async def get_updates(request, auth_info, db):
 
 
 async def get_records(request, auth_info, db):
-
     # Parse timerange option
     timerange_str = request.querydict.get("timerange", "").strip()
     if not timerange_str:
@@ -374,7 +372,6 @@ async def put_records(request, auth_info, db):
 
 
 async def get_settings(request, auth_info, db):
-
     # Collect settings
     settings = await db.select_all("settings")
 
@@ -388,7 +385,6 @@ async def put_settings(request, auth_info, db):
 
 
 async def _push_items(request, auth_info, db, what):
-
     # Download items
     items = await request.get_json(10 * 2**20)  # 10 MiB limit
     if not isinstance(items, list):

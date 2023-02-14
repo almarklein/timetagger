@@ -18,9 +18,7 @@ asset_handler = asgineer.utils.make_asset_handler(assets, max_age=0)
 
 
 def test_assets():
-
     with MockTestServer(asset_handler) as p:
-
         # Get root
         r = p.get("")
         assert r.status == 200
