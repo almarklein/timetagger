@@ -719,9 +719,9 @@ class StartStopEdit:
         self.radio_startnow.onclick = self._on_mode_change
         self.radio_startrlr.onclick = self._on_mode_change
         self.radio_finished.onclick = self._on_mode_change
-        self.date1input.onchange = lambda: self.onchanged("date1")
+        self.date1input.onblur = lambda: self.onchanged("date1")
         self.time1input.onchange = lambda: self.onchanged("time1")
-        self.date2input.onchange = lambda: self.onchanged("date2")
+        self.date2input.onblur = lambda: self.onchanged("date2")
         self.time2input.onchange = lambda: self.onchanged("time2")
         self.durationinput.onchange = lambda: self.onchanged("duration")
         self.time1more.onclick = lambda: self.onchanged("time1more")
