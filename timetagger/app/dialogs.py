@@ -826,9 +826,13 @@ class StartStopEdit:
 
         if is_running:
             t = dt.now() - self.t1
+            self.durationinput.value = (
+                f"{t//3600:.0f}h {(t//60)%60:02.0f}m {t%60:02.0f}s"
+            )
         else:
             t = self.t2 - self.t1
-        self.durationinput.value = f"{t//3600:.0f}h {(t//60)%60:02.0f}m {t%60:02.0f}s"
+            m = Math.round(t / 60)
+            self.durationinput.value = f"{m//60:.0f}h {m%60:02.0f}m"
 
     def _days_between_dates(self, d1, d2):
         year1, month1, day1 = d1.split("-")
@@ -862,7 +866,7 @@ class StartStopEdit:
 
         # Set date and time for t1
         self.date1input.value = t1_date
-        self.time1input.value = t1_time[:5] if t1_time.endsWith("00") else t1_time
+        self.time1input.value = t1_time[:5]
         self.days2 = self._days_between_dates(t1_date, t2_date)
 
         # Set stop time and duration
@@ -882,14 +886,9 @@ class StartStopEdit:
             self.date2input.disabled = False
             self.durationinput.disabled = False
             self.date2input.value = t2_date
-            self.time2input.value = t2_time[:5] if t2_time.endsWith("00") else t2_time
-            if t % 60 == 0:
-                m = Math.round((self.t2 - self.t1) / 60)
-                self.durationinput.value = f"{m//60:.0f}h {m%60:02.0f}m"
-            else:
-                self.durationinput.value = (
-                    f"{t//3600:.0f}h {(t//60)%60:02.0f}m {t%60:02.0f}s"
-                )
+            self.time2input.value = t2_time[:5]
+            m = Math.round(t / 60)
+            self.durationinput.value = f"{m//60:.0f}h {m%60:02.0f}m"
 
         # Tweak bgcolor of date2 field to hide it a bit
         if self.days2 == 0:
