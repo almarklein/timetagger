@@ -1731,7 +1731,7 @@ class RecordsWidget(Widget):
                     text = dt.get_weekday_shortname(t) + " " + monthday
                     if monthday == 1:
                         text += " " + dt.get_month_shortname(t)
-                    text += " 12h" if time_repr == "ampm" else " 0h"
+                    text += "  12h" if time_repr == "ampm" else "  0h"
                 elif time_repr == "ampm":  # am/pm is so weird!
                     if h == 0:
                         text = "12" + text[2:] + " am"
@@ -1747,7 +1747,7 @@ class RecordsWidget(Widget):
                     text = dt.get_weekday_shortname(t) + " " + monthday
                     if monthday == 1:
                         text += " " + dt.get_month_shortname(t)
-                    text += " 0h"
+                    text += "  0h"
             elif granularity == "DD":
                 text = dt.get_weekday_shortname(t) + " " + monthday
                 if monthday == 1:
