@@ -2419,7 +2419,7 @@ class SearchDialog(BaseDialog):
         self._autocompleter.clear()
 
     def _check_names(self):
-        text = self._search_input.value
+        text = self._search_input.value.lower()
 
         _, parts = utils.get_tags_and_parts_from_string(text)
 
