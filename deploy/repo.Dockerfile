@@ -4,15 +4,23 @@
 
 FROM python:3.10-slim-buster
 
+# Switch to unpriviliged user
+RUN groupadd -g 1000 timetagger && \
+    useradd -r -u 1000 -m -g timetagger timetagger && \
+    mkdir /opt/timetagger && \
+    chown timetagger:timetagger /opt/timetagger
+
+USER 1000
+
 # Install dependencies (including optional ones that make uvicorn faster)
-RUN pip --no-cache-dir install pip --upgrade && pip --no-cache-dir install \
+RUN pip --no-cache-dir install --no-warn-script-location pip --upgrade && pip --no-cache-dir install --no-warn-script-location \
     uvicorn uvloop httptools \
-    fastuaparser itemdb>=1.1.1 asgineer requests \
+    fastuaparser itemdb asgineer requests \
     jinja2 markdown pscript \
     pyjwt cryptography
 
-WORKDIR /root
-COPY . .
+WORKDIR /opt/timetagger
+COPY . /opt/timetagger
 
 RUN pip install -e .
 
