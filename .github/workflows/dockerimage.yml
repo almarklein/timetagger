@@ -24,18 +24,36 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN  }}
 
+      # Build default priviliged container image version
       - name: Extract metadata (tags, labels) for Docker
         id: meta
-        uses: docker/metadata-action@98669ae865ea3cffbcbaa878cf57c20bbf1c6c38
+        uses: docker/metadata-action@v4
         with:
           images: ghcr.io/${{ github.repository }}
           tags: type=ref,event=tag
 
       - name: Build and push Docker image
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v4
         with:
           context: .
           file: deploy/repo.Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+      # Build non-root container image variant
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta-nonroot
+        uses: docker/metadata-action@v4
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: type=ref,event=tag,suffix=-nonroot
+      
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: deploy/repo.Dockerfile
+          push: true
+          tags: ${{ steps.meta-nonroot.outputs.tags }}
+          labels: ${{ steps.meta-nonroot.outputs.labels }}
