@@ -1454,12 +1454,12 @@ class TopWidget(Widget):
                 records = window.store.records.get_running_records()
                 if len(records) > 0:
                     record = records[0]
-                    record.t2 = max(record.t1 + 10, now)
+                    record.t2 = max(record.t1 + 2, now)
                     self._canvas.record_dialog.open("Stop", record, self.update)
             elif action == "record_stopall":
                 records = window.store.records.get_running_records()
                 for record in records:
-                    record.t2 = max(record.t1 + 10, now)
+                    record.t2 = max(record.t1 + 2, now)
                     window.store.records.put(record)
                 if window.simplesettings.get("pomodoro_enabled"):
                     self._canvas.pomodoro_dialog.stop()
@@ -2753,9 +2753,9 @@ class RecordsWidget(Widget):
                             record.t2 = record.t1 + dt
                     # Finish
                     if self._selected_record[1] == 1:
-                        record.t1 = min(record.t2 - 10, record.t1)
+                        record.t1 = min(record.t2 - 2, record.t1)
                     else:
-                        record.t2 = max(record.t1 + 10, record.t2)
+                        record.t2 = max(record.t1 + 2, record.t2)
                     if isrunning:
                         record.t1 = min(record.t1, self._canvas.now())
                         record.t2 = record.t1

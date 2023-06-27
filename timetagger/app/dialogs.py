@@ -1740,7 +1740,7 @@ class RecordDialog(BaseDialog):
         if t2 is None:
             t2 = dt.now()
         for record in records:
-            record.t2 = max(record.t1 + 10, t2)
+            record.t2 = max(record.t1 + 2, t2)
             window.store.records.put(record)
 
     def submit(self):
