@@ -347,10 +347,11 @@ class NotificationDialog(BaseDialog):
 
     EXIT_ON_CLICK_OUTSIDE = True
 
-    def open(self, message):
+    def open(self, message, title="Notification"):
         """Show/open the dialog ."""
+        message
         html = f"""
-            <h1>Notification
+            <h1>{title}
                 <button type='button'><i class='fas'>\uf00d</i></button>
             </h1>
             <p>{message}</p>

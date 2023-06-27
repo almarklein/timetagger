@@ -202,7 +202,7 @@ class TimeTaggerCanvas(BaseCanvas):
         self._notification_cache = cache
         if message not in cache:
             cache[message] = True
-            self.notification_dialog.open(message)
+            self.notification_dialog.open(message, "Notification")
 
     def now(self):
         if self._now is not None:
@@ -1069,7 +1069,7 @@ class TopWidget(Widget):
         else:
             text = ""
 
-        sync_radius = 7
+        sync_radius = 9
         yoffset = -6 if len(text) else 0
 
         d = (y2 - y1) / 2
@@ -1171,7 +1171,7 @@ class TopWidget(Widget):
 
         # Register tiny sync button
         if register:
-            ob = {"button": True, "action": "refresh", "help": ""}
+            ob = {"button": True, "action": "dosync", "help": ""}
             self._picker.register(
                 x - radius - 1, y - radius - 1, x + radius + 1, y + radius + 1, ob
             )
@@ -1411,8 +1411,18 @@ class TopWidget(Widget):
         elif action == "login":
             window.location.href = "../login"
 
-        elif action == "refresh":
-            window.store.sync_soon(0.2)
+        elif action == "dosync":
+            if window.store.state in ("warning", "error"):
+                last_error = window.store.last_error or "Unknown sync error"
+                self._canvas.notification_dialog.open(last_error, "Sync error")
+            else:
+                msg = "This button shows the sync status. The current status is <b>OK</b>!"
+                msg += "<br><br>The app and server continiously exchange updates. "
+                msg += "When something is wrong, this button will change, "
+                msg += "and you can then click it to get more info."
+                self._canvas.notification_dialog.open(msg, "Sync status")
+                # Also sync now
+                window.store.sync_soon(0.2)
 
         elif action == "report":
             self._canvas.report_dialog.open()
