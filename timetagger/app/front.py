@@ -2254,9 +2254,7 @@ class RecordsWidget(Widget):
             duration_sec = ""
         else:
             duration = now - record.t1
-            duration_text_full = dt.duration_string(duration, True)
-            duration_text = dt.duration_string(duration, False)
-            duration_sec = duration_text_full[len(duration_text) :]
+            duration_text, duration_sec = dt.duration_string(duration, 2)
         ctx.fillStyle = COLORS.record_text if tags_selected else faded_clr
         ctx.textAlign = "right"
         ctx.fillText(duration_text, x5 + 30, text_ypos)
@@ -3421,9 +3419,7 @@ class AnalyticsWidget(Widget):
 
         # Get duration text
         if is_running:
-            duration_text_full = dt.duration_string(bar.t, True)
-            duration_text = dt.duration_string(bar.t, False)
-            duration_sec = duration_text_full[len(duration_text) :]
+            duration_text, duration_sec = dt.duration_string(bar.t, 2)
         else:
             duration_text = dt.duration_string(bar.t, False)
             duration_sec = ""

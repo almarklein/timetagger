@@ -3976,7 +3976,7 @@ class PomodoroDialog(BaseDialog):
         etime = self._state[1]
         left = max(0, etime - dt.now())
         if left:
-            return self._state[0] + ": " + dt.duration_string(left, True)[2:]
+            return self._state[0] + ": " + dt.duration_string(left, True)
         else:
             return None
 
