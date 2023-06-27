@@ -276,6 +276,9 @@ def duration_string_colon(t, show_secs=False):
         return (part1, part2) if show_secs == 2 else (part1 + part2)
     else:
         m = Math.round(t / 60)
+        # Note how for anythinh below 30s is shown as 00:00. This is
+        # intentional because a single 00:00:28 would stand out quite
+        # oddly in a series of hh:mm entries.
         return f"{sign}{m//60:.0f}:{m%60:02.0f}"
 
 
@@ -302,8 +305,12 @@ def duration_string(t, show_secs=False):
             h = m // 60
             if h:
                 return f"{sign}{h:.0f}h{m%60:02.0f}m"
-            else:
+            elif m:
                 return f"{sign}{m%60:.0f}m"
+            else:
+                # Only show the secs (even if show_secs is False)
+                return f"{sign}{t:02.0f}s"
+
     else:
         return duration_string_colon(t, show_secs)
 
