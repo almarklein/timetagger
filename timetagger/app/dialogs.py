@@ -215,7 +215,7 @@ class BaseDialog:
         self.maindiv = document.createElement("form")
         self.maindiv.addEventListener("keydown", self._on_key, 0)
         self._canvas.node.parentNode.appendChild(self.maindiv)
-        self.maindiv.className = "dialog"
+        self.maindiv.classList.add("dialog")
         self.maindiv.setAttribute("tabindex", -1)
 
     def _show_dialog(self):
@@ -530,7 +530,7 @@ class TimeSelectionDialog(BaseDialog):
             </div>
             <div style='margin-top:1em;'></div>
             <div style='display: flex;justify-content: flex-end;'>
-                <button type='button' class='actionbutton'>Done</button>
+                <button type='button'>Done</button>
             </div>
         """
 
@@ -1872,7 +1872,7 @@ class TagComboDialog(BaseDialog):
             clr = window.store.settings.get_color_for_tag(tag)
             el = document.createElement("button")
             el.setAttribute("type", "button")
-            el.classList.add("actionbutton")
+            el.style.marginRight = "3px"
             el.innerHTML = f"<b style='color:{clr};'>#</b>" + tag[1:]
             el.onclick = self._make_click_handler(tag, callback)
             button_div.appendChild(el)
