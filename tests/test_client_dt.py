@@ -106,13 +106,17 @@ def test_duration_string():
     js4 = evaljs(js, f"duration_string(65, true)")
     js5 = evaljs(js, f"duration_string(7265, false)")
     js6 = evaljs(js, f"duration_string(7265, true)")
+    js7 = evaljs(js, f"duration_string(42, false)")
+    js8 = evaljs(js, f"duration_string(42, true)")
 
-    assert js1 == "0m"
+    assert js1 == "5s"
     assert js2 == "0m05s"
     assert js3 == "1m"
     assert js4 == "1m05s"
     assert js5 == "2h01m"
     assert js6 == "2h01m05s"
+    assert js7 == "42s"
+    assert js8 == "0m42s"
 
     js1 = evaljs(js, f"duration_string_colon(5, false)")
     js2 = evaljs(js, f"duration_string_colon(5, true)")

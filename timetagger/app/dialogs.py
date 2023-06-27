@@ -1740,7 +1740,7 @@ class RecordDialog(BaseDialog):
         if t2 is None:
             t2 = dt.now()
         for record in records:
-            record.t2 = max(record.t1 + 10, t2)
+            record.t2 = max(record.t1 + 2, t2)
             window.store.records.put(record)
 
     def submit(self):
@@ -3976,7 +3976,7 @@ class PomodoroDialog(BaseDialog):
         etime = self._state[1]
         left = max(0, etime - dt.now())
         if left:
-            return self._state[0] + ": " + dt.duration_string(left, True)[2:]
+            return self._state[0] + ": " + dt.duration_string(left, True)
         else:
             return None
 
