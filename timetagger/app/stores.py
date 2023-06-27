@@ -896,10 +896,30 @@ class ConnectedDataStore(BaseDataStore):
             text = await res.text()
             self._set_state("error")  # is usually less bad than the fail's below
             self.last_error = res.status + " (" + res.statusText + ")<br>" + text
+            # We have reserved status 402 for messages that we want to notify the user of.
+            # Note that the 402 status code is defined as "payment required", which
+            # may not be what we mean here, so we replace the statusText.
+            if res.status == 402:
+                statusText = "notification"
+                i = text.find("|")
+                if i >= 0 and i < 16:
+                    statusText, _, text = text.partition("|")
+                    text = text.lstrip()
+                self.last_error = res.status + " (" + statusText + ")<br>" + text
+                # We also handle the case where the server forbids
+                # pushes, i.e. the account is read-only, so that the
+                # dialogs can disable buttons accordingly. We use CSS
+                # to disable all actionbuttons. And an attribbute to
+                # cover some specific edits in front.py. Note that the
+                # user can work around this thing and make changes, but
+                # these changes cannot be pushed to the server.
+                if statusText.lower() == "readonly":
+                    window.document.body.classList.add("is_read_only")
+                    self.is_read_only = True
+                # Notify user
+                if window.canvas:
+                    window.canvas.notify_once(text)
             console.warn(self.last_error)
-            # Also notify the user for 402 errors
-            if res.status == 402 and window.canvas:
-                window.canvas.notify_once(text)
 
         else:
             # Success, but it can still mean that some records failed. In this

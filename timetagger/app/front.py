@@ -2761,7 +2761,8 @@ class RecordsWidget(Widget):
                     if isrunning:
                         record.t1 = min(record.t1, self._canvas.now())
                         record.t2 = record.t1
-                    window.store.records.put(record)
+                    if not window.store.is_read_only:
+                        window.store.records.put(record)
                     if "up" in ev.type:
                         self._selected_record[1] = 0
                     self.update()
