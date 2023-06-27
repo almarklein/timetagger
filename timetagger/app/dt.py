@@ -305,11 +305,11 @@ def duration_string(t, show_secs=False):
             h = m // 60
             if h:
                 return f"{sign}{h:.0f}h{m%60:02.0f}m"
-            elif m:
+            elif t >= 60:
                 return f"{sign}{m%60:.0f}m"
             else:
                 # Only show the secs (even if show_secs is False)
-                return f"{sign}{t:02.0f}s"
+                return f"{sign}{t:.0f}s"
 
     else:
         return duration_string_colon(t, show_secs)
