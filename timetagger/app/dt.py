@@ -298,16 +298,15 @@ def duration_string(t, show_secs=False):
             if repr == "dhms":
                 d = h // 24
                 h -= d * 24
-            # Always show minutes and seconds
-            part1 = f"{m:.0f}m"
-            part2 = f"{t%60:02.0f}s"
-            # Show hours and days if they are nonzero
-            if h or d:
-                part1 = f"{h:.0f}h" + part1
+            # Show hours and days only if they are nonzero
             if d:
-                part1 = f"{d:.0f}d" + part1
-            # Prepend the sign and return in the appropriate format
-            part1 = f"{sign}" + part1
+                part1 = f"{sign}{d:.0f}d{h:02.0f}h{m:02.0f}m"
+            elif h:
+                part1 = f"{sign}{h:.0f}h{m:02.0f}m"
+            else:
+                part1 = f"{sign}{m:.0f}m"
+            # Combine with seconds
+            part2 = f"{t%60:02.0f}s"
             return (part1, part2) if show_secs == 2 else (part1 + part2)
         else:
             # Prep the numbers
@@ -318,7 +317,7 @@ def duration_string(t, show_secs=False):
                 d = h // 24
                 h -= d * 24
             if d:
-                return f"{sign}{d:.0f}d{h:.0f}h{m%60:02.0f}m"
+                return f"{sign}{d:.0f}d{h:02.0f}h{m%60:02.0f}m"
             elif h:
                 return f"{sign}{h:.0f}h{m%60:02.0f}m"
             elif t >= 60:
