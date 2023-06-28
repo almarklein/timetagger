@@ -3733,7 +3733,7 @@ class SettingsDialog(BaseDialog):
                     <option value='hms'>27h20m</option>
                     <option value='colon'>27:20</option>
                 </select>
-                <div>Today's snap offset:</div>
+                <div>Today starts at:</div>
                 <select>
                     <option value=''>00:00</option>
                     <option value='1h'>01:00</option>
@@ -3741,6 +3741,15 @@ class SettingsDialog(BaseDialog):
                     <option value='3h'>03:00</option>
                     <option value='4h'>04:00</option>
                     <option value='5h'>05:00</option>
+                    <option value='6h'>06:00</option>
+                    <option value='7h'>07:00</option>
+                    <option value='8h'>08:00</option>
+                    <option value='9h'>09:00</option>
+                </select>
+                <div>Today duration:</div>
+                <select>
+                    <option value='-12h'>12h</option>
+                    <option value=''>24h</option>
                 </select>
             </div>
             <h2><i class='fas'>\uf085</i>&nbsp;&nbsp;Misc</h2>
@@ -3832,6 +3841,12 @@ class SettingsDialog(BaseDialog):
         self._today_snap_offset.value = today_snap_offset
         self._today_snap_offset.onchange = self._on_today_snap_offset_change
 
+        # Today number of hours
+        today_end_offset = window.simplesettings.get("today_end_offset")
+        self._today_end_offset = self._repr_form.children[9]
+        self._today_end_offset.value = today_end_offset
+        self._today_end_offset.onchange = self._on_today_end_offset_change
+
         # Stopwatch
         show_stopwatch = window.simplesettings.get("show_stopwatch")
         self._stopwatch_check = self._stopwatch_label.children[0]
@@ -3880,6 +3895,10 @@ class SettingsDialog(BaseDialog):
     def _on_today_snap_offset_change(self):
         today_snap_offset = self._today_snap_offset.value
         window.simplesettings.set("today_snap_offset", today_snap_offset)
+
+    def _on_today_end_offset_change(self):
+        today_end_offset = self._today_end_offset.value
+        window.simplesettings.set("today_end_offset", today_end_offset)
 
     def _on_darkmode_change(self):
         darkmode = int(self._darkmode_select.value)

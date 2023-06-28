@@ -402,16 +402,21 @@ class TimeRange:
 
     def get_today_range(self):
         """Get the sensible range for "today"."""
-        now = self._canvas.now()
-        current_t1 = self.get_target_range()[0]
-        t1_actual = dt.floor(now, "1D")
+        # Get settings
         today_snap_offset = window.simplesettings.get("today_snap_offset")
-        if today_snap_offset:
-            t1_offset = dt.add(t1_actual, today_snap_offset)
-            t1 = t1_actual if current_t1 == t1_offset else t1_offset
-        else:
-            t1 = t1_actual
+        today_end_offset = window.simplesettings.get("today_end_offset")
+        # Get some reference data
+        now = self._canvas.now()
+        current_t1, current_t2 = self.get_target_range()
+        # The math
+        t1_actual = dt.floor(now, "1D")
+        t1 = dt.add(t1_actual, today_snap_offset) if today_snap_offset else t1_actual
         t2 = dt.add(t1, "1D")
+        t2 = dt.add(t2, today_end_offset) if today_end_offset else t2
+        # Toggle to a full day (0h-24h) if the range already matches.
+        if t1 == current_t1 and t2 == current_t2:
+            t1 = t1_actual
+            t2 = dt.add(t1, "1D")
         return t1, t2
 
     def get_range(self):

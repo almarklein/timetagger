@@ -631,6 +631,7 @@ class SimpleSettings:
             "time_repr": "auto",
             "duration_repr": "hms",
             "today_snap_offset": "",
+            "today_end_offset": "",
             "show_stopwatch": True,
         }
         # The data store for synced source
