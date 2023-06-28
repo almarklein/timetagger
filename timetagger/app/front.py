@@ -3128,6 +3128,13 @@ class AnalyticsWidget(Widget):
         for bar in bars:
             total_time += bar.t
 
+        # Prepare some more
+        self._running_tagz = []
+        for record in window.store.records.get_running_records():
+            self._running_tagz.append(
+                window.store.records.tags_from_record(record).join(" ")
+            )
+
         # Draw all bars
         self._draw_container(ctx, total_time, x1, y1, x3, overview_y2)
         for bar in bars:
@@ -3330,12 +3337,10 @@ class AnalyticsWidget(Widget):
         y1, y2 = bar.y1, bar.y2
         npixels = min(y2 - y1, self._npixels_each)
 
-        # Get whether the current tag combi corresponds to the currently running record
-        is_running = False
-        if t1 < self._canvas.now() < t2:
-            for record in window.store.records.get_running_records():
-                if window.store.records.tags_from_record(record).join(" ") == bar.tagz:
-                    is_running = True
+        # Get whether the current tag combi corresponds to the currently running record.
+        # The clock only ticks per second if now is within range, so we don't show seconds unless we can.
+        is_running = bar.tagz in self._running_tagz
+        show_secs = is_running and (t1 < self._canvas.now() < t2)
 
         # Roundness
         rn = min(ANALYSIS_ROUNDNESS, npixels / 2)
@@ -3424,7 +3429,7 @@ class AnalyticsWidget(Widget):
             return
 
         # Get duration text
-        if is_running:
+        if show_secs:
             duration_text, duration_sec = dt.duration_string(bar.t, 2)
         else:
             duration_text = dt.duration_string(bar.t, False)
