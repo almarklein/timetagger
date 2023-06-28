@@ -12,6 +12,7 @@ from pscript.stubs import (
     Date,
     Audio,
     Notification,
+    isNaN,
 )
 
 
@@ -103,7 +104,22 @@ def _browser_history_popstate():
             else:
                 h.back()
     elif window.location.hash:  # also note the hashchange event
+        _consume_browser_hash(window.location.hash)
         h.back()
+
+
+def _consume_browser_hash(hash):
+    """Consume the browser hash. We prevent the hash from being used
+    to navigate, but we do allow using the hash to put the app in a
+    certain state. For now this only included navogating to a certain
+    date.
+    """
+    d = tools.url2dict(hash)
+    if "date" in d:
+        t1 = str_date_to_time_int(d.date)
+        if not isNaN(t1):
+            t2 = dt.add(t1, "1D")
+            window.canvas.range.animate_range(t1, t2)
 
 
 def _browser_history_init():
@@ -113,6 +129,11 @@ def _browser_history_init():
     app is nearly always in the latter state. The first is only reached
     briefly when the user presses the back button.
     """
+
+    # In a second or so, we'll consume the current hash
+    window.setTimeout(_consume_browser_hash, 1000, window.location.hash)
+
+    # Prep
     h = window.history
     if h.state and h.state.tt_state:
         if h.state.tt_state == 1:
@@ -2396,6 +2417,7 @@ class SearchDialog(BaseDialog):
         )
 
         window._search_dialog_open_record = self._open_record
+        window._search_dialog_open_date = self._open_date
         self._records = []
 
         self._current_pos_tags = []
@@ -2587,13 +2609,23 @@ class SearchDialog(BaseDialog):
             date = dt.time2str(record.t1).split("T")[0]
             lines.append(
                 f"""
+                <a onclick='window._search_dialog_open_date("{date}")'
+                    style='cursor: pointer;'>
+                    <span>{date}</span>
+                </a>&nbsp;&nbsp;
                 <a onclick='window._search_dialog_open_record("{key}")'
                     style='cursor: pointer;'>
                     <i class='fas'>\uf682</i>
-                    <span>{date}</span>
-                    <span>{ds}</span></a>"""
+                    <span>{ds}</span>
+                </a>
+                """
             )
         self._records_node.innerHTML = "<br />\n".join(lines)
+
+    def _open_date(self, date):
+        t1 = str_date_to_time_int(date)
+        t2 = dt.add(t1, "1D")
+        self._canvas.range.animate_range(t1, t2)
 
     def _open_record(self, key):
         record = window.store.records.get_by_key(key)
