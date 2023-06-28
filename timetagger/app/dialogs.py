@@ -1782,6 +1782,11 @@ class RecordDialog(BaseDialog):
         window.store.records.put(record)
         # Close the dialog - don't apply local changes
         self.close()
+        # Move to today, if needed
+        t1, t2 = self._canvas.range.get_target_range()
+        if not (t1 < now < t2):
+            t1, t2 = self._canvas.range.get_today_range()
+            self._canvas.range.animate_range(t1, t2)
         # Start pomo?
         if window.simplesettings.get("pomodoro_enabled"):
             self._canvas.pomodoro_dialog.start_work()
