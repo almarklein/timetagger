@@ -2417,7 +2417,6 @@ class SearchDialog(BaseDialog):
         )
 
         window._search_dialog_open_record = self._open_record
-        window._search_dialog_open_date = self._open_date
         self._records = []
 
         self._current_pos_tags = []
@@ -2609,7 +2608,7 @@ class SearchDialog(BaseDialog):
             date = dt.time2str(record.t1).split("T")[0]
             lines.append(
                 f"""
-                <a onclick='window._search_dialog_open_date("{date}")'
+                <a href='#date={date}'
                     style='cursor: pointer;'>
                     <span>{date}</span>
                 </a>&nbsp;&nbsp;
@@ -2621,11 +2620,6 @@ class SearchDialog(BaseDialog):
                 """
             )
         self._records_node.innerHTML = "<br />\n".join(lines)
-
-    def _open_date(self, date):
-        t1 = str_date_to_time_int(date)
-        t2 = dt.add(t1, "1D")
-        self._canvas.range.animate_range(t1, t2)
 
     def _open_record(self, key):
         record = window.store.records.get_by_key(key)
