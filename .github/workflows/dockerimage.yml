@@ -11,7 +11,8 @@ permissions:
   packages: write
 
 jobs:
-  docker:
+  # Build default priviliged container image version
+  docker-root:
     runs-on: ubuntu-latest
     steps:
       - name: Check out the repo
@@ -24,7 +25,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN  }}
 
-      # Build default priviliged container image version
       - name: Extract metadata (tags, labels) for Docker
         id: meta
         uses: docker/metadata-action@v4
@@ -41,7 +41,20 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
-      # Build non-root container image variant
+  # Build non-root container image variant
+  docker-nonroot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v2
+
+      - name: Log in to GitHub container registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN  }}
+
       - name: Extract metadata (tags, labels) for Docker
         id: meta-nonroot
         uses: docker/metadata-action@v4
@@ -53,7 +66,7 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           context: .
-          file: deploy/repo.Dockerfile
+          file: deploy/repo.nonroot.Dockerfile
           push: true
           tags: ${{ steps.meta-nonroot.outputs.tags }}
           labels: ${{ steps.meta-nonroot.outputs.labels }}
