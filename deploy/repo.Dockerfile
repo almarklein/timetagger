@@ -7,6 +7,12 @@ FROM python:3.10-slim-buster
 WORKDIR /root
 COPY . .
 
-RUN pip install --no-cache-dir --no-warn-script-location -e .
+# Install dependencies (including optional ones that make uvicorn faster)
+# Upgrade pip to the lastest version
+RUN pip --no-cache-dir install pip --upgrade && \
+    # Install optional depedencies that make uvicorn faster
+    pip --no-cache-dir install uvicorn uvloop httptools && \
+    # Install timetagger depedencies defined via setup.py
+    pip install --no-cache-dir --no-warn-script-location -e .
 
 CMD ["python", "-m", "timetagger"]
