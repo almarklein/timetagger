@@ -848,6 +848,7 @@ class ConnectedDataStore(BaseDataStore):
         auth = self.get_auth()
         if not auth or auth.cantuse:
             self._set_state("error")
+            self.last_error = auth.cantuse or "Not authenticated"
             return
         # Get from local cache?
         if self._server_time == 0:
@@ -892,12 +893,33 @@ class ConnectedDataStore(BaseDataStore):
             # Put items back, but don't overwrite if the item was updated again.
             for key, item in items.items():
                 self._to_push[kind].setdefault(key, item)
-            self._set_state("error")  # is usually less bad than the fail's below
             text = await res.text()
-            console.warn(res.status + " (" + res.statusText + ") " + text)
-            # Also notify the user for 402 errors
-            if res.status == 402 and window.canvas:
-                window.canvas.notify_once(text)
+            self._set_state("error")  # is usually less bad than the fail's below
+            self.last_error = res.status + " (" + res.statusText + ")<br>" + text
+            # We have reserved status 402 for messages that we want to notify the user of.
+            # Note that the 402 status code is defined as "payment required", which
+            # may not be what we mean here, so we replace the statusText.
+            if res.status == 402:
+                statusText = "notification"
+                i = text.find("|")
+                if i >= 0 and i < 16:
+                    statusText, _, text = text.partition("|")
+                    text = text.lstrip()
+                self.last_error = res.status + " (" + statusText + ")<br>" + text
+                # We also handle the case where the server forbids
+                # pushes, i.e. the account is read-only, so that the
+                # dialogs can disable buttons accordingly. We use CSS
+                # to disable all actionbuttons. And an attribbute to
+                # cover some specific edits in front.py. Note that the
+                # user can work around this thing and make changes, but
+                # these changes cannot be pushed to the server.
+                if statusText.lower() == "readonly":
+                    window.document.body.classList.add("is_read_only")
+                    self.is_read_only = True
+                # Notify user
+                if window.canvas:
+                    window.canvas.notify_once(text)
+            console.warn(self.last_error)
 
         else:
             # Success, but it can still mean that some records failed. In this
@@ -909,7 +931,8 @@ class ConnectedDataStore(BaseDataStore):
                 self[kind]._drop(key)
             for err in d.errors:
                 self._set_state("warning")
-                console.warn(f"Server dropped a {kind}: {err}")
+                self.last_error = f"Server dropped a {kind}: {err}"
+                console.warn(self.last_error)
 
     async def _pull(self, authtoken):
         # Fetch and wait for response
@@ -925,8 +948,9 @@ class ConnectedDataStore(BaseDataStore):
         # Process response
         if res.status != 200:
             text = await res.text()
-            console.warn(res.status + " (" + res.statusText + ") " + text)
             self._set_state("error")  # E.g. Wifi or server down, or 500
+            self.last_error = res.status + " (" + res.statusText + ")<br>" + text
+            console.warn(self.last_error)
             if res.status == 401:
                 # Our token is probably expired. There may be local
                 # changes that have not yet been pushed, which would
@@ -952,12 +976,14 @@ class ConnectedDataStore(BaseDataStore):
                     self.settings._put_received(*ob.settings)
                 except Exception as err:
                     self._set_state("warning")
+                    self.last_error = err
                     console.error(err)
                     window.alert("Sync error (settings), see dev console for details.")
                 try:
                     self.records._put_received(*ob.records)
                 except Exception as err:
                     self._set_state("warning")
+                    self.last_error = err
                     console.error(err)
                     window.alert("Sync error (records), see dev console for details.")
 

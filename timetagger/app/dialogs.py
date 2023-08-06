@@ -12,6 +12,7 @@ from pscript.stubs import (
     Date,
     Audio,
     Notification,
+    isNaN,
 )
 
 
@@ -103,7 +104,22 @@ def _browser_history_popstate():
             else:
                 h.back()
     elif window.location.hash:  # also note the hashchange event
+        _consume_browser_hash(window.location.hash)
         h.back()
+
+
+def _consume_browser_hash(hash):
+    """Consume the browser hash. We prevent the hash from being used
+    to navigate, but we do allow using the hash to put the app in a
+    certain state. For now this only included navogating to a certain
+    date.
+    """
+    d = tools.url2dict(hash)
+    if "date" in d:
+        t1 = str_date_to_time_int(d.date)
+        if not isNaN(t1):
+            t2 = dt.add(t1, "1D")
+            window.canvas.range.animate_range(t1, t2)
 
 
 def _browser_history_init():
@@ -113,6 +129,11 @@ def _browser_history_init():
     app is nearly always in the latter state. The first is only reached
     briefly when the user presses the back button.
     """
+
+    # In a second or so, we'll consume the current hash
+    window.setTimeout(_consume_browser_hash, 1000, window.location.hash)
+
+    # Prep
     h = window.history
     if h.state and h.state.tt_state:
         if h.state.tt_state == 1:
@@ -215,7 +236,7 @@ class BaseDialog:
         self.maindiv = document.createElement("form")
         self.maindiv.addEventListener("keydown", self._on_key, 0)
         self._canvas.node.parentNode.appendChild(self.maindiv)
-        self.maindiv.className = "dialog"
+        self.maindiv.classList.add("dialog")
         self.maindiv.setAttribute("tabindex", -1)
 
     def _show_dialog(self):
@@ -347,10 +368,11 @@ class NotificationDialog(BaseDialog):
 
     EXIT_ON_CLICK_OUTSIDE = True
 
-    def open(self, message):
+    def open(self, message, title="Notification"):
         """Show/open the dialog ."""
+        message
         html = f"""
-            <h1>Notification
+            <h1>{title}
                 <button type='button'><i class='fas'>\uf00d</i></button>
             </h1>
             <p>{message}</p>
@@ -529,7 +551,7 @@ class TimeSelectionDialog(BaseDialog):
             </div>
             <div style='margin-top:1em;'></div>
             <div style='display: flex;justify-content: flex-end;'>
-                <button type='button' class='actionbutton'>Done</button>
+                <button type='button'>Done</button>
             </div>
         """
 
@@ -1739,7 +1761,7 @@ class RecordDialog(BaseDialog):
         if t2 is None:
             t2 = dt.now()
         for record in records:
-            record.t2 = max(record.t1 + 10, t2)
+            record.t2 = max(record.t1 + 2, t2)
             window.store.records.put(record)
 
     def submit(self):
@@ -1781,6 +1803,11 @@ class RecordDialog(BaseDialog):
         window.store.records.put(record)
         # Close the dialog - don't apply local changes
         self.close()
+        # Move to today, if needed
+        t1, t2 = self._canvas.range.get_target_range()
+        if not (t1 < now < t2):
+            t1, t2 = self._canvas.range.get_today_range()
+            self._canvas.range.animate_range(t1, t2)
         # Start pomo?
         if window.simplesettings.get("pomodoro_enabled"):
             self._canvas.pomodoro_dialog.start_work()
@@ -1871,7 +1898,7 @@ class TagComboDialog(BaseDialog):
             clr = window.store.settings.get_color_for_tag(tag)
             el = document.createElement("button")
             el.setAttribute("type", "button")
-            el.classList.add("actionbutton")
+            el.style.marginRight = "3px"
             el.innerHTML = f"<b style='color:{clr};'>#</b>" + tag[1:]
             el.onclick = self._make_click_handler(tag, callback)
             button_div.appendChild(el)
@@ -2581,11 +2608,16 @@ class SearchDialog(BaseDialog):
             date = dt.time2str(record.t1).split("T")[0]
             lines.append(
                 f"""
+                <a href='#date={date}'
+                    style='cursor: pointer;'>
+                    <span>{date}</span>
+                </a>&nbsp;&nbsp;
                 <a onclick='window._search_dialog_open_record("{key}")'
                     style='cursor: pointer;'>
                     <i class='fas'>\uf682</i>
-                    <span>{date}</span>
-                    <span>{ds}</span></a>"""
+                    <span>{ds}</span>
+                </a>
+                """
             )
         self._records_node.innerHTML = "<br />\n".join(lines)
 
@@ -3691,10 +3723,11 @@ class SettingsDialog(BaseDialog):
                 </select>
                 <div>Show duration as:</div>
                 <select>
-                    <option value='hms'>1h20m</option>
-                    <option value='colon'>01:20</option>
+                    <option value='dhms'>1d3h20m</option>
+                    <option value='hms'>27h20m</option>
+                    <option value='colon'>27:20</option>
                 </select>
-                <div>Today's snap offset:</div>
+                <div>Today starts at:</div>
                 <select>
                     <option value=''>00:00</option>
                     <option value='1h'>01:00</option>
@@ -3702,6 +3735,15 @@ class SettingsDialog(BaseDialog):
                     <option value='3h'>03:00</option>
                     <option value='4h'>04:00</option>
                     <option value='5h'>05:00</option>
+                    <option value='6h'>06:00</option>
+                    <option value='7h'>07:00</option>
+                    <option value='8h'>08:00</option>
+                    <option value='9h'>09:00</option>
+                </select>
+                <div>Today duration:</div>
+                <select>
+                    <option value='-12h'>12h</option>
+                    <option value=''>24h</option>
                 </select>
             </div>
             <h2><i class='fas'>\uf085</i>&nbsp;&nbsp;Misc</h2>
@@ -3793,6 +3835,12 @@ class SettingsDialog(BaseDialog):
         self._today_snap_offset.value = today_snap_offset
         self._today_snap_offset.onchange = self._on_today_snap_offset_change
 
+        # Today number of hours
+        today_end_offset = window.simplesettings.get("today_end_offset")
+        self._today_end_offset = self._repr_form.children[9]
+        self._today_end_offset.value = today_end_offset
+        self._today_end_offset.onchange = self._on_today_end_offset_change
+
         # Stopwatch
         show_stopwatch = window.simplesettings.get("show_stopwatch")
         self._stopwatch_check = self._stopwatch_label.children[0]
@@ -3841,6 +3889,10 @@ class SettingsDialog(BaseDialog):
     def _on_today_snap_offset_change(self):
         today_snap_offset = self._today_snap_offset.value
         window.simplesettings.set("today_snap_offset", today_snap_offset)
+
+    def _on_today_end_offset_change(self):
+        today_end_offset = self._today_end_offset.value
+        window.simplesettings.set("today_end_offset", today_end_offset)
 
     def _on_darkmode_change(self):
         darkmode = int(self._darkmode_select.value)
@@ -3975,7 +4027,7 @@ class PomodoroDialog(BaseDialog):
         etime = self._state[1]
         left = max(0, etime - dt.now())
         if left:
-            return self._state[0] + ": " + dt.duration_string(left, True)[2:]
+            return self._state[0] + ": " + dt.duration_string(left, True)
         else:
             return None
 

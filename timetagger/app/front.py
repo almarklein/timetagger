@@ -202,7 +202,7 @@ class TimeTaggerCanvas(BaseCanvas):
         self._notification_cache = cache
         if message not in cache:
             cache[message] = True
-            self.notification_dialog.open(message)
+            self.notification_dialog.open(message, "Notification")
 
     def now(self):
         if self._now is not None:
@@ -399,6 +399,25 @@ class TimeRange:
         self._t1 = dt.floor(self._canvas.now(), "1D")
         self._t2 = dt.add(self._t1, "1D")
         self._t1, self._t2 = self.get_snap_range()  # snap non-animated
+
+    def get_today_range(self):
+        """Get the sensible range for "today"."""
+        # Get settings
+        today_snap_offset = window.simplesettings.get("today_snap_offset")
+        today_end_offset = window.simplesettings.get("today_end_offset")
+        # Get some reference data
+        now = self._canvas.now()
+        current_t1, current_t2 = self.get_target_range()
+        # The math
+        t1_actual = dt.floor(now, "1D")
+        t1 = dt.add(t1_actual, today_snap_offset) if today_snap_offset else t1_actual
+        t2 = dt.add(t1, "1D")
+        t2 = dt.add(t2, today_end_offset) if today_end_offset else t2
+        # Toggle to a full day (0h-24h) if the range already matches.
+        if t1 == current_t1 and t2 == current_t2:
+            t1 = t1_actual
+            t2 = dt.add(t1, "1D")
+        return t1, t2
 
     def get_range(self):
         """Get the current time range (as a 2-element tuple, in seconds)."""
@@ -1069,7 +1088,7 @@ class TopWidget(Widget):
         else:
             text = ""
 
-        sync_radius = 7
+        sync_radius = 9
         yoffset = -6 if len(text) else 0
 
         d = (y2 - y1) / 2
@@ -1171,7 +1190,7 @@ class TopWidget(Widget):
 
         # Register tiny sync button
         if register:
-            ob = {"button": True, "action": "refresh", "help": ""}
+            ob = {"button": True, "action": "dosync", "help": ""}
             self._picker.register(
                 x - radius - 1, y - radius - 1, x + radius + 1, y + radius + 1, ob
             )
@@ -1411,8 +1430,18 @@ class TopWidget(Widget):
         elif action == "login":
             window.location.href = "../login"
 
-        elif action == "refresh":
-            window.store.sync_soon(0.2)
+        elif action == "dosync":
+            if window.store.state in ("warning", "error"):
+                last_error = window.store.last_error or "Unknown sync error"
+                self._canvas.notification_dialog.open(last_error, "Sync error")
+            else:
+                msg = "This button shows the sync status. The current status is <b>OK</b>!"
+                msg += "<br><br>The app and server continiously exchange updates. "
+                msg += "When something is wrong, this button will change, "
+                msg += "and you can then click it to get more info."
+                self._canvas.notification_dialog.open(msg, "Sync status")
+                # Also sync now
+                window.store.sync_soon(0.2)
 
         elif action == "report":
             self._canvas.report_dialog.open()
@@ -1444,12 +1473,12 @@ class TopWidget(Widget):
                 records = window.store.records.get_running_records()
                 if len(records) > 0:
                     record = records[0]
-                    record.t2 = max(record.t1 + 10, now)
+                    record.t2 = max(record.t1 + 2, now)
                     self._canvas.record_dialog.open("Stop", record, self.update)
             elif action == "record_stopall":
                 records = window.store.records.get_running_records()
                 for record in records:
-                    record.t2 = max(record.t1 + 10, now)
+                    record.t2 = max(record.t1 + 2, now)
                     window.store.records.put(record)
                 if window.simplesettings.get("pomodoro_enabled"):
                     self._canvas.pomodoro_dialog.stop()
@@ -1459,16 +1488,8 @@ class TopWidget(Widget):
             if action.startswith("nav_snap_"):
                 res = action.split("_")[-1]
                 t1, t2 = self._canvas.range.get_target_range()
-                current_t1 = t1
                 if res == "today":
-                    t1_actual = dt.floor(now, "1D")
-                    today_snap_offset = window.simplesettings.get("today_snap_offset")
-                    if today_snap_offset:
-                        t1_offset = dt.add(t1_actual, today_snap_offset)
-                        t1 = t1_actual if current_t1 == t1_offset else t1_offset
-                    else:
-                        t1 = t1_actual
-                    t2 = dt.add(t1, "1D")
+                    t1, t2 = self._canvas.range.get_today_range()
                 elif res.startswith("now"):
                     res = res[3:]
                     if len(res) == 0:
@@ -2244,9 +2265,7 @@ class RecordsWidget(Widget):
             duration_sec = ""
         else:
             duration = now - record.t1
-            duration_text_full = dt.duration_string(duration, True)
-            duration_text = dt.duration_string(duration, False)
-            duration_sec = duration_text_full[len(duration_text) :]
+            duration_text, duration_sec = dt.duration_string(duration, 2)
         ctx.fillStyle = COLORS.record_text if tags_selected else faded_clr
         ctx.textAlign = "right"
         ctx.fillText(duration_text, x5 + 30, text_ypos)
@@ -2745,13 +2764,14 @@ class RecordsWidget(Widget):
                             record.t2 = record.t1 + dt
                     # Finish
                     if self._selected_record[1] == 1:
-                        record.t1 = min(record.t2 - 10, record.t1)
+                        record.t1 = min(record.t2 - 2, record.t1)
                     else:
-                        record.t2 = max(record.t1 + 10, record.t2)
+                        record.t2 = max(record.t1 + 2, record.t2)
                     if isrunning:
                         record.t1 = min(record.t1, self._canvas.now())
                         record.t2 = record.t1
-                    window.store.records.put(record)
+                    if not window.store.is_read_only:
+                        window.store.records.put(record)
                     if "up" in ev.type:
                         self._selected_record[1] = 0
                     self.update()
@@ -3113,6 +3133,13 @@ class AnalyticsWidget(Widget):
         for bar in bars:
             total_time += bar.t
 
+        # Prepare some more
+        self._running_tagz = []
+        for record in window.store.records.get_running_records():
+            self._running_tagz.append(
+                window.store.records.tags_from_record(record).join(" ")
+            )
+
         # Draw all bars
         self._draw_container(ctx, total_time, x1, y1, x3, overview_y2)
         for bar in bars:
@@ -3315,12 +3342,10 @@ class AnalyticsWidget(Widget):
         y1, y2 = bar.y1, bar.y2
         npixels = min(y2 - y1, self._npixels_each)
 
-        # Get whether the current tag combi corresponds to the currently running record
-        is_running = False
-        if t1 < self._canvas.now() < t2:
-            for record in window.store.records.get_running_records():
-                if window.store.records.tags_from_record(record).join(" ") == bar.tagz:
-                    is_running = True
+        # Get whether the current tag combi corresponds to the currently running record.
+        # The clock only ticks per second if now is within range, so we don't show seconds unless we can.
+        is_running = bar.tagz in self._running_tagz
+        show_secs = is_running and (t1 < self._canvas.now() < t2)
 
         # Roundness
         rn = min(ANALYSIS_ROUNDNESS, npixels / 2)
@@ -3409,10 +3434,8 @@ class AnalyticsWidget(Widget):
             return
 
         # Get duration text
-        if is_running:
-            duration_text_full = dt.duration_string(bar.t, True)
-            duration_text = dt.duration_string(bar.t, False)
-            duration_sec = duration_text_full[len(duration_text) :]
+        if show_secs:
+            duration_text, duration_sec = dt.duration_string(bar.t, 2)
         else:
             duration_text = dt.duration_string(bar.t, False)
             duration_sec = ""
