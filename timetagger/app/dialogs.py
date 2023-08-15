@@ -438,7 +438,7 @@ class MenuDialog(BaseDialog):
             ("\uf059", True, "Get tips and help", "https://timetagger.app/support"),
             ("\uf0a1", True, whatsnew, whatsnew_url),
             (None, store_valid, "Manage", None),
-            ("\uf002", store_valid, "Search records and tags", self._search),
+            ("\uf002", store_valid, "Search", self._search),
             ("\uf56f", store_valid, "Import records", self._import),
             ("\uf56e", store_valid, "Export all records", self._export),
             (None, True, "User", None),

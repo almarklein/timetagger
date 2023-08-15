@@ -15,7 +15,7 @@ interactive user experience and powerful reporting.
 
 ## Introduction
 
-TimeTagger is a web-based time-tracking solution that can be run locally
+TimeTagger is a web-based time-tracking solution that can run locally
 or on a server. It's aimed at individuals and freelancers, and has the
 following features:
 
@@ -23,7 +23,7 @@ following features:
 * Lightweight feel by use of tags rather than projects.
 * Reporting in PDF and CSV.
 * Set daily/weekly/monthly targets.
-* Integrated Pomodoro method.
+* Integrated Pomodoro method (experimental).
 * Responsive: works well on small and large screens.
 * Sync between devices.
 
@@ -44,7 +44,7 @@ Maybe I'll someday implement it in something that compiles down to Wasm :)
 
 ## Install and run
 
-TimeTagger is a Python library and requires Python 3.6 or higher. The dependencies are listed in `requirements.txt` - these are installed automatically when you install TimeTagger with Pip.
+TimeTagger is implemented as a Python library that requires Python 3.6 or higher. The dependencies are listed in `requirements.txt` - these are installed automatically when you install TimeTagger with Pip.
 
 ```
 # Install
@@ -99,6 +99,15 @@ python -m timetagger --proxy_auth_enabled=True --proxy_auth_trusted=127.0.0.1 --
 export TIMETAGGER_PROXY_AUTH_ENABLED=True TIMETAGGER_PROXY_AUTH_TRUSTED=127.0.0.1 TIMETAGGER_PROXY_AUTH_HEADER=X-Remote-User
 python -m timetagger
 ```
+
+
+## Show your support
+
+If you're self-hosting TimeTagger and want to support the project, you can:
+
+* Write something about TimeTagger in a blog post or social media (and link to `https://timetagger.app`). This helps search engines find it better.
+* Contribute improvements via Github.
+* For financial support you can take a subscription or donate (see the donation links on the side).
 
 
 ## Using the hosted version
