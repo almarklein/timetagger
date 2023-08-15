@@ -2672,6 +2672,7 @@ class ReportDialog(BaseDialog):
                 <div>Grouping:</div> <select>
                                         <option value='none'>none</option>
                                         <option value='tagz'>tags</option>
+                                        <option value='ds'>description</option>
                                         <option value='date'>date</option>
                                         <option value='tagz/date'>tags / date</option>
                                         <option value='date/tagz'>date / tags</option>
@@ -2844,6 +2845,22 @@ class ReportDialog(BaseDialog):
                 group.records.push(record)
                 group.t += record.t2 - record.t1
             group_list = groups.values()
+
+        elif group_method == "ds":
+            groups = {}
+            for i in range(len(records)):
+                record = records[i]
+                tagz1 = window.store.records.tags_from_record(record).join(" ")
+                if tagz1 not in name_map:
+                    continue
+                ds = record.ds
+                if ds not in groups:
+                    groups[ds] = {"title": ds, "t": 0, "records": []}
+                group = groups[ds]
+                group.records.push(record)
+                group.t += record.t2 - record.t1
+            group_list = groups.values()
+            group_list.sort(key=lambda x: x.title.lower())
 
         elif group_method == "date":
             groups = {}
