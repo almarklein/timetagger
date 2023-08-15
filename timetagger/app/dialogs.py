@@ -2561,7 +2561,7 @@ class SearchDialog(BaseDialog):
                 # All checks passed
                 records.push([record.t1, record.key])
 
-        records.sort(key=lambda x: x[1])
+        records.sort(key=lambda x: -x[0])
         self._records = [x[1] for x in records]
         self._show_records()
         self._check_names()
