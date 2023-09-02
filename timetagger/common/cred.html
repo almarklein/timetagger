@@ -22,7 +22,7 @@
                 margin: 4px;
             }
 
-            #div_r {
+            .div_r {
                 position: relative;
                 background: #eee;
                 color: #000;
@@ -32,7 +32,7 @@
                 font-size: 100%;
             }
 
-            #div_r > #but_copy {
+            .div_r > button {
                 position: absolute;
                 right: 1em;
             }
@@ -47,29 +47,36 @@
             async function load() {
                 let input_u = document.getElementById("input_u");
                 let input_p = document.getElementById("input_p");
-                let but_copy = document.getElementById("but_copy");
 
                 input_u.oninput = calculate_result;
                 input_p.oninput = calculate_result;
-                but_copy.onclick = copy_result;
+                document.getElementById("but_copy1").onclick = function() {copy_result(0);};
+                document.getElementById("but_copy2").onclick = function() {copy_result(1);};
+                document.getElementById("but_copy3").onclick = function() {copy_result(2);};
 
-                window.result = "";
+                window.results = ["", "", ""];
             }
             window.addEventListener('load', load);
 
             async function calculate_result() {
-                let input_u = document.getElementById("input_u");
-                let input_p = document.getElementById("input_p");
-                let span_r = document.getElementById("span_r");
-                console.log("hey")
-                let hash = dcodeIO.bcrypt.hashSync(input_p.value, 8);
-                console.log("hash: " + hash)
-                window.result = input_u.value + ":" + hash;
-                span_r.innerText = window.result;
+                let username = document.getElementById("input_u").value;
+                let pw = document.getElementById("input_p").value;
+                let hash = dcodeIO.bcrypt.hashSync(pw, 8);
+
+                // Note that dollar signs need to be escaped for the replace function too
+                window.results = [
+                    username + ":" + hash,
+                    username + ":" + hash.replaceAll("$", "\\$$"),
+                    username + ":" + hash.replaceAll("$", "$$$$"),
+                ];
+
+                document.getElementById("span_r1").innerText = window.results[0];
+                document.getElementById("span_r2").innerText = window.results[1];
+                document.getElementById("span_r3").innerText = window.results[2];
             }
 
-            async function copy_result() {
-                navigator.clipboard.writeText(window.result);
+            async function copy_result(index) {
+                navigator.clipboard.writeText(window.results[index]);
             }
 
         </script>
@@ -82,14 +89,20 @@
 
             <h1>Generate credentials</h1>
 
-            <p>Generate a credentials-string with BCrypt hashing.
-            This page is only intended to generate the hash. It does
-            not communicate with any server or log you in somewhere.
+            <p>Generate a credentials-string with BCrypt hashing. This
+            page only generates the hash. It does not communicate with
+            a server or log you in somewhere. You can check the source if you want.
             </p>
 
             <input id='input_u' type='text' placeholder='username' /><br />
             <input id='input_p' type='password' placeholder='password' /><br />
-            <div id='div_r'><span id='span_r''>username:hash</span><button id='but_copy'>Copy 📋</button></div>
+
+            <p>The raw credentials:</p>
+            <div class='div_r'><span id='span_r1''>username:hash</span><button id='but_copy1'>Copy 📋</button></div>
+            <p>Dollar signs escaped with backslash, for Unix shell:</p>
+            <div class='div_r'><span id='span_r2''>username:hash</span><button id='but_copy2'>Copy 📋</button></div>
+            <p>Double dollar signs, for docker-compose script:</p>
+            <div class='div_r'><span id='span_r3''>username:hash</span><button id='but_copy3'>Copy 📋</button></div>
         </main>
 
     </body>
