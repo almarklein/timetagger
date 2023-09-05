@@ -3700,6 +3700,7 @@ class SettingsDialog(BaseDialog):
             "X": "Stop the timer",
             "T": "Select time range",
             "R": "Open report dialog",
+            "I": "Open the guide",
         }
         shortcuts_html = ""
         for key, expl in shortcuts.items():
