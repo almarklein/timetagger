@@ -3057,17 +3057,6 @@ class AnalyticsWidget(Widget):
             # ctx.fillStyle = COLORS.prim2_clr
             # ctx.fillText(self._help_text, x2 - 10, 90)
 
-        # Show some help if no records are shown
-        if (not self._tag_bars_dict) and (not self.selected_tags):
-            t1, t2 = self._canvas.range.get_range()
-            if t1 < self._canvas.now() < t2:
-                ctx.textAlign = "left"
-                ctx.font = FONT.size + "px " + FONT.default
-                ctx.textBaseline = "top"
-                ctx.fillStyle = COLORS.prim1_clr
-                text = "Click the ▶ button to start tracking!"
-                ctx.fillText(text, x1 + 5, y1 + self._npixels_each + 25)
-
     def _draw_stats(self, ctx, x1, y1, x2, y2):
         PSCRIPT_OVERLOAD = False  # noqa
 
