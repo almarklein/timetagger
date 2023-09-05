@@ -3922,6 +3922,34 @@ class SettingsDialog(BaseDialog):
         window.simplesettings.set("show_stopwatch", show_stopwatch)
 
 
+class GuideDialog(BaseDialog):
+    """Dialog to have quick access to the guide."""
+
+    def __init__(self, canvas):
+        super().__init__(canvas)
+        self._initialized = 0
+
+    def open(self, callback=None):
+        # Only init once, so that the guide stays in the state as the
+        # user tries something and then opens it again. Up to 24 hours.
+        if dt.now() < self._initialized + 86400:
+            return super().open(callback)
+        self._initialized = dt.now()
+
+        self.maindiv.innerHTML = """
+            <h1><i class='fas'>\uf05a</i>&nbsp;&nbsp;Guide
+                <button type='button'><i class='fas'>\uf00d</i></button>
+            </h1>
+            <iframe src='https://timetagger.app/guide_headless'
+            display:block; style='width:100%; height:calc(90vh - 100px); border:none;'
+            />
+        """
+
+        self._cancel_but = self.maindiv.children[0].children[-1]
+        self._cancel_but.onclick = self.close
+        super().open(callback)
+
+
 class PomodoroDialog(BaseDialog):
     """Dialog to control the Pomodoro timer."""
 

@@ -178,6 +178,7 @@ class TimeTaggerCanvas(BaseCanvas):
         self.search_dialog = dialogs.SearchDialog(self)
         self.export_dialog = dialogs.ExportDialog(self)
         self.import_dialog = dialogs.ImportDialog(self)
+        self.guide_dialog = dialogs.GuideDialog(self)
         self.pomodoro_dialog = dialogs.PomodoroDialog(self)
 
         # The order here is also the draw-order. Records must come after analytics.
@@ -975,7 +976,7 @@ class TopWidget(Widget):
         ha = 0.7 * h
         yc = y3 + h / 2
         updown_w = 0
-        if avail_width > 330:
+        if avail_width > 310:
             updown_w = self._draw_button(
                 ctx,
                 xc,
@@ -1004,7 +1005,7 @@ class TopWidget(Widget):
         x = xc - updown_w / 2 - 3
 
         zoom_w = 0
-        if avail_width > 400:
+        if avail_width > 350:
             zoom_w = self._draw_button(
                 ctx,
                 x,
@@ -1054,7 +1055,7 @@ class TopWidget(Widget):
 
         x = xc + updown_w / 2 + 3
 
-        if avail_width > 400:
+        if avail_width > 350:
             zoom_w = self._draw_button(
                 ctx,
                 x,
@@ -1074,10 +1075,23 @@ class TopWidget(Widget):
             y3,
             None,
             h,
-            ["fas-\uf15c", "Report"],
+            ["fas-\uf15c"] + (["Report"] if avail_width > 420 else []),
             "report",
             "Show report [r]",
             {"ref": "topleft", "font": FONT.condensed},
+        )
+        x += margin
+
+        x += self._draw_button(
+            ctx,
+            x,
+            y3,
+            None,
+            h,
+            ["fas-\uf05a"],
+            "guide",
+            "Show guide [i]",
+            {"ref": "topleft"},
         )
 
     def _draw_menu_button(self, ctx, x1, y1, x2, y2):
@@ -1417,6 +1431,8 @@ class TopWidget(Widget):
             self._handle_button_press("record_stopall")
         elif e.key.lower() == "r":
             self._handle_button_press("report")
+        elif e.key.lower() == "i":
+            self._handle_button_press("guide")
         else:
             return
         e.preventDefault()
@@ -1445,6 +1461,9 @@ class TopWidget(Widget):
 
         elif action == "report":
             self._canvas.report_dialog.open()
+
+        elif action == "guide":
+            self._canvas.guide_dialog.open()
 
         elif action == "pomo":
             self._canvas.pomodoro_dialog.open()
