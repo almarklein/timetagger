@@ -908,7 +908,7 @@ class BaseCanvas:
         x, y = ev.pos
         # Only on mouse - it's anoying for touch
         is_mouse = bool(ev.touches["-1"])
-        if not is_mouse:
+        if not (is_mouse and looks_like_desktop()):
             self._tooltipdiv.style.display = "none"
             return
         # Get tooltip object - if text is None it means no tooltip
