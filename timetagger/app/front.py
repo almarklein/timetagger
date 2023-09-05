@@ -1094,6 +1094,22 @@ class TopWidget(Widget):
             {"ref": "topleft"},
         )
 
+        if (
+            window.store.records.put_count < 10
+            and not self._canvas.guide_dialog.initialized
+        ):
+            # Help new users find the guide
+            y_balloon = y3 + h / 2
+            ctx.strokeStyle = COLORS.acc_clr
+            ctx.lineWidth = 3
+            ctx.beginPath()
+            ctx.moveTo(x + 5, y_balloon)
+            ctx.lineTo(x + 35, y_balloon)
+            ctx.stroke()
+            text = "Handy guide!"
+            options = {"ref": "middleleft", "color": "#000", "body": COLORS.acc_clr}
+            self._draw_button(ctx, x + 30, y_balloon, None, 30, text, "", "", options)
+
     def _draw_menu_button(self, ctx, x1, y1, x2, y2):
         if window.store.__name__.startswith("Demo"):
             text = "Demo"
@@ -1280,6 +1296,19 @@ class TopWidget(Widget):
                 {"ref": "topright", "font": FONT.condensed},
             )
             x -= dx
+
+            if window.store.records.put_count == 0:
+                # Help new users find the record button (can test this in the sandbox)
+                x_balloon = x + 0.5 * dx
+                ctx.strokeStyle = COLORS.acc_clr
+                ctx.lineWidth = 3
+                ctx.beginPath()
+                ctx.moveTo(x_balloon, y + 40)
+                ctx.lineTo(x_balloon, y + 80)
+                ctx.stroke()
+                text = "Press to start tracking time!"
+                options = {"ref": "topleft", "color": "#000", "body": COLORS.acc_clr}
+                self._draw_button(ctx, x, y + 70, None, 30, text, "", "", options)
 
         # Pomodoro button
         if window.simplesettings.get("pomodoro_enabled"):
