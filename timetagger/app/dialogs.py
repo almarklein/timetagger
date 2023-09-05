@@ -3700,6 +3700,7 @@ class SettingsDialog(BaseDialog):
             "X": "Stop the timer",
             "T": "Select time range",
             "R": "Open report dialog",
+            "I": "Open the guide",
         }
         shortcuts_html = ""
         for key, expl in shortcuts.items():
@@ -3927,14 +3928,14 @@ class GuideDialog(BaseDialog):
 
     def __init__(self, canvas):
         super().__init__(canvas)
-        self._initialized = 0
+        self.initialized = 0
 
     def open(self, callback=None):
         # Only init once, so that the guide stays in the state as the
         # user tries something and then opens it again. Up to 24 hours.
-        if dt.now() < self._initialized + 86400:
+        if dt.now() < self.initialized + 86400:
             return super().open(callback)
-        self._initialized = dt.now()
+        self.initialized = dt.now()
 
         self.maindiv.innerHTML = """
             <h1><i class='fas'>\uf05a</i>&nbsp;&nbsp;Guide

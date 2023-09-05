@@ -1094,6 +1094,22 @@ class TopWidget(Widget):
             {"ref": "topleft"},
         )
 
+        if (
+            window.store.records.put_count < 10
+            and not self._canvas.guide_dialog.initialized
+        ):
+            # Help new users find the guide
+            y_balloon = y3 + h / 2
+            ctx.strokeStyle = COLORS.acc_clr
+            ctx.lineWidth = 3
+            ctx.beginPath()
+            ctx.moveTo(x + 5, y_balloon)
+            ctx.lineTo(x + 35, y_balloon)
+            ctx.stroke()
+            text = "Handy guide!"
+            options = {"ref": "middleleft", "color": "#000", "body": COLORS.acc_clr}
+            self._draw_button(ctx, x + 30, y_balloon, None, 30, text, "", "", options)
+
     def _draw_menu_button(self, ctx, x1, y1, x2, y2):
         if window.store.__name__.startswith("Demo"):
             text = "Demo"
@@ -1280,6 +1296,19 @@ class TopWidget(Widget):
                 {"ref": "topright", "font": FONT.condensed},
             )
             x -= dx
+
+            if window.store.records.put_count == 0:
+                # Help new users find the record button (can test this in the sandbox)
+                x_balloon = x + 0.5 * dx
+                ctx.strokeStyle = COLORS.acc_clr
+                ctx.lineWidth = 3
+                ctx.beginPath()
+                ctx.moveTo(x_balloon, y + 40)
+                ctx.lineTo(x_balloon, y + 80)
+                ctx.stroke()
+                text = "Press to start tracking time!"
+                options = {"ref": "topleft", "color": "#000", "body": COLORS.acc_clr}
+                self._draw_button(ctx, x, y + 70, None, 30, text, "", "", options)
 
         # Pomodoro button
         if window.simplesettings.get("pomodoro_enabled"):
@@ -3027,17 +3056,6 @@ class AnalyticsWidget(Widget):
             # ctx.font = (FONT.size * 0.9) + "px " + FONT.default
             # ctx.fillStyle = COLORS.prim2_clr
             # ctx.fillText(self._help_text, x2 - 10, 90)
-
-        # Show some help if no records are shown
-        if (not self._tag_bars_dict) and (not self.selected_tags):
-            t1, t2 = self._canvas.range.get_range()
-            if t1 < self._canvas.now() < t2:
-                ctx.textAlign = "left"
-                ctx.font = FONT.size + "px " + FONT.default
-                ctx.textBaseline = "top"
-                ctx.fillStyle = COLORS.prim1_clr
-                text = "Click the ▶ button to start tracking!"
-                ctx.fillText(text, x1 + 5, y1 + self._npixels_each + 25)
 
     def _draw_stats(self, ctx, x1, y1, x2, y2):
         PSCRIPT_OVERLOAD = False  # noqa

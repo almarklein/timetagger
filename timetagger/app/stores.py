@@ -372,6 +372,7 @@ class RecordStore(BaseStore):
 
     def __init__(self, datastore):
         self._datastore = datastore
+        self.put_count = 0  # Handy to detect new users
         self._items = {}  # key -> record
         self._running_records = {}  # Should be 0, 1, or occasionally maybe a few.
         self._heap = [{}]  # list of layers, each layer is binNr -> stats
@@ -445,6 +446,7 @@ class RecordStore(BaseStore):
 
             # Store the record in our flat dict
             self._items[key] = new_record
+            self.put_count += 1
 
             # Remove cur_record from bins in layer 0
             if cur_record is not None:
