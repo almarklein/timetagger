@@ -3940,7 +3940,7 @@ class GuideDialog(BaseDialog):
             <h1><i class='fas'>\uf05a</i>&nbsp;&nbsp;Guide
                 <button type='button'><i class='fas'>\uf00d</i></button>
             </h1>
-            <iframe src='/guide_headless'
+            <iframe src='https://timetagger.app/guide_headless'
             display:block; style='width:100%; height:calc(90vh - 100px); border:none;'
             />
         """
