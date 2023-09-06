@@ -65,6 +65,14 @@ def now():
         return time.time()
 
 
+_start_time = now()
+
+
+def time_since_app_loaded():
+    """Get the number of seconds since the app loaded."""
+    return now() - _start_time
+
+
 def to_time_int(t):
     """Get a time (in int seconds since epoch), given float/str input.
     String inputs can be:

@@ -1095,7 +1095,8 @@ class TopWidget(Widget):
         )
 
         if (
-            window.store.records.put_count < 10
+            dt.time_since_app_loaded() > 4
+            and window.store.records.put_count < 5
             and not self._canvas.guide_dialog.initialized
         ):
             # Help new users find the guide
@@ -1297,7 +1298,7 @@ class TopWidget(Widget):
             )
             x -= dx
 
-            if window.store.records.put_count == 0:
+            if dt.time_since_app_loaded() > 3 and window.store.records.put_count == 0:
                 # Help new users find the record button (can test this in the sandbox)
                 x_balloon = x + 0.5 * dx
                 ctx.strokeStyle = COLORS.acc_clr
