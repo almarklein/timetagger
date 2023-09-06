@@ -2856,7 +2856,6 @@ class ReportDialog(BaseDialog):
                 group.records.push(record)
                 group.t += record.t2 - record.t1
             group_list1 = groups.values()
-            group_list1.sort(key=lambda x: x.title.lower())
 
         elif group_method == "ds":
             groups = {}
