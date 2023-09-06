@@ -2,6 +2,7 @@
 name: "Build and push release docker image"
 
 on:
+  workflow_dispatch:
   push:
     tags:
       - "v*"
