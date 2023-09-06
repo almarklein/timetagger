@@ -2705,7 +2705,7 @@ class ReportDialog(BaseDialog):
         self._grouping_select = form.children[5]
         self._groupperiod_select = form.children[7]
         self._hidesecondary_but = form.children[9].children[0]  # inside label
-        self._hourdecimals_but = form.children[1].children[0]  # inside label
+        self._hourdecimals_but = form.children[11].children[0]  # inside label
         self._showrecords_but = form.children[13].children[0]  # inside label
         self._copy_but = form.children[14]
         self._savecsv_but = form.children[16]
