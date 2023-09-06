@@ -2,6 +2,7 @@
 name: "Build and push release docker image"
 
 on:
+  workflow_dispatch:
   push:
     tags:
       - "v*"
@@ -11,9 +12,12 @@ permissions:
   packages: write
 
 jobs:
+
   # Build default priviliged container image version
+  # We make it need the other jobs, so this comes last and becomes the "latest"
   docker-root:
     runs-on: ubuntu-latest
+    needs: [docker-nonroot]
     steps:
       - name: Check out the repo
         uses: actions/checkout@v3
@@ -74,7 +78,7 @@ jobs:
         with:
           images: ghcr.io/${{ github.repository }}
           tags: type=ref,event=tag,suffix=-nonroot
-      
+
       - name: Build and push Docker image
         uses: docker/build-push-action@v4
         with:
