@@ -2890,7 +2890,7 @@ class ReportDialog(BaseDialog):
             groups = {}
             for group_index in range(len(group_list1)):
                 group_title = group_list1[group_index].title
-                for record in group.records:
+                for record in group_list1[group_index].records:
                     # Get period string
                     date = dt.time2localstr(record.t1).split(" ")[0]
                     year = int(date.split("-")[0])
