@@ -61,7 +61,7 @@ If the server runs on your local machine, you can use single-user mode out-of-th
 
 A docker image is provided via the [Github container registry](https://github.com/almarklein/timetagger/pkgs/container/timetagger), so you can use e.g. Docker-compose to easily host your
 own server.
-See the example [docker-compose.yml](https://github.com/almarklein/timetagger/blob/main/deploy/docker-compose.yml).
+See the example [docker-compose.yml](https://github.com/almarklein/timetagger/blob/main/deploy/docker-compose.yml) (or [docker-compose.nonroot.yml](https://github.com/almarklein/timetagger/blob/main/deploy/docker-compose.nonroot.yml) for the nonroot variant).
 See [this article](https://timetagger.app/articles/selfhost2/) for more information about self hosting.
 
 
