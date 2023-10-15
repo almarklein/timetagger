@@ -1449,6 +1449,8 @@ class TopWidget(Widget):
             self._handle_button_press("nav_snap_now1W")
         elif e.key.lower() == "m":
             self._handle_button_press("nav_snap_now1M")
+        elif e.key.lower() == "y":
+            self._handle_button_press("nav_snap_now1Y")
         elif e.key.lower() == "t":
             self._handle_button_press("nav_menu")
         #

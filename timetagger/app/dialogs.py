@@ -3690,6 +3690,7 @@ class SettingsDialog(BaseDialog):
             "D": "Select today",
             "W": "Select this week",
             "M": "Select this month",
+            "Y": "Select this year",
             "↑/PageUp": "Step back in time",
             "↓/PageDown": "Step forward in time",
             "→": "Zoom in",
