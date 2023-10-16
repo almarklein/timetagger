@@ -59,11 +59,15 @@ If the server runs on your local machine, you can use single-user mode out-of-th
 
 ## Self-hosting your time tracker
 
-A docker image is provided via the [Github container registry](https://github.com/almarklein/timetagger/pkgs/container/timetagger), so you can use e.g. Docker-compose to easily host your
-own server.
-See the example [docker-compose.yml](https://github.com/almarklein/timetagger/blob/main/deploy/docker-compose.yml).
-See [this article](https://timetagger.app/articles/selfhost2/) for more information about self hosting.
+Docker images are provided via the [Github container registry](https://github.com/almarklein/timetagger/pkgs/container/timetagger),
+so you can use e.g. Docker-compose to easily host your own server.
 
+There are two variants, one that runs the server as root inside the container and a nonroot variant
+that runs as user 1000:
+- [docker-compose.yml](https://github.com/almarklein/timetagger/blob/main/deploy/docker-compose.yml)
+- [docker-compose.nonroot.yml](https://github.com/almarklein/timetagger/blob/main/deploy/docker-compose.nonroot.yml)
+ 
+See [this article](https://timetagger.app/articles/selfhost2/) for more information about self hosting.
 
 ### Authentication using credentials
 
