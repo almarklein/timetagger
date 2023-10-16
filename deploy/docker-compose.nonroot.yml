@@ -14,9 +14,9 @@ services:
     ports:
       - "80:80"
     volumes:
-      - ./_timetagger:/opt/timetagger/_timetagger
+      - ./_timetagger:/opt/_timetagger
     environment:
       - TIMETAGGER_BIND=0.0.0.0:80
-      - TIMETAGGER_DATADIR=/opt/timetagger/_timetagger
+      - TIMETAGGER_DATADIR=/opt/_timetagger
       - TIMETAGGER_LOG_LEVEL=info
       - TIMETAGGER_CREDENTIALS=test:$$2a$$08$$0CD1NFiIbancwWsu3se1v.RNR/b7YeZd71yg3cZ/3whGlyU6Iny5i  # test:test
