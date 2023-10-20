@@ -881,10 +881,10 @@ class StartStopEdit:
     def _stepwise_delta(self, mm, delta):
         if delta >= 0:
             # delta is positiv, apply modulo with offset
-            return (delta - (mm%delta))
+            return (delta - (mm % delta))
         else:
             # delta is negative
-            mm_new = -(mm%-(delta))
+            mm_new = -(mm % -(delta))
             if mm_new == 0:
                 # we are already at stepsize, just return delta
                 return delta
