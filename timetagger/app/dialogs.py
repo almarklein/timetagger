@@ -931,7 +931,6 @@ class StartStopEdit:
             self.date2input.style.color = None
 
     def onchanged(self, action):
-
         # step size used for time buttons
         _stepsize = 5
 
