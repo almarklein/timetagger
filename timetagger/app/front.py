@@ -58,7 +58,6 @@ def set_width_mode():
     entries = []
     add = lambda x: entries.push(x)
     content_div.classList.forEach(add)
-    print(entries)
     for entry in entries:
         if "width-" in entry:
             content_div.classList.remove(entry)
