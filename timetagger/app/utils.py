@@ -56,7 +56,9 @@ def fit_font_size(ctx, available_width, font, text, maxsize=100):
     # Takes 2-5 iters, smaller available_width -> faster iteration
     size = maxsize
     width = available_width + 2
-    while width > available_width and size > 4:
+    iter = 0  # failsafe
+    while iter < 9 and width > available_width and size > 4:
+        iter += 1
         new_size = int(1.1 * size * available_width / width)
         size = new_size if new_size < size else size - 1
         ctx.font = str(size) + "px " + font
@@ -460,20 +462,10 @@ def positions_mean_and_std(positions):
     return avg_pos, std_pos
 
 
-def get_pixel_ratio(ctx):
+def get_pixel_ratio():
     """Get the ratio of logical pixel to screen pixel."""
     PSCRIPT_OVERLOAD = False  # noqa
-
-    dpr = window.devicePixelRatio or 1
-    bsr = (
-        ctx.webkitBackingStorePixelRatio
-        or ctx.mozBackingStorePixelRatio
-        or ctx.msBackingStorePixelRatio
-        or ctx.oBackingStorePixelRatio
-        or ctx.backingStorePixelRatio
-        or 1
-    )
-    return dpr / bsr
+    return window.devicePixelRatio or 1
 
 
 def create_pointer_event(node, e):
@@ -841,17 +833,33 @@ class BaseCanvas:
 
     def _on_js_resize_event(self):
         """Ensure that the canvas has the correct size and dpi."""
-        ctx = self.node.getContext("2d")
-        self.pixel_ratio = get_pixel_ratio(ctx)
+
+        # Get and store pixel ratio
+        self.pixel_ratio = ratio = get_pixel_ratio()
+
+        # Get the true client size (we get subpixel values this way)
+        rect = self.node.getBoundingClientRect()
+        # Calculate the physical size, and round it down to an integer value.
+        psize = int(rect.width * ratio), int(rect.height * ratio)
+        # Calculate the logical size from that.
+        lsize = psize[0] / ratio, psize[1] / ratio
+        # The lsize may be smaller, so we need to apply padding.
+        # This padding is the trick to get sharp images, even for weird pixel ratio's.
+        padding = rect.width - lsize[0], rect.height - lsize[1]
+        # Set the canvas' physical size and padding
+        self.node.width = psize[0]
+        self.node.height = psize[1]
+        self.node.style.paddingRight = padding[0] + "px"
+        self.node.style.paddingBottom = padding[1] + "px"
+
+        # Store the logial size, which is what is used to do the app layout.
+        self.w, self.h = lsize[0], lsize[1]
 
         # A line-width of 2 is great to have crisp images. For uneven line widths
         # one needs to offset 0.5 * pixel_ratio. But, that line-width must be
         # snapped to a width matching the pixel_ratio! pfew!
         self.grid_linewidth2 = min(self.pixel_ratio, self.grid_round(1)) * 2
 
-        self.w, self.h = self.node.clientWidth, self.node.clientHeight
-        self.node.width = self.w * self.pixel_ratio
-        self.node.height = self.h * self.pixel_ratio
         self.update()
         self.on_resize(True)  # draw asap to avoid flicker
 
