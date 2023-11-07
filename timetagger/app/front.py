@@ -3017,6 +3017,8 @@ class AnalyticsWidget(Widget):
         if y2 - y1 < 20:
             return
 
+        # return self._draw_test_grid()
+
         self._picker.clear()
 
         # If too little space, only draw button to expand
@@ -3075,6 +3077,23 @@ class AnalyticsWidget(Widget):
             # ctx.font = (FONT.size * 0.9) + "px " + FONT.default
             # ctx.fillStyle = COLORS.prim2_clr
             # ctx.fillText(self._help_text, x2 - 10, 90)
+
+    def _draw_test_grid(self, ctx):
+        x1, y1, x2, y2 = self.rect
+
+        x1, x2, x3 = int(x1), int((x1 + x2) / 2), int(x2)
+        y1, y2, y3 = int(y1), int((y1 + y2) / 2), int(y2)
+
+        ctx.strokeStyle = "#000"
+        ctx.lineWidth = 2
+        for i in range((x2 - x1) / 4):
+            ctx.moveTo(x1 + i * 4, y1)
+            ctx.lineTo(x1 + i * 4, y3)
+        ctx.stroke()
+        for i in range((y2 - y1) / 4):
+            ctx.moveTo(x1, y2 + i * 4)
+            ctx.lineTo(x3, y2 + i * 4)
+        ctx.stroke()
 
     def _draw_stats(self, ctx, x1, y1, x2, y2):
         PSCRIPT_OVERLOAD = False  # noqa
