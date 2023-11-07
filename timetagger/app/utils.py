@@ -56,7 +56,9 @@ def fit_font_size(ctx, available_width, font, text, maxsize=100):
     # Takes 2-5 iters, smaller available_width -> faster iteration
     size = maxsize
     width = available_width + 2
-    while width > available_width and size > 4:
+    iter = 0  # failsafe
+    while iter < 9 and width > available_width and size > 4:
+        iter += 1
         new_size = int(1.1 * size * available_width / width)
         size = new_size if new_size < size else size - 1
         ctx.font = str(size) + "px " + font
@@ -460,20 +462,10 @@ def positions_mean_and_std(positions):
     return avg_pos, std_pos
 
 
-def get_pixel_ratio(ctx):
+def get_pixel_ratio():
     """Get the ratio of logical pixel to screen pixel."""
     PSCRIPT_OVERLOAD = False  # noqa
-
-    dpr = window.devicePixelRatio or 1
-    bsr = (
-        ctx.webkitBackingStorePixelRatio
-        or ctx.mozBackingStorePixelRatio
-        or ctx.msBackingStorePixelRatio
-        or ctx.oBackingStorePixelRatio
-        or ctx.backingStorePixelRatio
-        or 1
-    )
-    return dpr / bsr
+    return window.devicePixelRatio or 1
 
 
 def create_pointer_event(node, e):
@@ -777,8 +769,9 @@ class BaseCanvas:
         self.node.addEventListener("touchmove", self._on_js_touch_event, 0)
 
         # Keep track of window size
-        window.addEventListener("resize", self._on_js_resize_event, False)
-        window.setTimeout(self._on_js_resize_event, 10)
+        # window.addEventListener("resize", self._on_js_resize_event, False)
+        self._resize_observer = window.ResizeObserver(self._on_resize_observer)
+        self._resize_observer.observe(self.node, {"box": "device-pixel-content-box"})
 
     def _prevent_default_event(self, e):
         """Prevent the default action of an event unless all modifier
@@ -839,21 +832,39 @@ class BaseCanvas:
         }.get(e.type[5:])
         self.on_pointer(ev)
 
-    def _on_js_resize_event(self):
-        """Ensure that the canvas has the correct size and dpi."""
-        ctx = self.node.getContext("2d")
-        self.pixel_ratio = get_pixel_ratio(ctx)
+    def _on_resize_observer(self, entries):
+        # The resize observer allows us to get the extact size of the element
+        # in physical pixels, something we cannot do with a normal resize event.
+        # See https://web.dev/articles/device-pixel-content-box
+        #
+        # On Firefox I've seen the app hang due to window resizing. I have not
+        # been able to find a singular reason, but its important that we update
+        # the canvas physical size (i.e. call _apply_new_size) directly. I also
+        # found that drawing stuff outside a requested animation frame is
+        # dangerous. See https://github.com/almarklein/timetagger/pull/418
+        entry = entries.find(lambda entry: entry.target is self.node)
+        psize = [
+            entry.devicePixelContentBoxSize[0].inlineSize,
+            entry.devicePixelContentBoxSize[0].blockSize,
+        ]
+        self._apply_new_size(psize)
+        self._draw()  # draw directly to prevent flicker (and maybe even hanging)
 
-        # A line-width of 2 is great to have crisp images. For uneven line widths
-        # one needs to offset 0.5 * pixel_ratio. But, that line-width must be
-        # snapped to a width matching the pixel_ratio! pfew!
+    def _apply_new_size(self, psize):
+        # This is called JIT right before a draw, when a resize has happened
+
+        # Get and store pixel ratio
+        self.pixel_ratio = ratio = get_pixel_ratio()
+        # Use that to obtain the real number of logical pixels
+        lsize = psize[0] / ratio, psize[1] / ratio
+        # Apply
+        self.node.width = psize[0]
+        self.node.height = psize[1]
+        self.w, self.h = lsize[0], lsize[1]
+        # Calculate linewidth param
         self.grid_linewidth2 = min(self.pixel_ratio, self.grid_round(1)) * 2
-
-        self.w, self.h = self.node.clientWidth, self.node.clientHeight
-        self.node.width = self.w * self.pixel_ratio
-        self.node.height = self.h * self.pixel_ratio
-        self.update()
-        self.on_resize(True)  # draw asap to avoid flicker
+        # Update
+        self.on_resize()
 
     def grid_round(self, x):
         """Round a value to the screen pixel grid."""
@@ -873,8 +884,8 @@ class BaseCanvas:
 
     def update(self, asap=True):
         """Schedule an update."""
-        # The extra setTimeout is to make sure that there is time for the
-        # browser to process events (like scrolling).
+        # The optional extra setTimeout is to make sure that there is
+        # time for the browser to process events (like scrolling).
         if not self._pending_draw:
             self._pending_draw = True
             if asap:
@@ -884,21 +895,24 @@ class BaseCanvas:
 
     def _draw(self):
         """The entry draw function, called by the browser."""
+
+        # Reset flag
         self._pending_draw = False
+
+        # Is the element even visible
         if self.node.style.display == "none":
             return  # Hidden
-        elif self.w <= 0 or self.h <= 0:
+        if self.w <= 0 or self.h <= 0:
             return  # Probably still initializing
 
-        ctx = self.node.getContext("2d")
+        # Some bookkeeping
+        self._tooltips.clear()
 
-        # Prepare hidpi mode for canvas  (flush state just in case)
-        for i in range(4):
-            ctx.restore()
+        # Prepare context
+        ctx = self.node.getContext("2d")
+        ctx.restore()  # undo last
         ctx.save()
         ctx.scale(self.pixel_ratio, self.pixel_ratio)
-
-        self._tooltips.clear()
 
         # Draw
         self.on_draw(ctx)
