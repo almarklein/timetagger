@@ -833,14 +833,22 @@ class BaseCanvas:
         self.on_pointer(ev)
 
     def _on_resize_observer(self, entries):
-        # Get the physical pixels of the canvas
+        # The resize observer allows us to get the extact size of the element
+        # in physical pixels, something we cannot do with a normal resize event.
+        # See https://web.dev/articles/device-pixel-content-box
+        #
+        # On Firefox I've seen the app hang due to window resizing. I have not
+        # been able to find a singular reason, but its important that we update
+        # the canvas physical size (i.e. call _apply_new_size) directly. I also
+        # found that drawing stuff outside a requested animation frame is
+        # dangerous. See https://github.com/almarklein/timetagger/pull/418
         entry = entries.find(lambda entry: entry.target is self.node)
         psize = [
             entry.devicePixelContentBoxSize[0].inlineSize,
             entry.devicePixelContentBoxSize[0].blockSize,
         ]
         self._apply_new_size(psize)
-        self._draw()
+        self._draw()  # draw directly to prevent flicker (and maybe even hanging)
 
     def _apply_new_size(self, psize):
         # This is called JIT right before a draw, when a resize has happened
