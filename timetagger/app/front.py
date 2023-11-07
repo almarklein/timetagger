@@ -239,7 +239,7 @@ class TimeTaggerCanvas(BaseCanvas):
 
         x0 = 0
         x1 = margin
-        x2 = x1 + records_width
+        x2 = x1 + max(0, records_width)
         x3 = x2 + margin2
         x4 = self.w - margin
         x5 = self.w  # noqa
@@ -251,7 +251,7 @@ class TimeTaggerCanvas(BaseCanvas):
 
         y0 = 0
         y1 = self.grid_round(140)
-        y3 = self.grid_round(self.h - 15)
+        y3 = self.grid_round(max(y1 + 40, self.h - 15))
 
         self.widgets["TopWidget"].rect = x0, y0, x5, y1
         self.widgets["RecordsWidget"].rect = x1, y1, x2, y3
@@ -598,7 +598,7 @@ class TimeRange:
         # Define ticks
         ticks = []
         minor_ticks = []
-        maxi = 2 * npixels / min_distance
+        maxi = min(2 * npixels / min_distance, 99)
         t = dt.floor(t1 - 0.1 * nsecs, delta)
         iter = -1
         while iter < maxi:  # just to be safe
@@ -613,7 +613,9 @@ class TimeRange:
                 t_new = dt.add(t, delta)
             # Minor ticks
             t_minor = dt.add(t, minor_delta)
-            while (t_new - t_minor) > 0:
+            iter_minor = -1
+            while iter_minor < 20 and (t_new - t_minor) > 0:
+                iter_minor += 1
                 pix_pos = (t_minor - t1) * npixels / nsecs
                 minor_ticks.push((pix_pos, t_minor))
                 t_minor_new = dt.add(t_minor, minor_delta)
@@ -635,7 +637,9 @@ class TimeRange:
                         # Add minor ticks at duplicate hour
                         d_minor = dt.add(t_new, minor_delta) - t_new
                         t_minor = tb + d_minor
-                        while t_minor < tc:
+                        iter_minor = -1
+                        while iter_minor < 20 and t_minor < tc:
+                            iter_minor += 1
                             pix_pos = (t_minor - t1) * npixels / nsecs + 3
                             minor_ticks.push((pix_pos, t_minor))
                             t_minor += d_minor
@@ -914,6 +918,10 @@ class TopWidget(Widget):
     def on_draw(self, ctx, menu_only=False):
         self._picker.clear()
         x1, y1, x2, y2 = self.rect
+
+        # Guard for small screen space during resize
+        if x2 - x1 < 50 or y2 - y1 < 20:
+            return
 
         y4 = y2  # noqa - bottom
         y2 = y1 + 60
@@ -1618,6 +1626,10 @@ class RecordsWidget(Widget):
     def on_draw(self, ctx):
         x1, y1, x2, y2 = self.rect
         self._picker.clear()
+
+        # Guard for small screen space during resize
+        if y2 - y1 < 20:
+            return
 
         # If too little space, only draw button to expand
         if x2 - x1 <= 50:
@@ -3000,6 +3012,11 @@ class AnalyticsWidget(Widget):
 
     def on_draw(self, ctx):
         x1, y1, x2, y2 = self.rect
+
+        # Guard for small screen space during resize
+        if y2 - y1 < 20:
+            return
+
         self._picker.clear()
 
         # If too little space, only draw button to expand
