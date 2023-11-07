@@ -1156,18 +1156,18 @@ class TopWidget(Widget):
 
     def _draw_sync_feedback(self, ctx, x1, y1, radius):
         self._sync_feedback_xy = x1, y1, radius
-        return self._draw_sync_feedback_work()
+        return self._draw_sync_feedback_work(ctx)
 
     def _draw_sync_feedback_callback(self):
-        self._draw_sync_feedback_work(False)
+        ctx = self._canvas.node.getContext("2d")
+        self._draw_sync_feedback_work(ctx, False)
 
-    def _draw_sync_feedback_work(self, register=True):
+    def _draw_sync_feedback_work(self, ctx, register=True):
         PSCRIPT_OVERLOAD = False  # noqa
 
         if window.document.hidden:
             return
 
-        ctx = self._canvas.node.getContext("2d")
         x, y, radius = self._sync_feedback_xy
 
         state = window.store.state

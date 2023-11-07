@@ -769,6 +769,7 @@ class BaseCanvas:
         self.node.addEventListener("touchmove", self._on_js_touch_event, 0)
 
         # Keep track of window size
+        # window.addEventListener("resize", self._on_js_resize_event, False)
         self._resize_observer = window.ResizeObserver(self._on_resize_observer)
         self._resize_observer.observe(self.node, {"box": "device-pixel-content-box"})
 
@@ -853,8 +854,10 @@ class BaseCanvas:
         # Calculate linewidth param
         self.grid_linewidth2 = min(self.pixel_ratio, self.grid_round(1)) * 2
 
+        # Update
+        self.on_resize()
         self.update()
-        self.on_resize(True)
+        self._draw()  # Draw right now to avoid flicker
 
     def grid_round(self, x):
         """Round a value to the screen pixel grid."""
@@ -874,8 +877,8 @@ class BaseCanvas:
 
     def update(self, asap=True):
         """Schedule an update."""
-        # The extra setTimeout is to make sure that there is time for the
-        # browser to process events (like scrolling).
+        # The optional extra setTimeout is to make sure that there is
+        # time for the browser to process events (like scrolling).
         if not self._pending_draw:
             self._pending_draw = True
             if asap:
@@ -888,18 +891,17 @@ class BaseCanvas:
         self._pending_draw = False
         if self.node.style.display == "none":
             return  # Hidden
-        elif self.w <= 0 or self.h <= 0:
+        if self.w <= 0 or self.h <= 0:
             return  # Probably still initializing
+
+        self._tooltips.clear()
 
         ctx = self.node.getContext("2d")
 
         # Prepare hidpi mode for canvas  (flush state just in case)
-        for i in range(4):
-            ctx.restore()
+        ctx.restore()  # undo last
         ctx.save()
         ctx.scale(self.pixel_ratio, self.pixel_ratio)
-
-        self._tooltips.clear()
 
         # Draw
         self.on_draw(ctx)
