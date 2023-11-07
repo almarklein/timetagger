@@ -839,15 +839,12 @@ class BaseCanvas:
             entry.devicePixelContentBoxSize[0].inlineSize,
             entry.devicePixelContentBoxSize[0].blockSize,
         ]
-        self._resize_info = psize
-        self.update(False)
+        self._apply_new_size(psize)
+        self._draw()
 
-    def _apply_new_size(self):
+    def _apply_new_size(self, psize):
         # This is called JIT right before a draw, when a resize has happened
 
-        # Get size info and reset the flag
-        psize = self._resize_info
-        self._resize_info = None
         # Get and store pixel ratio
         self.pixel_ratio = ratio = get_pixel_ratio()
         # Use that to obtain the real number of logical pixels
@@ -893,10 +890,6 @@ class BaseCanvas:
 
         # Reset flag
         self._pending_draw = False
-
-        # Need to resize?
-        if self._resize_info:
-            self._apply_new_size()
 
         # Is the element even visible
         if self.node.style.display == "none":

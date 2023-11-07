@@ -908,7 +908,11 @@ class TopWidget(Widget):
         self._button_pressed = None
         self._current_scale = {}
         self._sync_feedback_xy = 0, 0, 0
-        window.setInterval(self._draw_sync_feedback_callback, 100)
+
+        # Periodically draw the sync feedback icon. Make sure to do it via requestAnimationFrame
+        window.setInterval(
+            window.requestAnimationFrame, 100, self._draw_sync_feedback_callback
+        )
 
         # For navigation with keys. Listen to canvas events, and window events (in
         # case canvas does not have focus), but don't listen for events from dialogs.
