@@ -833,31 +833,33 @@ class BaseCanvas:
         self.on_pointer(ev)
 
     def _on_resize_observer(self, entries):
-        # Get and store pixel ratio
-        self.pixel_ratio = ratio = get_pixel_ratio()
-
         # Get the physical pixels of the canvas
         entry = entries.find(lambda entry: entry.target is self.node)
         psize = [
             entry.devicePixelContentBoxSize[0].inlineSize,
             entry.devicePixelContentBoxSize[0].blockSize,
         ]
+        self._resize_info = psize
+        self.update(False)
 
+    def _apply_new_size(self):
+        # This is called JIT right before a draw, when a resize has happened
+
+        # Get size info and reset the flag
+        psize = self._resize_info
+        self._resize_info = None
+        # Get and store pixel ratio
+        self.pixel_ratio = ratio = get_pixel_ratio()
         # Use that to obtain the real number of logical pixels
         lsize = psize[0] / ratio, psize[1] / ratio
-
         # Apply
         self.node.width = psize[0]
         self.node.height = psize[1]
         self.w, self.h = lsize[0], lsize[1]
-
         # Calculate linewidth param
         self.grid_linewidth2 = min(self.pixel_ratio, self.grid_round(1)) * 2
-
         # Update
         self.on_resize()
-        self.update()
-        self._draw()  # Draw right now to avoid flicker
 
     def grid_round(self, x):
         """Round a value to the screen pixel grid."""
@@ -888,17 +890,25 @@ class BaseCanvas:
 
     def _draw(self):
         """The entry draw function, called by the browser."""
+
+        # Reset flag
         self._pending_draw = False
+
+        # Need to resize?
+        if self._resize_info:
+            self._apply_new_size()
+
+        # Is the element even visible
         if self.node.style.display == "none":
             return  # Hidden
         if self.w <= 0 or self.h <= 0:
             return  # Probably still initializing
 
+        # Some bookkeeping
         self._tooltips.clear()
 
+        # Prepare context
         ctx = self.node.getContext("2d")
-
-        # Prepare hidpi mode for canvas  (flush state just in case)
         ctx.restore()  # undo last
         ctx.save()
         ctx.scale(self.pixel_ratio, self.pixel_ratio)
