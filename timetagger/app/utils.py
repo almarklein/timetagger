@@ -769,8 +769,8 @@ class BaseCanvas:
         self.node.addEventListener("touchmove", self._on_js_touch_event, 0)
 
         # Keep track of window size
-        window.addEventListener("resize", self._on_js_resize_event, False)
-        window.setTimeout(self._on_js_resize_event, 10)
+        self._resize_observer = window.ResizeObserver(self._on_resize_observer)
+        self._resize_observer.observe(self.node, {"box": "device-pixel-content-box"})
 
     def _prevent_default_event(self, e):
         """Prevent the default action of an event unless all modifier
@@ -831,37 +831,30 @@ class BaseCanvas:
         }.get(e.type[5:])
         self.on_pointer(ev)
 
-    def _on_js_resize_event(self):
-        """Ensure that the canvas has the correct size and dpi."""
-
+    def _on_resize_observer(self, entries):
         # Get and store pixel ratio
         self.pixel_ratio = ratio = get_pixel_ratio()
 
-        # Get the true client size (we get subpixel values this way)
-        rect = self.node.getBoundingClientRect()
-        # Calculate the physical size, and round it down to an integer value.
-        psize = int(rect.width * ratio), int(rect.height * ratio)
-        # Calculate the logical size from that.
+        # Get the physical pixels of the canvas
+        entry = entries.find(lambda entry: entry.target is self.node)
+        psize = [
+            entry.devicePixelContentBoxSize[0].inlineSize,
+            entry.devicePixelContentBoxSize[0].blockSize,
+        ]
+
+        # Use that to obtain the real number of logical pixels
         lsize = psize[0] / ratio, psize[1] / ratio
-        # The lsize may be smaller, so we need to apply padding.
-        # This padding is the trick to get sharp images, even for weird pixel ratio's.
-        padding = rect.width - lsize[0], rect.height - lsize[1]
-        # Set the canvas' physical size and padding
+
+        # Apply
         self.node.width = psize[0]
         self.node.height = psize[1]
-        self.node.style.paddingRight = padding[0] + "px"
-        self.node.style.paddingBottom = padding[1] + "px"
-
-        # Store the logial size, which is what is used to do the app layout.
         self.w, self.h = lsize[0], lsize[1]
 
-        # A line-width of 2 is great to have crisp images. For uneven line widths
-        # one needs to offset 0.5 * pixel_ratio. But, that line-width must be
-        # snapped to a width matching the pixel_ratio! pfew!
+        # Calculate linewidth param
         self.grid_linewidth2 = min(self.pixel_ratio, self.grid_round(1)) * 2
 
         self.update()
-        self.on_resize(True)  # draw asap to avoid flicker
+        self.on_resize(True)
 
     def grid_round(self, x):
         """Round a value to the screen pixel grid."""
