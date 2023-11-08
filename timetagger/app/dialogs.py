@@ -1203,6 +1203,10 @@ class Autocompleter:
         suggestions = matches1
         suggestions.extend(matches2)
 
+        # All suggestions are insert-on-select
+        for i in range(len(suggestions)):
+            suggestions[i].push(False)
+
         # Show
         if suggestions:
             if show_descriptions:
@@ -1226,28 +1230,48 @@ class Autocompleter:
     def show_suggestions(self, kind=""):
         suggestions = []
         types = []
+        _, words = utils.get_tags_and_parts_from_string(self._input.value)
+        search_word = None
+        if len(words) == 1:
+            search_word = words[0].lower()
         # Collect recent ds's
         if "descriptions" in kind:
             types.push("Recent descriptions")
+            if search_word:
+                for ds, ds_t2 in self._suggested_ds_recent:
+                    if search_word in ds.lower():
+                        html = "<b>" + ds + "</b><span class='meta'>match<span>"
+                        suggestions.push((ds, html, True))
             for ds, ds_t2 in self._suggested_ds_recent:
                 date = days_ago(ds_t2)
                 date = {0: "today", 1: "yesterday"}.get(date, date + " days ago")
                 html = ds + "<span class='meta'>recent: " + date + "<span>"
-                suggestions.push((ds, html))
+                suggestions.push((ds, html, True))
         # Collect presets
         if "presets" in kind:
             types.push("Presets")
-            for preset in self._get_suggested_tags_presets():
+            presets = self._get_suggested_tags_presets()
+            if search_word:
+                for preset in presets:
+                    if search_word in preset:
+                        html = "<b>" + preset + "</b><span class='meta'>match<span>"
+                        suggestions.push((preset, html, True))
+            for preset in presets:
                 html = preset + "<span class='meta'>preset<span>"
-                suggestions.push((preset, html))
+                suggestions.push((preset, html, False))
         # Collect tags
         if "tags" in kind:
             types.push("Recent tags")
+            if search_word:
+                for tag, tag_t2 in self._suggested_tags_recent:
+                    if search_word in tag:
+                        html = "<b>" + tag + "</b><span class='meta'>match<span>"
+                        suggestions.push((tag, html, True))
             for tag, tag_t2 in self._suggested_tags_recent:
                 date = days_ago(tag_t2)
                 date = {0: "today", 1: "yesterday"}.get(date, date + " days ago")
                 html = tag + "<span class='meta'>recent: " + date + "<span>"
-                suggestions.push((tag, html))
+                suggestions.push((tag, html, False))
         # Show
         if not types:
             self.clear()
@@ -1315,8 +1339,8 @@ class Autocompleter:
         self._div.appendChild(item)
         # Add suggestions
         self._suggested_tags_in_autocomp = []
-        for text, html in suggestions:  # text is a tag or a preset
-            self._suggested_tags_in_autocomp.push(text)
+        for text, html, select_does_replace in suggestions:  # text is a tag or a preset
+            self._suggested_tags_in_autocomp.push((text, select_does_replace))
             i = len(self._suggested_tags_in_autocomp) - 1
             item = document.createElement("div")
             item.classList.add("tag-suggestion")
@@ -1325,7 +1349,6 @@ class Autocompleter:
             item.setAttribute("onmousedown", onclick)
             self._div.appendChild(item)
         # Show
-        self._select_does_replace = "descriptions" in headline
         self._div.hidden = False
         self._make_active(0)
 
@@ -1357,8 +1380,13 @@ class Autocompleter:
 
     def _finish(self, text):
         self.clear()
+        if isinstance(text, str):
+            text = text
+            select_does_replace = False
+        else:
+            text, select_does_replace = text
         if text:
-            if self._select_does_replace:
+            if select_does_replace:
                 # Recent ds, just replace the whole thing
                 self._input.value = text
                 self._input.selectionStart = self._input.selectionEnd = len(text)
