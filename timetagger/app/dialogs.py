@@ -1237,7 +1237,22 @@ class Autocompleter:
         # Collect presets
         if "presets" in kind:
             types.push("Presets")
-            for preset in self._get_suggested_tags_presets():
+            tags, _ = utils.get_tags_and_parts_from_string(self._input.value)
+            presets = self._get_suggested_tags_presets()
+            selected_presets = []
+            other_presets = []
+            if len(tags) > 0:
+                for preset in presets:
+                    if all([tag in preset for tag in tags]):
+                        selected_presets.push(preset)
+                    else:
+                        other_presets.push(preset)
+            else:
+                other_presets = presets
+            for preset in selected_presets:
+                html = "<b>" + preset + "</b><span class='meta'>matching preset<span>"
+                suggestions.push((preset, html))
+            for preset in other_presets:
                 html = preset + "<span class='meta'>preset<span>"
                 suggestions.push((preset, html))
         # Collect tags
