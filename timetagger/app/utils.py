@@ -771,7 +771,7 @@ class BaseCanvas:
         # Keep track of window size
         # window.addEventListener("resize", self._on_js_resize_event, False)
         self._resize_observer = window.ResizeObserver(self._on_resize_observer)
-        self._resize_observer.observe(self.node, {"box": "device-pixel-content-box"})
+        self._resize_observer.observe(self.node)
 
     def _prevent_default_event(self, e):
         """Prevent the default action of an event unless all modifier
@@ -843,10 +843,24 @@ class BaseCanvas:
         # It also looks like drawing stuff outside a requested animation frame
         # is dangerous. See https://github.com/almarklein/timetagger/pull/418
         entry = entries.find(lambda entry: entry.target is self.node)
-        psize = [
-            entry.devicePixelContentBoxSize[0].inlineSize,
-            entry.devicePixelContentBoxSize[0].blockSize,
-        ]
+        if entry.devicePixelContentBoxSize:
+            # Best if we have the physical pixels ...
+            psize = [
+                entry.devicePixelContentBoxSize[0].inlineSize,
+                entry.devicePixelContentBoxSize[0].blockSize,
+            ]
+        else:
+            # ... but not all browsers support that (see issue #423) ...
+            if entry.contentBoxSize:
+                lsize = [
+                    entry.contentBoxSize[0].inlineSize,
+                    entry.contentBoxSize[0].blockSize,
+                ]
+            else:  # even more backward compat
+                lsize = [entry.contentRect.width, entry.contentRect.height]
+            ratio = get_pixel_ratio()
+            psize = Math.floor(lsize[0] * ratio), Math.floor(lsize[1] * ratio)
+
         self._apply_new_size(psize)
         # Calling self._draw() avoids flicker, but I still saw occasional hangups,
         # so let's accept the flicker and use update() ...
