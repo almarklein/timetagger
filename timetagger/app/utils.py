@@ -838,17 +838,19 @@ class BaseCanvas:
         # See https://web.dev/articles/device-pixel-content-box
         #
         # On Firefox I've seen the app hang due to window resizing. I have not
-        # been able to find a singular reason, but its important that we update
-        # the canvas physical size (i.e. call _apply_new_size) directly. I also
-        # found that drawing stuff outside a requested animation frame is
-        # dangerous. See https://github.com/almarklein/timetagger/pull/418
+        # been able to find a singular reason, but it seems important that we
+        # update the canvas physical size (i.e. call _apply_new_size) directly.
+        # It also looks like drawing stuff outside a requested animation frame
+        # is dangerous. See https://github.com/almarklein/timetagger/pull/418
         entry = entries.find(lambda entry: entry.target is self.node)
         psize = [
             entry.devicePixelContentBoxSize[0].inlineSize,
             entry.devicePixelContentBoxSize[0].blockSize,
         ]
         self._apply_new_size(psize)
-        self._draw()  # draw directly to prevent flicker (and maybe even hanging)
+        # Calling self._draw() avoids flicker, but I still saw occasional hangups,
+        # so let's accept the flicker and use update() ...
+        self.update()
 
     def _apply_new_size(self, psize):
         # This is called JIT right before a draw, when a resize has happened
