@@ -848,8 +848,7 @@ class BaseCanvas:
             entry.devicePixelContentBoxSize[0].blockSize,
         ]
         self._apply_new_size(psize)
-        self.update()
-        # self._draw()  # draw directly to prevent flicker (and maybe even hanging)
+        self._draw()  # draw directly to prevent flicker (and maybe even hanging)
 
     def _apply_new_size(self, psize):
         # This is called JIT right before a draw, when a resize has happened
