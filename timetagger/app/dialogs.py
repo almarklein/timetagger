@@ -1233,13 +1233,13 @@ class Autocompleter:
         _, words = utils.get_tags_and_parts_from_string(self._input.value)
         search_word = None
         if len(words) == 1:
-            search_word = words[0]
+            search_word = words[0].lower()
         # Collect recent ds's
         if "descriptions" in kind:
             types.push("Recent descriptions")
             if search_word:
                 for ds, ds_t2 in self._suggested_ds_recent:
-                    if search_word in ds:
+                    if search_word in ds.lower():
                         html = "<b>" + ds + "</b><span class='meta'>match<span>"
                         suggestions.push((ds, html, True))
             for ds, ds_t2 in self._suggested_ds_recent:
