@@ -3011,6 +3011,8 @@ class AnalyticsWidget(Widget):
         self._time_at_last_draw = 0
         self._time_since_last_draw = 0
         self._npixels_each = 0
+        self._target_scroll_offset = 0
+        self._scroll_offset = 0
         self.tagzmap = {}  # public map of tagz -> tagz
         self._tag_bars_dict = {}  # tagz -> bar-info
 
@@ -3176,20 +3178,30 @@ class AnalyticsWidget(Widget):
 
         # Calculate available height for all the bars, plus space to show the total
         if len(self.selected_tags) > 0:
-            header_bar_space = 2
+            header_bar_slots = 2
         else:
-            header_bar_space = 1
-        avail_height = (y2 - y1) - 4
+            header_bar_slots = 1
+        avail_height1 = (y2 - y1) - 8 - 4  # bit extra to prevent FP hiding
 
         # Set _npixels_each (number of pixels per bar)
-        npixels_each_min_max = 25, 60
-        npixels_each = avail_height / (len(bars) + header_bar_space)
+        npixels_each_min_max = 30, 60
+        npixels_each = avail_height1 / (len(bars) + header_bar_slots)
         npixels_each = max(npixels_each, npixels_each_min_max[0])
         npixels_each = min(npixels_each, npixels_each_min_max[1])
         self._npixels_each = self._slowly_update_value(self._npixels_each, npixels_each)
 
-        # Get overview height
-        overview_height = self._npixels_each * header_bar_space
+        # Get vertical bounds of the space for the bars
+        y_top = y1 + self._npixels_each * header_bar_slots
+        y_bottom = y2 - 8
+        avail_height2 = y_bottom - y_top
+
+        # From that we can derive how many bars we can show, and the max scroll offset
+        n_bars = int(avail_height2 / self._npixels_each)
+        max_scroll_offset = max(0, (len(bars) - n_bars) * self._npixels_each)
+        self._target_scroll_offset = min(max_scroll_offset, self._target_scroll_offset)
+        self._scroll_offset = self._slowly_update_value(
+            self._scroll_offset, self._target_scroll_offset
+        )
 
         # Calculate right base edge. Note that the bars will go beyond it
         x3 = x2 - 10 - 2
@@ -3199,16 +3211,29 @@ class AnalyticsWidget(Widget):
             self._resolve_target_dimensions(bar, x3 - x1, self._npixels_each)
         for bar in bars:
             self._resolve_real_dimensions(bar)
-        y = y1 + overview_height
+        y = y_top - self._scroll_offset
         for bar in bars:
             self._resolve_positions(bar, x1, x3, y)
             y += bar.height
 
+        # Check what bars to not draw, i.e. how many we're missing in view.
+        n_hidden1 = n_hidden2 = 0
+        drawn_bars = bars.copy()
+        height_missing = 20
+        while len(drawn_bars) > 1 and drawn_bars[0].y1 < y_top:
+            drawn_bars.pop(0)
+            n_hidden1 += 1
+        while len(drawn_bars) > 1 and drawn_bars[-1].y2 > y_bottom:
+            drawn_bars.pop(-1)
+            n_hidden2 += 1
+
         # Get statistics
         total_time = 0
-        overview_y2 = y1 + overview_height
-        if len(bars):
-            overview_y2 = bars[-1].y2 + 8
+        overview_y2 = y_top
+        if len(drawn_bars):
+            overview_y2 = drawn_bars[-1].y2 + 8
+        if n_hidden1 > 0 or n_hidden2 > 0:
+            overview_y2 = max(overview_y2, y2)
         for bar in bars:
             total_time += bar.t
 
@@ -3219,10 +3244,19 @@ class AnalyticsWidget(Widget):
                 window.store.records.tags_from_record(record).join(" ")
             )
 
-        # Draw all bars
+        # Draw all visible bars
         self._draw_container(ctx, total_time, x1, y1, x3, overview_y2)
-        for bar in bars:
+        for bar in drawn_bars:
             self._draw_one_bar(ctx, bar)
+        if n_hidden1 > 0:
+            self._draw_placeholder_for_hidden_bars(
+                ctx, x1 + 10, x1 + 50, y_top, y_top + height_missing, n_hidden1
+            )
+        if n_hidden2 > 0:
+            ymiss = overview_y2 - 8
+            self._draw_placeholder_for_hidden_bars(
+                ctx, x1 + 10, x1 + 50, ymiss - height_missing, ymiss, n_hidden2
+            )
 
         # # Determine help text
         # if self._maxlevel > 0:
@@ -3413,6 +3447,44 @@ class AnalyticsWidget(Widget):
             else:
                 ctx.fillText("No target", tx, ty)
 
+    def _draw_placeholder_for_hidden_bars(self, ctx, x1, x2, y1, y2, n_hidden):
+        PSCRIPT_OVERLOAD = False  # noqa
+
+        # Offset the bubble by a bit
+        x1 -= 2
+        x2 -= 2
+        y1 -= 2
+        y2 -= 2
+
+        npixels = self._npixels_each
+
+        # Roundness
+        rn = min(ANALYSIS_ROUNDNESS, npixels / 2)
+        rnb = min(COLORBAND_ROUNDNESS, npixels / 2)
+
+        # Draw front
+        ctx.lineWidth = 1.2
+        ctx.strokeStyle = COLORS.record_edge
+        ctx.fillStyle = COLORS.record_bg
+        path = window.Path2D()
+        path.arc(x2 - rn, y1 + rn, rn, 1.5 * PI, 2.0 * PI)
+        path.arc(x2 - rn, y2 - rn, rn, 0.0 * PI, 0.5 * PI)
+        path.arc(x1 + rnb, y2 - rnb, rnb, 0.5 * PI, 1.0 * PI)
+        path.arc(x1 + rnb, y1 + rnb, rnb, 1.0 * PI, 1.5 * PI)
+        path.closePath()
+        ctx.fill(path)
+
+        # Draw edge
+        ctx.stroke(path)
+
+        ymid = y1 + 0.5 * (y2 - y1)
+
+        # Draw number hidden
+        ctx.font = "14px " + FONT.default
+        ctx.textAlign = "left"
+        ctx.fillStyle = COLORS.prim1_clr
+        ctx.fillText(f"+ {n_hidden}", x1 + 11, ymid)
+
     def _draw_one_bar(self, ctx, bar):
         PSCRIPT_OVERLOAD = False  # noqa
 
@@ -3592,6 +3664,13 @@ class AnalyticsWidget(Widget):
                     _, _, tagz = picked.action.partition(":")
                     self._canvas.tag_combo_dialog.open(tagz, self.update)
                 self.update()
+
+    def on_wheel(self, ev):
+        """Handle wheel event."""
+        if len(ev.modifiers) == 0 and ev.vscroll != 0:
+            self._target_scroll_offset = max(0, self._target_scroll_offset + ev.vscroll)
+            self.update()
+        return True
 
 
 if __name__ == "__main__":
