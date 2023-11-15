@@ -3005,6 +3005,7 @@ class AnalyticsWidget(Widget):
     """Widget that draws the analytics, and handles corresponding interaction."""
 
     def on_init(self):
+        self._interaction_mode = 0
         self._picker = utils.Picker()
         self.selected_tags = []
         self._need_more_drawing_flag = False
@@ -3638,7 +3639,26 @@ class AnalyticsWidget(Widget):
     def on_pointer(self, ev):
         x, y = ev.pos[0], ev.pos[1]
 
+        last_interaction_mode = self._interaction_mode
         if "down" in ev.type:
+            if self._interaction_mode == 0 and ev.ntouches == 1:
+                self._interaction_mode = 1  # mode undecided
+                self._last_pointer_down_event = ev
+                self.update()
+            else:  # multi-touch -> tick-widget-behavior-mode
+                self._interaction_mode = 2
+        elif "move" in ev.type:
+            if self._interaction_mode == 1:
+                downx, downy = self._last_pointer_down_event.pos
+                if Math.sqrt((x - downx) ** 2 + (y - downy) ** 2) > 10:
+                    self._last_pointer_move_event = self._last_pointer_down_event
+                    self._interaction_mode = 2  # tick-widget-behavior-mode
+        elif "up" in ev.type:
+            if "mouse" in ev.type or ev.ntouches == 0:
+                self._interaction_mode = 0
+
+        if last_interaction_mode == 1 and "up" in ev.type:
+            # Clicks
             picked = self._picker.pick(x, y)
             if picked is None or picked == "":
                 pass
@@ -3665,6 +3685,12 @@ class AnalyticsWidget(Widget):
                     _, _, tagz = picked.action.partition(":")
                     self._canvas.tag_combo_dialog.open(tagz, self.update)
                 self.update()
+
+        if self._interaction_mode == 2 and "move" in ev.type:
+            dy = self._last_pointer_move_event.pos[1] - y
+            self._last_pointer_move_event = ev
+            self._target_scroll_offset = max(0, self._target_scroll_offset + dy)
+            self.update()
 
     def on_wheel(self, ev):
         """Handle wheel event."""
