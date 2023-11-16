@@ -3494,7 +3494,7 @@ class AnalyticsWidget(Widget):
         t1, t2 = self._canvas.range.get_range()
         x1, x2 = bar.x1, bar.x2
         y1, y2 = bar.y1, bar.y2
-        npixels = min(y2 - y1, self._npixels_each)
+        npixels = Math.round(min(y2 - y1, self._npixels_each))
 
         # Get whether the current tag combi corresponds to the currently running record.
         # The clock only ticks per second if now is within range, so we don't show seconds unless we can.
