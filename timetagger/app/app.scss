@@ -8,7 +8,6 @@ main div.content { padding: 0; }  /* prevent empty space at bottom on iPhone */
     top: 0; left: 0; width: 100%; height: 100%;
     border: 0; margin: 0; padding: 0; outline: none;
     box-shadow: 0 0 4px rgba(0, 0, 0, 0.4);
-    border-radius: 2px;
     background: $sec2_clr;
 }
 body.darkmode #canvas { background: #171E28; }
