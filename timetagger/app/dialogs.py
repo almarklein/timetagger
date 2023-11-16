@@ -1140,8 +1140,8 @@ class Autocompleter:
                 return self.show_suggestions("tags")
 
         # Obtain suggestions
-        matches1 = []
-        matches2 = []
+        matches1 = []  # list of (text, html, select_does_replace)
+        matches2 = []  # same
         if show_presets:
             # Suggestions from presets
             for preset in self._get_suggested_tags_presets():
@@ -1158,7 +1158,7 @@ class Autocompleter:
                             + preset[i + needle.length :]
                         )
                         html += "<span class='meta'>preset<span>"
-                        matches1.push((preset, html))
+                        matches1.push((preset, html, False))
                     elif needle.length >= 2:
                         # The preset contains the needle, and the needle is more than 1 char
                         html = (
@@ -1169,7 +1169,7 @@ class Autocompleter:
                             + preset[i + needle.length :]
                         )
                         html += "<span class='meta'>preset<span>"
-                        matches2.push((preset, html))
+                        matches2.push((preset, html, False))
         if show_tags:
             # Suggestions from recent tags
             for tag, tag_t2 in self._suggested_tags_combined:
@@ -1181,14 +1181,14 @@ class Autocompleter:
                         # The tag startswith the needle
                         html = "<b>" + tag_to_be + "</b>" + tag[tag_to_be.length :]
                         html += "<span class='meta'>last used " + date + "<span>"
-                        matches1.push((tag, html))
+                        matches1.push((tag, html, False))
                     elif needle.length >= 2:
                         # The tag contains the needle, and the needle is more than 1 char
                         html = (
                             tag[:i] + "<b>" + needle + "</b>" + tag[i + needle.length :]
                         )
                         html += "<span class='meta'>last used " + date + "<span>"
-                        matches2.push((tag, html))
+                        matches2.push((tag, html, False))
         if show_descriptions:
             # Suggestions from recent descriptions
             for ds, ds_t2 in self._suggested_ds_recent:
@@ -1204,14 +1204,10 @@ class Autocompleter:
                         + ds[i + needle.length :]
                     )
                     html += "<span class='meta'>last used " + date + "<span>"
-                    matches2.push((ds, html))
+                    matches2.push((ds, html, True))
 
         suggestions = matches1
         suggestions.extend(matches2)
-
-        # All suggestions are insert-on-select
-        for i in range(len(suggestions)):
-            suggestions[i].push(False)
 
         # Show
         if suggestions:
