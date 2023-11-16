@@ -799,6 +799,7 @@ class Widget:
             texts = list(text)
 
         # Measure texts
+        texts2 = []
         widths = []
         fonts = []
         fontsize = int(0.5 * h)
@@ -806,14 +807,16 @@ class Widget:
             fontsize = min(fontsize, int(0.6 * given_w))
         for i in range(len(texts)):
             text = texts[i]
-            if text.startswith("fas-"):
+            if len(text) == 0:
+                continue
+            elif text.startswith("fas-"):
                 text = text[4:]
                 font = fontsize + "px FontAwesome"
             else:
                 font = fontsize + "px " + opt.font
             ctx.font = font
             width = ctx.measureText(text).width
-            texts[i] = text
+            texts2.push(text)
             fonts.push(font)
             widths.push(width)
 
@@ -888,8 +891,8 @@ class Widget:
         ctx.textBaseline = "middle"
         ctx.textAlign = "left"
         ctx.fillStyle = opt.color
-        for i in range(len(texts)):
-            text, width, font = texts[i], widths[i], fonts[i]
+        for i in range(len(texts2)):
+            text, width, font = texts2[i], widths[i], fonts[i]
             ctx.font = font
             if text.startsWith("#"):
                 draw_tag(ctx, text, x, 0.5 * (y1 + y2))
@@ -922,32 +925,35 @@ class TopWidget(Widget):
     def on_draw(self, ctx, menu_only=False):
         self._picker.clear()
         x1, y1, x2, y2 = self.rect
+        avail_width = x2 - x1
+        avail_height = y2 - y1
 
         # Guard for small screen space during resize
-        if x2 - x1 < 50 or y2 - y1 < 20:
+        if avail_width < 50 or avail_height < 20:
             return
 
         y4 = y2  # noqa - bottom
         y2 = y1 + 60
-        y3 = y2 + 20
+        y3 = y2 + 16
 
-        margin = 8
-        h = 36
+        h = 40
+        margin = 8 if avail_width < 900 else 20
 
         # Top band background
         ctx.fillStyle = COLORS.top_bg
         ctx.fillRect(0, 0, x2, 60)
 
         # Draw icon in top-right
-        iconsize = (y2 - y1) - 2 * margin
+        icon_margin = 8
+        icon_size = (y2 - y1) - 2 * icon_margin
 
-        if iconsize:
+        if icon_size:
             ctx.drawImage(
                 window.document.getElementById("ttlogo_sl"),
-                x2 - iconsize - margin,
-                y1 + margin,
-                iconsize,
-                iconsize,
+                x2 - icon_size - icon_margin,
+                y1 + icon_margin,
+                icon_size,
+                icon_size,
             )
 
         # Always draw the menu button
@@ -980,14 +986,13 @@ class TopWidget(Widget):
         xc = (x1 + x2) / 2
 
         # Move a bit to the right on smaller screens
-        avail_width = x2 - x1
-        xc += max(0, 600 - avail_width) * 0.18
+        xc += min(h, max(0, 800 - avail_width) * 0.18)
 
-        # Draw arrows
-        ha = 0.7 * h
+        # Draw up-down arrows
+        ha = 0.75 * h
         yc = y3 + h / 2
-        updown_w = 0
-        if avail_width > 310:
+        center_margin = -margin / 2
+        if avail_width > 315:
             updown_w = self._draw_button(
                 ctx,
                 xc,
@@ -1010,75 +1015,74 @@ class TopWidget(Widget):
                 "Step forward [↓/pageDown]",
                 {"ref": "topcenter"},
             )
+            center_margin = updown_w / 2 + 3
 
         # -- move to the left
 
-        x = xc - updown_w / 2 - 3
+        x = xc - center_margin
 
-        zoom_w = 0
-        if avail_width > 350:
-            zoom_w = self._draw_button(
+        if avail_width > 400:
+            x -= self._draw_button(
                 ctx,
                 x,
                 y3,
-                ha,
+                h,
                 h,
                 "fas-\uf010",
                 "nav_zoom_" + self._current_scale["out"],
                 "Zoom out [←]",
                 {"ref": "ropright"},
             )
-            x -= zoom_w + 5
+        x -= margin
 
         nav_width = ha
-        x -= nav_width + 3 + 5  # tiny extra margin between nav button groups
 
-        today_w = 0
-        today_w = self._draw_button(
+        x -= self._draw_button(
             ctx,
             x,
             y3,
-            None,
-            h,
-            "Today",
-            "nav_snap_today",  # "nav_snap_now" + now_scale,
-            "Snap to today [d]",  # "Snap to now [Home]",
-            {"ref": "topright", "color": now_clr, "font": FONT.condensed},
-        )
-
-        self._draw_button(
-            ctx,
-            x + nav_width + 3,
-            y3,
             nav_width,
             h,
-            "fas-\uf0d7",  # ["fas-\uf073", "fas-\uf0d7"],
+            "fas-\uf073",  # ["fas-\uf073", "fas-\uf0d7"],
             "nav_menu",
             "Select time range [t]",
             {"ref": "topright"},
         )
 
-        x -= today_w + margin
+        if avail_width > 510:
+            x -= 3
+            x -= self._draw_button(
+                ctx,
+                x,
+                y3,
+                None,
+                h,
+                "Today",
+                "nav_snap_today",  # "nav_snap_now" + now_scale,
+                "Snap to today [d]",  # "Snap to now [Home]",
+                {"ref": "topright", "color": now_clr, "font": FONT.condensed},
+            )
+        x -= margin
 
         self._draw_tracking_buttons(ctx, x, y3, h)
 
         # -- move to the right
 
-        x = xc + updown_w / 2 + 3
+        x = xc + center_margin
 
-        if avail_width > 350:
-            zoom_w = self._draw_button(
+        if avail_width > 400:
+            x += self._draw_button(
                 ctx,
                 x,
                 y3,
-                ha,
+                h,
                 h,
                 "fas-\uf00e",
                 "nav_zoom_" + self._current_scale["in"],
                 "Zoom in [→]",
                 {"ref": "ropleft"},
             )
-        x += zoom_w + margin
+        x += margin
 
         x += self._draw_button(
             ctx,
@@ -1086,7 +1090,7 @@ class TopWidget(Widget):
             y3,
             None,
             h,
-            ["fas-\uf15c"] + (["Report"] if avail_width > 420 else []),
+            ["fas-\uf15c", "Report" if avail_width > 490 else ""],
             "report",
             "Show report [r]",
             {"ref": "topleft", "font": FONT.condensed},
@@ -1296,6 +1300,8 @@ class TopWidget(Widget):
             )
             x -= dx
         else:
+            # This but takes more space, but there it no stop but. So no reason
+            # to reduce size when avail_width is low.
             dx = self._draw_button(
                 ctx,
                 x,
@@ -1692,7 +1698,7 @@ class RecordsWidget(Widget):
             ctx.fillText("⬋ drag to create new record", x4, y1 - 2)
 
         # Draw title text
-        if self._canvas.w > 700:
+        if self._canvas.w > 800:
             text1 = "Timeline"
             ctx.textAlign = "left"
             ctx.textBaseline = "top"
@@ -3074,7 +3080,7 @@ class AnalyticsWidget(Widget):
             self._time_since_last_draw = 0
 
         # Draw title text
-        if self._canvas.w > 700:
+        if self._canvas.w > 800:
             text1 = "Overview"
             ctx.textAlign = "right"
             ctx.textBaseline = "top"
