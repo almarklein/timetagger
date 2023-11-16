@@ -616,7 +616,7 @@ class SimpleSettings:
             "report_grouping": "date",
             "report_groupperiod": "none",
             "report_hidesecondary": False,
-            "report_hourdecimals": False,
+            "report_format": "hm",
             "report_showrecords": True,
         }
         self._synced_keys = {

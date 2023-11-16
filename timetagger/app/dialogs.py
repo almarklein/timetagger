@@ -2728,7 +2728,14 @@ class ReportDialog(BaseDialog):
                                         <option value='year'>year</option>
                                      </select>
                 <div>Tag order:</div> <label><input type='checkbox' /> Hide secondary tags</label>
-                <div>Format:</div> <label><input type='checkbox' /> Hours in decimals</label>
+                <div>Duration format:</div> <select>
+                                        <option value='h0'>9</option>
+                                        <option value='hm'>9:07</option>
+                                        <option value='hms'>9:07:24</option>
+                                        <option value='h1'>9.1</option>
+                                        <option value='h2'>9.12</option>
+                                        <option value='h3'>9.123</option>
+                                     </select>
                 <div>Details:</div> <label><input type='checkbox' checked /> Show records</label>
                 <button type='button'><i class='fas'>\uf328</i>&nbsp;&nbsp;{self._copybuttext}</button>
                     <div>paste in a spreadsheet</div>
@@ -2750,7 +2757,7 @@ class ReportDialog(BaseDialog):
         self._grouping_select = form.children[5]
         self._groupperiod_select = form.children[7]
         self._hidesecondary_but = form.children[9].children[0]  # inside label
-        self._hourdecimals_but = form.children[11].children[0]  # inside label
+        self._format_but = form.children[11]
         self._showrecords_but = form.children[13].children[0]  # inside label
         self._copy_but = form.children[14]
         self._savecsv_but = form.children[16]
@@ -2774,15 +2781,15 @@ class ReportDialog(BaseDialog):
         self._groupperiod_select.value = groupperiod
         hidesecondary = window.simplesettings.get("report_hidesecondary")
         self._hidesecondary_but.checked = hidesecondary
-        hourdecimals = window.simplesettings.get("report_hourdecimals")
-        self._hourdecimals_but.checked = hourdecimals
+        format = window.simplesettings.get("report_format")
+        self._format_but.value = format
         showrecords = window.simplesettings.get("report_showrecords")
         self._showrecords_but.checked = showrecords
         #
         self._grouping_select.onchange = self._on_setting_changed
         self._groupperiod_select.onchange = self._on_setting_changed
         self._hidesecondary_but.oninput = self._on_setting_changed
-        self._hourdecimals_but.oninput = self._on_setting_changed
+        self._format_but.onchange = self._on_setting_changed
         self._showrecords_but.oninput = self._on_setting_changed
         #
         self._copy_but.onclick = self._copy_clipboard
@@ -2802,7 +2809,7 @@ class ReportDialog(BaseDialog):
         window.simplesettings.set(
             "report_hidesecondary", self._hidesecondary_but.checked
         )
-        window.simplesettings.set("report_hourdecimals", self._hourdecimals_but.checked)
+        window.simplesettings.set("report_format", self._format_but.value)
         window.simplesettings.set("report_showrecords", self._showrecords_but.checked)
         self._update_table()
 
@@ -2836,15 +2843,40 @@ class ReportDialog(BaseDialog):
     def _generate_table_rows(self, t1, t2):
         showrecords = self._showrecords_but.checked
 
-        if self._hourdecimals_but.checked:
-            duration2str = lambda t: f"{t / 3600:0.2f}"
-        else:
+        format = self._format_but.value
+        if format == "h0":
+            round_duration = lambda t: Math.round(t / 3600) * 3600
+            duration2str = lambda t: f"{t/3600:0.0f}"
+        elif format == "h1":
+            round_duration = lambda t: Math.round(t / 360) * 360
+            duration2str = lambda t: f"{t/3600:0.1f}"
+        elif format == "h2":
+            round_duration = lambda t: Math.round(t / 36) * 36
+            duration2str = lambda t: f"{t/3600:0.2f}"
+        elif format == "h3":
+            round_duration = lambda t: Math.round(t / 3.6) * 3.6
+            duration2str = lambda t: f"{t/3600:0.3f}"
+        elif format == "h4":
+            round_duration = lambda t: Math.round(t / 0.36) * 0.36
+            duration2str = lambda t: f"{t/3600:0.4f}"
+        elif format == "hms":
+            round_duration = lambda t: Math.round(t)
+            duration2str = lambda t: dt.duration_string_colon(t, True)
+        else:  # fallback == "hm":
+            round_duration = lambda t: Math.round(t / 60) * 60
             duration2str = lambda t: dt.duration_string_colon(t, False)
 
         # Get stats and sorted records, this already excludes hidden records
         stats = window.store.records.get_stats(t1, t2).copy()
         records = window.store.records.get_records(t1, t2).values()
         records.sort(key=lambda record: record.t1)
+
+        # Set (appropriately rounded) durations
+        total_duration = 0
+        for i in range(len(records)):
+            record = records[i]
+            record.duration = round_duration(min(t2, record.t2) - max(t1, record.t1))
+            total_duration += record.duration
 
         # Determine priorities
         priorities = {}
@@ -2888,7 +2920,7 @@ class ReportDialog(BaseDialog):
             for obj in statobjects:
                 groups[obj.tagz] = {
                     "title": obj.tagz or empty_title,
-                    "t": 0,
+                    "duration": 0,
                     "records": [],
                 }
             for i in range(len(records)):
@@ -2899,7 +2931,7 @@ class ReportDialog(BaseDialog):
                 tagz2 = name_map[tagz1]
                 group = groups[tagz2]
                 group.records.push(record)
-                group.t += record.t2 - record.t1
+                group.duration += record.duration
             group_list1 = groups.values()
 
         elif group_method == "ds":
@@ -2911,15 +2943,15 @@ class ReportDialog(BaseDialog):
                     continue
                 ds = record.ds
                 if ds not in groups:
-                    groups[ds] = {"title": ds, "t": 0, "records": []}
+                    groups[ds] = {"title": ds, "duration": 0, "records": []}
                 group = groups[ds]
                 group.records.push(record)
-                group.t += record.t2 - record.t1
+                group.duration += record.duration
             group_list1 = groups.values()
             group_list1.sort(key=lambda x: x.title.lower())
 
         else:
-            group = {"title": "hidden", "t": 0, "records": []}
+            group = {"title": "hidden", "duration": 0, "records": []}
             group_list1 = [group]
             for i in range(len(records)):
                 record = records[i]
@@ -2966,14 +2998,14 @@ class ReportDialog(BaseDialog):
                     if title not in groups:
                         groups[title] = {
                             "title": title,
-                            "t": 0,
+                            "duration": 0,
                             "records": [],
                             "sortkey": sortkey,
                         }
                     # Append
                     group = groups[title]
                     group.records.push(record)
-                    group.t += record.t2 - record.t1
+                    group.duration += record.duration
 
             # Get new groups, sorted by period
             group_list2 = groups.values()
@@ -2983,14 +3015,11 @@ class ReportDialog(BaseDialog):
         rows = []
 
         # Include total
-        total = 0
-        for tagz in name_map.keys():
-            total += stats[tagz]
-        rows.append(["head", duration2str(total), "Total", 0])
+        rows.append(["head", duration2str(total_duration), "Total", 0])
 
         for group in group_list2:
             # Add row for total of this tag combi
-            duration = duration2str(group.t)
+            duration = duration2str(group.duration)
             pad = 1
             if showrecords:
                 rows.append(["blank"])
@@ -3008,7 +3037,7 @@ class ReportDialog(BaseDialog):
                         st1 = st1[:-3]
                     if True:  # st2.endsWith(":00"):
                         st2 = st2[:-3]
-                    duration = duration2str(min(t2, record.t2) - max(t1, record.t1))
+                    duration = duration2str(record.duration)
                     rows.append(
                         [
                             "record",
