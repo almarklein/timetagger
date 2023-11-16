@@ -530,9 +530,9 @@ class TimeSelectionDialog(BaseDialog):
             <div></div>
             <div style='min-height: 6px;'></div>
             <div class='grid5'>
-                <a>today <span class='keyhint'>d</span></a>
-                <a>this week <span class='keyhint'>w</span></a>
-                <a>this month <span class='keyhint'>m</span></a>
+                <a>today</a>
+                <a>this week</a>
+                <a>this month</a>
                 <a>this quarter</a>
                 <a>this year</a>
                 <a>yester<wbr>day</a>
@@ -565,6 +565,11 @@ class TimeSelectionDialog(BaseDialog):
         # quicknav = self.maindiv.children[0]
         # quicknav.children[1].onclick = lambda e: self._apply_quicknav("out")
         # quicknav.children[2].onclick = lambda e: self._apply_quicknav("in")
+
+        if utils.looks_like_desktop():
+            presets.children[0].innerHTML += " <span class='keyhint'>d</span>"
+            presets.children[1].innerHTML += " <span class='keyhint'>w</span>"
+            presets.children[2].innerHTML += " <span class='keyhint'>m</span>"
 
         for i in range(presets.children.length):
             but = presets.children[i]
@@ -620,6 +625,7 @@ class TimeSelectionDialog(BaseDialog):
         self._t1_input.value = dt.time2localstr(t1).split(" ")[0]
         self._t2_input.value = dt.time2localstr(t2).split(" ")[0]
         self._update_range()
+        self.close()
 
     def _update_range(self):
         t1_date = self._t1_input.value
