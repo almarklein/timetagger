@@ -1,6 +1,8 @@
 body { background: $bg1; }
 body.darkmode { background: $bg3; }
 
+main div.content { padding: 0; }
+
 #canvas {
     position: absolute;
     top: 0; left: 0; width: 100%; height: 100%;
