@@ -3197,9 +3197,10 @@ class AnalyticsWidget(Widget):
         y_bottom = y2 - 8
         avail_height2 = y_bottom - y_top
 
-        # From that we can derive how many bars we can show, and the max scroll offset
+        # From that we can derive how many bars we can show, and the max scroll offset.
+        # The extra 15 pixels is to help when a phone shows the navbar *over* the app.
         n_bars = int(avail_height2 / self._npixels_each)
-        max_scroll_offset = max(0, (len(bars) - n_bars) * self._npixels_each)
+        max_scroll_offset = max(0, (len(bars) - n_bars) * self._npixels_each + 15)
         self._target_scroll_offset = min(max_scroll_offset, self._target_scroll_offset)
         self._scroll_offset = self._slowly_update_value(
             self._scroll_offset, self._target_scroll_offset
