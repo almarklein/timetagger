@@ -625,6 +625,7 @@ class TimeSelectionDialog(BaseDialog):
         self._t1_input.value = dt.time2localstr(t1).split(" ")[0]
         self._t2_input.value = dt.time2localstr(t2).split(" ")[0]
         self._update_range()
+        self.close()
 
     def _update_range(self):
         t1_date = self._t1_input.value
