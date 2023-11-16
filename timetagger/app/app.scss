@@ -1,7 +1,7 @@
 body { background: $bg1; }
 body.darkmode { background: $bg3; }
 
-main div.content { padding: 0; }
+main div.content { padding: 0; }  /* prevent empty space at bottom on iPhone */
 
 #canvas {
     position: absolute;
