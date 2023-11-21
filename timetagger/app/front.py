@@ -3399,14 +3399,18 @@ class AnalyticsWidget(Widget):
                     "Configure tag combo",
                     opt,
                 )
-            # Snow total title
-            ctx.textAlign = "left"
-            ctx.font = FONT.size + "px " + FONT.default
-            ctx.fillStyle = COLORS.record_text
+            # Snow tags
+            opt = {
+                "ref": "leftmiddle",
+                "color": COLORS.button_tag_text,
+                "body": COLORS.button_tag_bg,
+                "padding": min(7, (x2 - x1) / 100),
+            }
             for tag in self.selected_tags:
-                text = tag
-                draw_tag(ctx, text, tx, ty)
-                tx += ctx.measureText(text).width + 12
+                tt = "Click to remove from filter"
+                tx += 12 + self._draw_button(
+                    ctx, tx, ty, None, but_height, tag, "unselect:" + tag, tt, opt
+                )
             # Show total duration
             ctx.textAlign = "right"
             ctx.fillStyle = COLORS.record_text
@@ -3683,6 +3687,13 @@ class AnalyticsWidget(Widget):
                                 self.selected_tags.push(tag)
                     else:
                         self.selected_tags = []
+                    self._tag_bars_dict = {}  # trigger animation
+                elif picked.action.startswith("unselect:"):
+                    _, _, tagz = picked.action.partition(":")
+                    if tagz:
+                        for tag in tagz.split(" "):
+                            if tag in self.selected_tags:
+                                self.selected_tags.remove(tag)
                     self._tag_bars_dict = {}  # trigger animation
                 elif picked.action.startswith("configure_tag:"):
                     _, _, tagz = picked.action.partition(":")
