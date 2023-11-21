@@ -2872,11 +2872,9 @@ class ReportDialog(BaseDialog):
         records.sort(key=lambda record: record.t1)
 
         # Set (appropriately rounded) durations
-        total_duration = 0
         for i in range(len(records)):
             record = records[i]
             record.duration = round_duration(min(t2, record.t2) - max(t1, record.t1))
-            total_duration += record.duration
 
         # Determine priorities
         priorities = {}
@@ -3015,6 +3013,9 @@ class ReportDialog(BaseDialog):
         rows = []
 
         # Include total
+        total_duration = 0
+        for group in group_list2:
+            total_duration += group.duration
         rows.append(["head", duration2str(total_duration), "Total", 0])
 
         for group in group_list2:
