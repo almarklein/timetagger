@@ -12,7 +12,7 @@ services:
   timetagger:
     image: ghcr.io/almarklein/timetagger
     ports:
-      - "80:80"
+      - "8888:80"
     volumes:
       - timetagger:/root/_timetagger
     environment:
