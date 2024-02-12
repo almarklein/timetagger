@@ -29,7 +29,7 @@ services:
       - TIMETAGGER_CREDENTIALS=test:$$2a$$08$$0CD1NFiIbancwWsu3se1v.RNR/b7YeZd71yg3cZ/3whGlyU6Iny5i
 
       # Using the reverse proxy authentication
-      # I use cosmos-cloud.io, change corrosponding headers and ip for the proxy
+      # This uses cosmos-cloud.io, change corresponding headers and ip for the proxy
       # Uncomment the following 3 lines if not using proxy to auth
       # - TIMETAGGER_PROXY_AUTH_ENABLED=true 
       # - TIMETAGGER_PROXY_AUTH_TRUSTED=100.0.0.0/8
