@@ -301,6 +301,9 @@ async def get_updates(request, auth_info, db):
     except ValueError:
         return 400, {}, "bad request: /updates since needs a number (timestamp)"
 
+    #user = auth_info["username"]
+    user = request.querydict.get("user", "").strip()
+
     # # Parse pollmethod option
     # pollmethod = request.querydict.get("pollmethod", "").strip() or "short"
     # if pollmethod not in ("short", "long"):
@@ -326,15 +329,19 @@ async def get_updates(request, auth_info, db):
     reset = since <= reset_time
 
     # Get data
-    username = auth_info["username"]
-    userquery = f"user = '{username}'"
+    userquery = None
+    if user:
+        userquery = f"user = '{user}'"
     if reset:
         #records = await db.select_all("records")
         records = await db.select("records", userquery)
         settings = await db.select_all("settings")
     else:
         query = f"st >= {float(since)}"
-        records = await db.select("records", f"{userquery} AND {query}")
+        records_query = query
+        if userquery:
+            records_query = f"{userquery} AND {query}"
+        records = await db.select("records", records_query)
         settings = await db.select("settings", query)
 
     # Return result

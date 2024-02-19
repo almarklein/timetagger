@@ -15,7 +15,7 @@ When do ranges overlap?
 
 
 * Assume/assert that A1 < A2 and B1 < B2
-* No ovelap   : A2 <= B1 or  A1 >= B2
+* No overlap  : A2 <= B1 or  A1 >= B2
 * Some overlap: A2 > B1 and A1 < B2
 * A fully in B: A1 >= B1 and A2 <= B2
 * B fully in A: A1 <= B1 and A2 >= B2
@@ -778,6 +778,7 @@ class ConnectedDataStore(BaseDataStore):
         self._pull_statuses = [0, 0, 0, 0, 0]
         self._auth = window.tools.get_auth_info()
         self._auth_cantuse = None
+        self.show_all_users = None
 
     def get_auth(self):
         """Get an auth info object that is guaranteed to match the username
@@ -938,9 +939,23 @@ class ConnectedDataStore(BaseDataStore):
                 console.warn(self.last_error)
 
     async def _pull(self, authtoken):
-        # Fetch and wait for response
-        url = tools.build_api_url("updates?since=" + self._server_time)
+        # FIXME:
+        # on first _pull,
+        # simplesettings.get("show_all_users") returns the default value,
+        # not the stored value.
+        # So, when setting changed, repeat asking for all data (since=0).
+        since = self._server_time
+        show_all_users = window.simplesettings.get("show_all_users")
+        if show_all_users != self.show_all_users:
+            since = 0
+            self.show_all_users = show_all_users
+        console.log(f"_pull: show_all_users: {show_all_users}, since: {since}")
+        if window.simplesettings.get("show_all_users"):
+            url = tools.build_api_url(f"updates?since={since}")
+        else:
+            url = tools.build_api_url(f"updates?since={since}&user={self._auth.username}")
         init = dict(method="GET", headers={"authtoken": authtoken})
+        # Fetch and wait for response
         try:
             res = await window.fetch(url, init)
         except Exception as err:
