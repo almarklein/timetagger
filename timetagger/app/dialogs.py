@@ -3837,6 +3837,10 @@ class SettingsDialog(BaseDialog):
             <label>
                 <input type='checkbox' checked='true'></input>
                 Show elapsed time below start-button</label>
+            <br />
+            <label>
+                <input type='checkbox' checked='false'></input>
+                Show all users</label>
 
             <hr style='margin-top: 1em;' />
 
@@ -3882,6 +3886,8 @@ class SettingsDialog(BaseDialog):
             self._repr_form,
             _,  # Misc header
             self._stopwatch_label,
+            _,  # br
+            self._all_users_label,
             _,  # hr
             _,  # Section: per device
             _,  # Appearance header
@@ -3933,6 +3939,13 @@ class SettingsDialog(BaseDialog):
         self._stopwatch_check = self._stopwatch_label.children[0]
         self._stopwatch_check.checked = show_stopwatch
         self._stopwatch_check.onchange = self._on_stopwatch_check
+
+        # All users
+        show_all_users = window.simplesettings.get("show_all_users")
+        console.log(f"show_all_users: {show_all_users}")
+        self._all_users_check = self._all_users_label.children[0]
+        self._all_users_check.checked = show_all_users
+        self._all_users_check.onchange = self._on_all_users_check
 
         # Device settings
 
@@ -4001,6 +4014,13 @@ class SettingsDialog(BaseDialog):
     def _on_stopwatch_check(self):
         show_stopwatch = bool(self._stopwatch_check.checked)
         window.simplesettings.set("show_stopwatch", show_stopwatch)
+
+    def _on_all_users_check(self):
+        show_all_users = bool(self._all_users_check.checked)
+        window.simplesettings.set("show_all_users", show_all_users)
+        # empty local record store. how?
+        #window.stores.ConnectedDataStore()._clear_cache()
+        #window.stores.ConnectedDataStore().reset()
 
 
 class GuideDialog(BaseDialog):
