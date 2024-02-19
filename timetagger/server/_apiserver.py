@@ -49,8 +49,8 @@ def to_jsonable(x):
 RECORD_SPEC = dict(key=to_str, mt=to_int, t1=to_int, t2=to_int, ds=to_str, user=to_str)
 RECORD_REQ = ["key", "mt", "t1", "t2", "user"]
 
-SETTING_SPEC = dict(key=to_str, mt=to_int, value=to_jsonable)
-SETTING_REQ = ["key", "mt", "value"]
+SETTING_SPEC = dict(idx=to_str, key=to_str, mt=to_int, value=to_jsonable, user=to_str)
+SETTING_REQ = ["idx", "key", "mt", "value", "user"]
 
 STR_MAX = 256
 JSON_MAX = 8192
@@ -66,7 +66,7 @@ REQS = {
 # Database indices
 INDICES = {
     "records": ("!key", "st", "t1", "t2", "user"),
-    "settings": ("!key", "st"),
+    "settings": ("!idx", "key", "st", "user"),
     "userinfo": ("!key", "st"),
 }
 
@@ -159,7 +159,7 @@ async def authenticate(request):
     #   would still fail (albeit with a 500).
     # * The validation is done in order of importance. The seed is checked
     #   before the expiration. Clients can scan the 401 message for the word
-    #   "revoked" and handle revokation different from expiration.
+    #   "revoked" and handle revocation different from expiration.
 
     st = time.time()
 
@@ -184,7 +184,7 @@ async def authenticate(request):
     # Get reference seed from db
     expires = auth_info["expires"]
     tokenkind = "apitoken" if expires > st + WEBTOKEN_LIFETIME else "webtoken"
-    ref_seed = await _get_token_seed_from_db(db, tokenkind, False)
+    ref_seed = await _get_token_seed_from_db(db, auth_info["username"], tokenkind, False)
 
     # Compare seeds. Validates that the token is not revoked.
     if not ref_seed or ref_seed != auth_info["seed"]:
@@ -229,7 +229,7 @@ async def _get_any_token(auth_info, db, tokenkind, reset):
     else:
         expires = int(time.time()) + WEBTOKEN_LIFETIME
     # Create token
-    seed = await _get_token_seed_from_db(db, tokenkind, reset)
+    seed = await _get_token_seed_from_db(db, auth_info["username"], tokenkind, reset)
     payload = dict(
         username=auth_info["username"],
         expires=expires,
@@ -241,9 +241,10 @@ async def _get_any_token(auth_info, db, tokenkind, reset):
     return 200, {}, result
 
 
-async def _get_token_seed_from_db(db, tokenkind, reset):
+async def _get_token_seed_from_db(db, username, tokenkind, reset):
     # Get seed
-    query = f"key = '{tokenkind}_seed'"
+    db_key = f"{tokenkind}_seed_{username}"
+    query = f"key = '{db_key}'"
     ob = await db.select_one("userinfo", query) or {}
     seed = ob.get("value", "")
     # Create new seed if needed
@@ -252,7 +253,7 @@ async def _get_token_seed_from_db(db, tokenkind, reset):
         st = time.time()
         async with db:
             await db.put_one(
-                "userinfo", key=f"{tokenkind}_seed", st=st, mt=st, value=seed
+                "userinfo", key=db_key, st=st, mt=st, value=seed
             )
     return seed
 
@@ -277,7 +278,7 @@ async def get_webtoken_unsafe(username, reset=False):
     db = await itemdb.AsyncItemDB(dbname)
     await db.ensure_table("userinfo", *INDICES["userinfo"])
     # Produce payload
-    seed = await _get_token_seed_from_db(db, "webtoken", reset)
+    seed = await _get_token_seed_from_db(db, username, "webtoken", reset)
     payload = dict(
         username=username,
         expires=int(time.time()) + WEBTOKEN_LIFETIME,
@@ -301,8 +302,8 @@ async def get_updates(request, auth_info, db):
     except ValueError:
         return 400, {}, "bad request: /updates since needs a number (timestamp)"
 
-    #user = auth_info["username"]
-    user = request.querydict.get("user", "").strip()
+    username = auth_info["username"]
+    records_user = request.querydict.get("user", "").strip()
 
     # # Parse pollmethod option
     # pollmethod = request.querydict.get("pollmethod", "").strip() or "short"
@@ -329,20 +330,19 @@ async def get_updates(request, auth_info, db):
     reset = since <= reset_time
 
     # Get data
-    userquery = None
-    if user:
-        userquery = f"user = '{user}'"
+    records_user_query = None
+    if records_user:
+        records_user_query = f"user = '{records_user}'"
     if reset:
-        #records = await db.select_all("records")
-        records = await db.select("records", userquery)
-        settings = await db.select_all("settings")
+        records = await db.select("records", records_user_query)
+        settings = await db.select("settings", f"user = '{username}'")
     else:
         query = f"st >= {float(since)}"
         records_query = query
-        if userquery:
-            records_query = f"{userquery} AND {query}"
+        if records_user_query:
+            records_query = f"{records_user_query} AND {query}"
         records = await db.select("records", records_query)
-        settings = await db.select("settings", query)
+        settings = await db.select("settings", f"{query} AND user = '{username}'")
 
     # Return result
     result = dict(
@@ -384,7 +384,8 @@ async def put_records(request, auth_info, db):
 
 async def get_settings(request, auth_info, db):
     # Collect settings
-    settings = await db.select_all("settings")
+    username = auth_info["username"]
+    settings = await db.select("settings", f"user = '{username}'")
 
     # Return result
     result = dict(settings=settings)
@@ -412,7 +413,8 @@ async def _push_items(request, auth_info, db, what):
     errors2 = []  # error messages for items that did not even have a key
 
     async with db:
-        ob = await db.select_one("userinfo", "key == 'reset_time'")
+        username = auth_info["username"]
+        ob = await db.select_one("userinfo", f"key == 'reset_time' AND user == '{username}'")
         reset_time = float((ob or {}).get("value", -1))
 
         for item in items:
@@ -424,7 +426,7 @@ async def _push_items(request, auth_info, db, what):
             # Get current item (or None). We will ALWAYS update the item's st
             # (except when cur_item is None and incoming is corrupt).
             # This helps guarantee consistency between server and client.
-            cur_item = await db.select_one(what, "key == ?", item["key"])
+            cur_item = await db.select_one(what, "key == ? AND user == ?", item["key"], username)
 
             # Validate and copy the item (only copy fields that we know)
             try:
@@ -460,6 +462,9 @@ async def _push_items(request, auth_info, db, what):
                 item["st"] = max(server_time, cur_item["st"] + 0.0001)
             else:
                 item["st"] = server_time
+
+            item["user"] = username
+            item["idx"] = f"#user/{username}#{item['key']}"
 
             # Store it!
             await db.put(what, item)

@@ -133,8 +133,8 @@ _min_heap_bin_size = 2**17  # about 1.5 day
 RECORD_SPEC = dict(key=to_str, mt=to_int, t1=to_int, t2=to_int, ds=to_str, user=to_str)
 RECORD_REQ = ["key", "mt", "t1", "t2", "user"]
 
-SETTING_SPEC = dict(key=to_str, mt=to_int, value=to_jsonable)
-SETTING_REQ = ["key", "mt", "value"]
+SETTING_SPEC = dict(idx=to_str, key=to_str, mt=to_int, value=to_jsonable, user=to_str)
+SETTING_REQ = ["idx", "key", "mt", "value", "user"]
 
 STR_MAX = 256
 JSON_MAX = 8192
@@ -303,9 +303,13 @@ class SettingsStore(BaseStore):
         self._datastore = datastore  # This object will handle sync and storage
         self._items = {}  # key -> setting
 
+    def to_idx(self, key, username):
+        return f"#user/{username}#{key}"
+
     def create(self, key, value):
         """Create a new setting from a key and value. Does not put it in the store."""
-        return dict(key=to_str(key), st=0, mt=int(dt.now()), value=to_jsonable(value))
+        username = self._datastore._auth.username
+        return dict(idx=self.to_idx(key, username), key=to_str(key), st=0, mt=int(dt.now()), value=to_jsonable(value), user=username)
 
     def _drop(self, key):
         # Called by datastore to discard items that were not accepted by the server
