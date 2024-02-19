@@ -69,7 +69,7 @@ def set_width_mode():
 # Also see e.g. https://www.canva.com/colors/color-wheel/
 def set_colors():
     # Dark vs light mode
-    mode = mode = window.simplesettings.get("darkmode")
+    mode = window.simplesettings.get("darkmode")
     if mode == 1:
         light_mode = True
     elif mode == 2:
