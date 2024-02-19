@@ -47,6 +47,7 @@ class Config:
         ("datadir", str, "~/_timetagger"),
         ("log_level", str, "info"),
         ("credentials", str, ""),
+        ("multiuserdb", to_bool, False),
         ("proxy_auth_enabled", to_bool, False),
         ("proxy_auth_trusted", str, "127.0.0.1"),
         ("proxy_auth_header", str, "X-Remote-User"),

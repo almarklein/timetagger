@@ -46,8 +46,8 @@ def to_jsonable(x):
 
 # ----- COMMON PART (don't change this comment)
 
-RECORD_SPEC = dict(key=to_str, mt=to_int, t1=to_int, t2=to_int, ds=to_str)
-RECORD_REQ = ["key", "mt", "t1", "t2"]
+RECORD_SPEC = dict(key=to_str, mt=to_int, t1=to_int, t2=to_int, ds=to_str, user=to_str)
+RECORD_REQ = ["key", "mt", "t1", "t2", "user"]
 
 SETTING_SPEC = dict(key=to_str, mt=to_int, value=to_jsonable)
 SETTING_REQ = ["key", "mt", "value"]
@@ -65,7 +65,7 @@ REQS = {
 
 # Database indices
 INDICES = {
-    "records": ("!key", "st", "t1", "t2"),
+    "records": ("!key", "st", "t1", "t2", "user"),
     "settings": ("!key", "st"),
     "userinfo": ("!key", "st"),
 }
@@ -326,12 +326,15 @@ async def get_updates(request, auth_info, db):
     reset = since <= reset_time
 
     # Get data
+    username = auth_info["username"]
+    userquery = f"user = '{username}'"
     if reset:
-        records = await db.select_all("records")
+        #records = await db.select_all("records")
+        records = await db.select("records", userquery)
         settings = await db.select_all("settings")
     else:
         query = f"st >= {float(since)}"
-        records = await db.select("records", query)
+        records = await db.select("records", f"{userquery} AND {query}")
         settings = await db.select("settings", query)
 
     # Return result
@@ -359,7 +362,8 @@ async def get_records(request, auth_info, db):
 
     # Collect records
     tr1, tr2 = int(timerange[0]), int(timerange[1])
-    query = f"(t2 >= {tr1} AND t1 <= {tr2}) OR (t1 == t2 AND t1 <= {tr2})"
+    username = auth_info["username"]
+    query = f"(user = '{username}') AND ((t2 >= {tr1} AND t1 <= {tr2}) OR (t1 == t2 AND t1 <= {tr2}))"
     records = await db.select("records", query)
 
     # Return result

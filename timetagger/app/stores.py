@@ -130,8 +130,8 @@ _min_heap_bin_size = 2**17  # about 1.5 day
 
 # ----- COMMON PART (don't change this comment)
 
-RECORD_SPEC = dict(key=to_str, mt=to_int, t1=to_int, t2=to_int, ds=to_str)
-RECORD_REQ = ["key", "mt", "t1", "t2"]
+RECORD_SPEC = dict(key=to_str, mt=to_int, t1=to_int, t2=to_int, ds=to_str, user=to_str)
+RECORD_REQ = ["key", "mt", "t1", "t2", "user"]
 
 SETTING_SPEC = dict(key=to_str, mt=to_int, value=to_jsonable)
 SETTING_REQ = ["key", "mt", "value"]
@@ -389,6 +389,7 @@ class RecordStore(BaseStore):
             t1=dt.to_time_int(t1),
             t2=dt.to_time_int(t2),
             ds=to_str(ds),
+            user=self._datastore._auth.username,
         )
 
     def tags_from_record(self, record):

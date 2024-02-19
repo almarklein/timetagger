@@ -1743,8 +1743,10 @@ class RecordDialog(BaseDialog):
         # Show info about current tags in description
         tags, parts = utils.get_tags_and_parts_from_string(self._ds_input.value)
         tags_html = "Tags:&nbsp; &nbsp;"
-        if len(tags) == 0:
-            tags = ["#untagged"]
+        #if len(tags) == 0:
+        #    tags = ["#untagged"]
+        username = window.store.get_auth().username
+        utils.add_user_tag(tags, username)
         tags_list = []
         for tag in tags:
             clr = window.store.settings.get_color_for_tag(tag)
@@ -1816,6 +1818,8 @@ class RecordDialog(BaseDialog):
             return self.close()
         # Set record.ds
         _, parts = utils.get_tags_and_parts_from_string(to_str(self._ds_input.value))
+        username = window.store.get_auth().username
+        utils.add_user_tag(parts, username, True)
         self._record.ds = parts.join("")
         if not self._record.ds:
             self._record.pop("ds", None)

@@ -224,6 +224,19 @@ def get_tags_and_parts_from_string(s="", sorted=True):
         tags.sort()
     return tags, parts
 
+def has_user_tag(tags):
+    for tag in tags:
+        if tag.startswith("#user/"):
+            return True
+    return False
+
+def add_user_tag(tags, username, parts=False):
+    if username is None:
+        return
+    if not has_user_tag(tags):
+        if parts:
+            tags.append(" ")
+        tags.append(f"#user/{username}")
 
 def get_better_tag_order_from_stats(
     stats, selected_tags, remove_selected, priorities=None
@@ -602,7 +615,7 @@ class SimpleSettings:
     Key-value pairs are stored in a cache for fast getters.
     The actual storage can be:
     * None / session only: unknown keys are not stored across sessions.
-    * Local storage: a predefined set of keys are stored in local storaged,
+    * Local storage: a predefined set of keys are stored in local storage,
       which means that they are device-specific.
     * Synced: synced to the server using the settings store.
     """

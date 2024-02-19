@@ -36,6 +36,9 @@ def user2filename(username):
     # agressively create a clean representation (for recognizability)
     # and a base64 encoded string (so that we can reverse this process).
 
+    if config.multiuserdb:
+        return os.path.join(ROOT_USER_DIR, "multiuser.db")
+
     clean = "".join((c if c in ok_chars else "-") for c in username)
     encoded = urlsafe_b64encode(username.encode()).decode()
     fname = clean + "~" + encoded + ".db"
