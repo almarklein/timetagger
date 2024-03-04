@@ -16,8 +16,10 @@ Possible improvements:
 
 import argparse
 import binascii
+import json
 import logging
 import pathlib
+from pprint import pprint
 import sys
 
 from itemdb import ItemDB
@@ -40,33 +42,116 @@ def get_arguments():
         "-d", "--debug", action="store_true", help="enable debugging output"
     )
 
-    parser_list_users = argparser.add_argument_group("users")
-    parser_list_users.add_argument(
-        "--list-users", action="store_true", help="show all available user databases"
-    )
+    subparsers = argparser.add_subparsers()
+    parser_users = subparsers.add_parser("users")
 
-    parser_dump_db = argparser.add_argument_group("dump")
-    parser_dump_db.add_argument(
+    # parser_list_users = argparser.add_argument_group("users")
+    parser_users.add_argument(
+        "--list", action="store_true", help="show all available user databases"
+    )
+    parser_users.set_defaults(func=handle_users_command)
+
+    parser_records = subparsers.add_parser("records")
+    # parser_dump_db = argparser.add_argument_group("dump")
+    parser_records.add_argument(
         "--dump", metavar="user", help="dump records of user database"
     )
 
-    parser_merge = argparser.add_argument_group("merge")
+    # parser_merge = argparser.add_argument_group("merge")
 
-    parser_merge.add_argument(
+    # parser_merge.add_argument(
+    parser_records.add_argument(
         "--dest",
         metavar="dest_user",
         default="tt_all",
         help="destination user database (default: '%(default)s')",
     )
-    parser_merge.add_argument(
+    # parser_merge.add_argument(
+    parser_records.add_argument(
         "source_user", nargs="*", help="source user databases (default: <all>)"
     )
+    parser_records.set_defaults(func=handle_records_command)
+
+    parser_settings = subparsers.add_parser("settings")
+    # parser_settings = argparser.add_argument_group("distribute settings")
+    parser_settings.add_argument(
+        "--dump", action="store_true", help="dump settings from user database"
+    )
+    parser_settings.add_argument("--settings", help="file", type=argparse.FileType("r"))
+    parser_settings.add_argument(
+        "dest",
+        metavar="dest_user",
+        nargs="*",
+        help="destination user database (default: '<all_users>')",
+    )
+    parser_settings.set_defaults(func=handle_settings_command)
 
     args = argparser.parse_args()
     return args
 
 
-class MergeDB:
+def itemdb_exists(db, table):
+    if db.mtime < 0:
+        return False
+    if table not in db.get_table_names():
+        return False
+    return True
+
+
+class Common:
+    def dump_db_by_usernames(self, usernames, table):
+        for username in usernames:
+            self.dump_db_by_username(username, table)
+
+    def dump_db_by_username(self, username, table):
+        print(f"username: {username}")
+        filename = user2filename(username)
+        return self.dump_db_by_filename(filename, table)
+
+    def dump_db_by_filename(self, filename, table):
+        print(f"filename: {filename}")
+        db = ItemDB(filename)
+        if not itemdb_exists(db, table):
+            print("database: not existant")
+            return
+        self.dump_db(db, table)
+
+    def dump_db(self, db, table):
+        with db:
+            for i in db.select_all(table):
+                print(i)
+
+
+class Settings(Common):
+    TABLE = "settings"
+
+    def __init__(self, dest_usernames=None):
+        self.logger = logging.getLogger()
+        self.dest_usernames = dest_usernames
+
+    def dump(self):
+        self.dump_db_by_usernames(self.dest_usernames, self.TABLE)
+
+    def distribute_to_user(self, username, settings):
+        db_filename = user2filename(username)
+        db = ItemDB(db_filename)
+        with db:
+            # for key, value in settings.items():
+            #     print(f"key: {key}, value: {value}")
+            #     db.put_one(self.TABLE, key=key, value=value)
+            for row in settings:
+                print(f"row: {row}")
+                db.put(self.TABLE, row)
+
+    def distribute(self, settings):
+        # for key, value in settings.items():
+        #     print(f"key: {key}, value: {value}")
+        for username in self.dest_usernames:
+            print(f"distribute settings to user '{username}'")
+            self.distribute_to_user(username, settings)
+
+
+class MergeDB(Common):
     """Merge multiple ItemDB records tables"""
 
     TABLE = "records"
@@ -100,32 +185,8 @@ class MergeDB:
                     "failed to extract username from filename '%s', skipped.", filename
                 )
 
-    def db_exists(self, db, table=TABLE):
-        if db.mtime < 0:
-            return False
-        if table not in db.get_table_names():
-            return False
-        return True
-
     def dump_db_by_username(self, username):
-        print(f"username: {username}")
-        filename = user2filename(username)
-        return self.dump_db_by_filename(filename)
-
-    def dump_db_by_filename(self, filename):
-        print(f"filename: {filename}")
-        db = ItemDB(filename)
-        if not self.db_exists(db):
-            print("database: not existant")
-            return
-        self.dump(db)
-
-    def dump(self, db=None):
-        if db is None:
-            db = self.target_db
-        with db:
-            for i in db.select_all(self.TABLE):
-                print(i)
+        super().dump_db_by_username(username, self.TABLE)
 
     def clear(self):
         with self.target_db:
@@ -137,7 +198,7 @@ class MergeDB:
             raise RuntimeError("Target database is not initialized")
         filename = user2filename(username)
         db = ItemDB(filename)
-        if not self.db_exists(db):
+        if not itemdb_exists(db, self.TABLE):
             raise RuntimeError(
                 f"Accessing database {filename} failed: no such file or table ({self.TABLE})"
             )
@@ -162,9 +223,39 @@ class MergeDB:
             # delete running timers
             self.target_db.delete(self.TMP_TABLE, "t1 = t2")
         with self.target_db:
-            if self.db_exists(self.target_db, self.TABLE):
+            if itemdb_exists(self.target_db, self.TABLE):
                 self.target_db.delete_table(self.TABLE)
             self.target_db.rename_table(self.TMP_TABLE, self.TABLE)
+
+
+def handle_users_command(args):
+    if args.list:
+        print(list(MergeDB().get_timetagger_usernames()))
+        sys.exit(0)
+
+
+def handle_settings_command(args):
+    settings = Settings(args.dest)
+    if args.settings:
+        settings_data = json.load(args.settings)
+        pprint(settings_data)
+        settings.distribute(settings_data)
+    if args.dump:
+        settings.dump()
+    sys.exit(0)
+
+
+def handle_records_command(args):
+    if args.dump:
+        MergeDB().dump_db_by_username(args.dump)
+        sys.exit(0)
+
+    print(f"creating database for user '{args.dest}'")
+    print(f"filename: {user2filename(args.dest)}")
+    mdb = MergeDB(args.dest)
+    mdb.merge(args.source_user)
+    # print("resulting db:")
+    # mdb.dump()
 
 
 if __name__ == "__main__":
@@ -178,17 +269,5 @@ if __name__ == "__main__":
         logger.setLevel(logging.DEBUG)
         logger.debug(args)
 
-    if args.list_users:
-        print(list(MergeDB().get_timetagger_usernames()))
-        sys.exit(0)
-
-    if args.dump:
-        MergeDB().dump_db_by_username(args.dump)
-        sys.exit(0)
-
-    print(f"creating database for user '{args.dest}'")
-    print(f"filename: {user2filename(args.dest)}")
-    mdb = MergeDB(args.dest)
-    mdb.merge(args.source_user)
-    # print("resulting db:")
-    # mdb.dump()
+    args.func(args)
+    sys.exit(0)
