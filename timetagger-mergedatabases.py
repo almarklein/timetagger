@@ -26,7 +26,7 @@ from itemdb import ItemDB
 from timetagger.server._utils import user2filename, filename2user, ROOT_USER_DIR
 
 
-def get_arguments():
+def setup_parser():
     """setup argument parsing"""
     epilog = """%(prog)s merges TimeTagger record tables of multiple users
     into one user database, replacing the existing records. 
@@ -87,8 +87,7 @@ def get_arguments():
     )
     parser_settings.set_defaults(func=handle_settings_command)
 
-    args = argparser.parse_args()
-    return args
+    return argparser
 
 
 def itemdb_exists(db, table):
@@ -271,10 +270,15 @@ if __name__ == "__main__":
     )
     logger = logging.getLogger()
 
-    args = get_arguments()
+    parser = setup_parser()
+    args = parser.parse_args()
     if args.debug:
         logger.setLevel(logging.DEBUG)
         logger.debug(args)
 
-    args.func(args)
-    sys.exit(0)
+    if hasattr(args, "func"):
+        args.func(args)
+        sys.exit(0)
+    else:
+        parser.print_help()
+        sys.exit(0)
