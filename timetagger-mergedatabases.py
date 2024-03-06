@@ -52,25 +52,26 @@ def get_arguments():
     parser_users.set_defaults(func=handle_users_command)
 
     parser_records = subparsers.add_parser("records")
-    # parser_dump_db = argparser.add_argument_group("dump")
     parser_records.add_argument(
-        "--dump", metavar="user", help="dump records of user database"
+        "--dump", action="store_true", help="dump records of user databases"
     )
 
-    # parser_merge = argparser.add_argument_group("merge")
-
-    # parser_merge.add_argument(
-    parser_records.add_argument(
+    records_merge_group = parser_records.add_argument_group("merging")
+    records_merge_group.add_argument(
+        "--merge",
+        action="store_true",
+        help="merge source user database records into dest_user records, overwriting all existing records.",
+    )
+    records_merge_group.add_argument(
         "--dest",
         metavar="dest_user",
         default="tt_all",
         help="destination user database (default: '%(default)s')",
     )
-    # parser_merge.add_argument(
     parser_records.add_argument(
-        "source_user", nargs="*", help="source user databases (default: <all>)"
+        "source_user", nargs="*", help="source user (default: <all>)"
     )
-    parser_records.set_defaults(func=handle_records_command)
+    parser_records.set_defaults(parser=parser_records, func=handle_records_command)
 
     parser_settings = subparsers.add_parser("settings")
     # parser_settings = argparser.add_argument_group("distribute settings")
@@ -104,6 +105,7 @@ class Common:
             self.dump_db_by_username(username, table)
 
     def dump_db_by_username(self, username, table):
+        print()
         print(f"username: {username}")
         filename = user2filename(username)
         return self.dump_db_by_filename(filename, table)
@@ -185,8 +187,10 @@ class MergeDB(Common):
                     "failed to extract username from filename '%s', skipped.", filename
                 )
 
-    def dump_db_by_username(self, username):
-        super().dump_db_by_username(username, self.TABLE)
+    def dump_db_by_usernames(self, users):
+        if not users:
+            users = list(self.get_timetagger_usernames())
+        super().dump_db_by_usernames(users, self.TABLE)
 
     def clear(self):
         with self.target_db:
@@ -229,9 +233,10 @@ class MergeDB(Common):
 
 
 def handle_users_command(args):
-    if args.list:
-        print(list(MergeDB().get_timetagger_usernames()))
-        sys.exit(0)
+    # if args.list:
+    # currently, there is only the list subcommand:
+    print(list(MergeDB().get_timetagger_usernames()))
+    sys.exit(0)
 
 
 def handle_settings_command(args):
@@ -247,15 +252,17 @@ def handle_settings_command(args):
 
 def handle_records_command(args):
     if args.dump:
-        MergeDB().dump_db_by_username(args.dump)
+        MergeDB().dump_db_by_usernames(args.source_user)
         sys.exit(0)
-
-    print(f"creating database for user '{args.dest}'")
-    print(f"filename: {user2filename(args.dest)}")
-    mdb = MergeDB(args.dest)
-    mdb.merge(args.source_user)
-    # print("resulting db:")
-    # mdb.dump()
+    if args.merge:
+        print(f"creating database for user '{args.dest}'")
+        print(f"filename: {user2filename(args.dest)}")
+        mdb = MergeDB(args.dest)
+        mdb.merge(args.source_user)
+        # print("resulting db:")
+        # mdb.dump()
+        sys.exit(0)
+    args.parser.print_help()
 
 
 if __name__ == "__main__":
