@@ -1,17 +1,17 @@
 #!/usr/bin/env python
 
 """
-Merges TimeTagger record tables of multiple users into one user database,
-replacing the existing records. Extends the records by user information.
+Some utilities to help running TimeTagger in a multi-user environment.
 
-This can be used to create a timetagger view of the records of multiple users.
+Examples:
+* multiuser_tweaks.py records --merge --dest newuser
+  * merges TimeTagger record tables of multiple users into one user database,
+    replacing the existing records. Extends the records by user information.
+    This can be used to create a timetagger view of the records of multiple users.
+* multiuser_tweaks.py settings --settings settings.json
+  * copy settings from a JSON file to the users settings database tables.
 
 Author: joerg.steffens@bareos.com
-
-Possible improvements:
-* in order to keep the webui fast,
-  it would be easy to extend the script to only copy entries
-  newer than a specific date.
 """
 
 import argparse
@@ -21,6 +21,7 @@ import logging
 import pathlib
 from pprint import pprint
 import sys
+import time
 
 from itemdb import ItemDB
 from timetagger.server._utils import user2filename, filename2user, ROOT_USER_DIR
@@ -28,14 +29,17 @@ from timetagger.server._utils import user2filename, filename2user, ROOT_USER_DIR
 
 def setup_parser():
     """setup argument parsing"""
-    epilog = """%(prog)s merges TimeTagger record tables of multiple users
+    epilog = """%(prog)s is a helper tool for TimeTagger in multi-user environments.
+    TimeTagger uses a separate Sqlite database per user.
+    This tool directly accesses the databases and offers to manipulate them.
+    Especially it can merge the records of multiple users
     into one user database, replacing the existing records. 
     Every newly generated record is extended by the tag '#user/<username>'.
     This way each record still show to which user it belongs.
     """
 
     argparser = argparse.ArgumentParser(
-        description="Merges TimeTagger record tables of multiple users into one user database.",
+        description="Perform actions on TimeTagger databases.",
         epilog=epilog,
     )
     argparser.add_argument(
@@ -43,24 +47,27 @@ def setup_parser():
     )
 
     subparsers = argparser.add_subparsers()
-    parser_users = subparsers.add_parser("users")
 
-    # parser_list_users = argparser.add_argument_group("users")
+    # users
+    parser_users = subparsers.add_parser("users")
     parser_users.add_argument(
         "--list", action="store_true", help="show all available user databases"
     )
-    parser_users.set_defaults(func=handle_users_command)
+    parser_users.set_defaults(parser=parser_users, func=handle_users_command)
 
-    parser_records = subparsers.add_parser("records")
+    # records
+    parser_records = subparsers.add_parser(
+        "records",
+        description="Perform action on the records tables of TimeTagger databases.",
+    )
     parser_records.add_argument(
         "--dump", action="store_true", help="dump records of user databases"
     )
-
     records_merge_group = parser_records.add_argument_group("merging")
     records_merge_group.add_argument(
         "--merge",
         action="store_true",
-        help="merge source user database records into dest_user records, overwriting all existing records.",
+        help="merge source user database records into dest_user records, overwriting all existing records",
     )
     records_merge_group.add_argument(
         "--dest",
@@ -73,19 +80,30 @@ def setup_parser():
     )
     parser_records.set_defaults(parser=parser_records, func=handle_records_command)
 
-    parser_settings = subparsers.add_parser("settings")
-    # parser_settings = argparser.add_argument_group("distribute settings")
-    parser_settings.add_argument(
-        "--dump", action="store_true", help="dump settings from user database"
+    # settings
+    parser_settings = subparsers.add_parser(
+        "settings",
+        description="Perform action on the settings tables of TimeTagger databases.",
     )
-    parser_settings.add_argument("--settings", help="file", type=argparse.FileType("r"))
+    parser_settings.add_argument(
+        "--dump", action="store_true", help="dump settings from user databases"
+    )
+    parser_settings.add_argument(
+        "--source",
+        help='copy settings from JSON file into user settings databases. Format: { "key1": "value1", "key2": "value2" [, ...] }',
+        type=argparse.FileType("r"),
+        metavar="<filename.json>",
+    )
+    parser_settings.add_argument(
+        "--force", action="store_true", help="overwrite existing user settings"
+    )
     parser_settings.add_argument(
         "dest",
         metavar="dest_user",
         nargs="*",
         help="destination user database (default: '<all_users>')",
     )
-    parser_settings.set_defaults(func=handle_settings_command)
+    parser_settings.set_defaults(parser=parser_settings, func=handle_settings_command)
 
     return argparser
 
@@ -98,7 +116,26 @@ def itemdb_exists(db, table):
     return True
 
 
-class Common:
+class TimeTaggerDB:
+    def get_timetagger_usernames(self, exclude_users=None):
+        logger = logging.getLogger()
+        logger.debug("ROOT_USER_DIR: %s", ROOT_USER_DIR)
+        ignore_usernames = ["defaultuser"]
+        if exclude_users:
+            ignore_usernames += exclude_users
+        for filename in pathlib.Path(ROOT_USER_DIR).glob("*.db"):
+            try:
+                username = filename2user(filename)
+                if username in ignore_usernames:
+                    logger.debug("skipping username '%s'", username)
+                else:
+                    logger.debug("db: %s, user: %s", filename, username)
+                    yield username
+            except binascii.Error:
+                logger.warning(
+                    "failed to extract username from filename '%s', skipped.", filename
+                )
+
     def dump_db_by_usernames(self, usernames, table):
         for username in usernames:
             self.dump_db_by_username(username, table)
@@ -123,36 +160,56 @@ class Common:
                 print(i)
 
 
-class Settings(Common):
+class Settings(TimeTaggerDB):
     TABLE = "settings"
 
     def __init__(self, dest_usernames=None):
         self.logger = logging.getLogger()
-        self.dest_usernames = dest_usernames
+        if dest_usernames:
+            self.dest_usernames = dest_usernames
+        else:
+            self.dest_usernames = self.get_timetagger_usernames()
 
     def dump(self):
         self.dump_db_by_usernames(self.dest_usernames, self.TABLE)
 
-    def distribute_to_user(self, username, settings):
+    def distribute_to_user(self, username, settings, force):
         db_filename = user2filename(username)
         db = ItemDB(db_filename)
+        if not itemdb_exists(db, self.TABLE):
+            print("  skipped, database (table) does not exists")
+            return
+        now = int(time.time())
         with db:
-            # for key, value in settings.items():
-            #     print(f"key: {key}, value: {value}")
-            #     db.put_one(self.TABLE, key=key, value=value)
-            for row in settings:
-                print(f"row: {row}")
-                db.put(self.TABLE, row)
+            for key, value in settings.items():
+                print(f"  '{key}': ", end="")
+                result = db.select_one(self.TABLE, "key = ?", key)
+                if key == "tag_presets":
+                    current_set = set()
+                    if result:
+                        current_set = set(result.get("value"))
+                    new_set = set(value)
+                    if new_set <= current_set:
+                        print("skipped (values already set)")
+                        continue
+                    print("adding: ", list(new_set - current_set))
+                    value = list(current_set | new_set)
+                    db.put_one(self.TABLE, key=key, value=value, st=now, mt=now)
+                elif result and not force:
+                    print("skipped (already set)")
+                else:
+                    print(value)
+                    db.put_one(self.TABLE, key=key, value=value, st=now, mt=now)
 
-    def distribute(self, settings):
+    def distribute(self, settings, force):
         # for key, value in settings.items():
         #     print(f"key: {key}, value: {value}")
         for username in self.dest_usernames:
             print(f"distribute settings to user '{username}'")
-            self.distribute_to_user(username, settings)
+            self.distribute_to_user(username, settings, force)
 
 
-class MergeDB(Common):
+class Records(TimeTaggerDB):
     """Merge multiple ItemDB records tables"""
 
     TABLE = "records"
@@ -168,23 +225,6 @@ class MergeDB(Common):
             self.target_db_filename = user2filename(target_username)
             self.target_db = ItemDB(self.target_db_filename)
             self.target_db.ensure_table(self.TMP_TABLE, *self.INDICES)
-
-    def get_timetagger_usernames(self):
-        logger = logging.getLogger()
-        logger.debug("ROOT_USER_DIR: %s", ROOT_USER_DIR)
-        ignore_usernames = ["defaultuser", self.target_username]
-        for filename in pathlib.Path(ROOT_USER_DIR).glob("*.db"):
-            try:
-                username = filename2user(filename)
-                if username in ignore_usernames:
-                    logger.debug("skipping username '%s'", username)
-                else:
-                    logger.debug("db: %s, user: %s", filename, username)
-                    yield username
-            except binascii.Error:
-                logger.warning(
-                    "failed to extract username from filename '%s', skipped.", filename
-                )
 
     def dump_db_by_usernames(self, users):
         if not users:
@@ -218,7 +258,7 @@ class MergeDB(Common):
 
     def merge(self, users=None):
         if not users:
-            users = list(self.get_timetagger_usernames())
+            users = list(self.get_timetagger_usernames([self.target_username]))
         for username in users:
             print(f"merging user records of '{username}'")
             self.merge_user_db(username)
@@ -232,36 +272,33 @@ class MergeDB(Common):
 
 
 def handle_users_command(args):
-    # if args.list:
     # currently, there is only the list subcommand:
-    print(list(MergeDB().get_timetagger_usernames()))
-    sys.exit(0)
+    print(list(TimeTaggerDB().get_timetagger_usernames()))
 
 
 def handle_settings_command(args):
     settings = Settings(args.dest)
-    if args.settings:
-        settings_data = json.load(args.settings)
-        pprint(settings_data)
-        settings.distribute(settings_data)
-    if args.dump:
+    if args.source:
+        settings_data = json.load(args.source)
+        # pprint(settings_data)
+        settings.distribute(settings_data, args.force)
+    elif args.dump:
         settings.dump()
-    sys.exit(0)
+    else:
+        args.parser.print_help()
 
 
 def handle_records_command(args):
     if args.dump:
-        MergeDB().dump_db_by_usernames(args.source_user)
+        Records().dump_db_by_usernames(args.source_user)
         sys.exit(0)
-    if args.merge:
+    elif args.merge:
         print(f"creating database for user '{args.dest}'")
         print(f"filename: {user2filename(args.dest)}")
-        mdb = MergeDB(args.dest)
-        mdb.merge(args.source_user)
-        # print("resulting db:")
-        # mdb.dump()
-        sys.exit(0)
-    args.parser.print_help()
+        records = Records(args.dest)
+        records.merge(args.source_user)
+    else:
+        args.parser.print_help()
 
 
 if __name__ == "__main__":
@@ -278,7 +315,5 @@ if __name__ == "__main__":
 
     if hasattr(args, "func"):
         args.func(args)
-        sys.exit(0)
     else:
         parser.print_help()
-        sys.exit(0)
