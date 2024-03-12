@@ -243,4 +243,6 @@ TRUSTED_PROXIES = load_trusted_proxies()
 
 
 if __name__ == "__main__":
-    asgineer.run("timetagger.__main__:main_handler", "uvicorn", config.bind, log_level="warning")
+    asgineer.run(
+        "timetagger.__main__:main_handler", "uvicorn", config.bind, log_level="warning"
+    )

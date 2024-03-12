@@ -3,7 +3,6 @@ Test some logic from the utils module.
 Some of this is implicitly covered by the other tests, but not all.
 """
 
-
 from _common import run_tests
 from timetagger.app.utils import (
     convert_text_to_valid_tag,
