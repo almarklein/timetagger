@@ -688,7 +688,7 @@ class StartStopEdit:
             <span></span>
         <span><i class='fas' style='color:#999; vertical-align:middle;'>\uf2f2</i></span>
             <span></span>
-            <input type='text' style='flex: 1; min-width: 50px; font-size: 80%' />
+            <input type='text' style='flex: 1; min-width: 50px; font-size: 16px' />
             <span></span>
         </div>
         """
