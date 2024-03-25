@@ -3798,6 +3798,12 @@ class SettingsDialog(BaseDialog):
                     <option value='1'>Monday</option>
                     <option value='6'>Saturday</option>
                 </select>
+                <div>Workdays:</div>
+                <select>
+                    <option value='2'>Monday - Friday</option>
+                    <option value='1'>Monday - Saturday</option>
+                    <option value='0'>Monday - Sunday</option>
+                </select>
                 <div>Show time as:</div>
                 <select>
                     <option value='auto'>Auto</option>
@@ -3900,27 +3906,33 @@ class SettingsDialog(BaseDialog):
         self._first_day_of_week.value = first_day_of_week
         self._first_day_of_week.onchange = self._on_first_day_of_week_change
 
+        # Workdays
+        workdays = window.simplesettings.get("workdays")
+        self._workdays = self._repr_form.children[3]
+        self._workdays.value = workdays
+        self._workdays.onchange = self._on_workdays_change
+
         # Time representation
         time_repr = window.simplesettings.get("time_repr")
-        self._time_repr = self._repr_form.children[3]
+        self._time_repr = self._repr_form.children[5]
         self._time_repr.value = time_repr
         self._time_repr.onchange = self._on_time_repr_change
 
         # Duration representation
         duration_repr = window.simplesettings.get("duration_repr")
-        self._duration_repr = self._repr_form.children[5]
+        self._duration_repr = self._repr_form.children[7]
         self._duration_repr.value = duration_repr
         self._duration_repr.onchange = self._on_duration_repr_change
 
         # Today snap time/offset
         today_snap_offset = window.simplesettings.get("today_snap_offset")
-        self._today_snap_offset = self._repr_form.children[7]
+        self._today_snap_offset = self._repr_form.children[9]
         self._today_snap_offset.value = today_snap_offset
         self._today_snap_offset.onchange = self._on_today_snap_offset_change
 
         # Today number of hours
         today_end_offset = window.simplesettings.get("today_end_offset")
-        self._today_end_offset = self._repr_form.children[9]
+        self._today_end_offset = self._repr_form.children[11]
         self._today_end_offset.value = today_end_offset
         self._today_end_offset.onchange = self._on_today_end_offset_change
 
@@ -3960,6 +3972,10 @@ class SettingsDialog(BaseDialog):
     def _on_first_day_of_week_change(self):
         first_day_of_week = int(self._first_day_of_week.value)
         window.simplesettings.set("first_day_of_week", first_day_of_week)
+
+    def _on_workdays_change(self):
+        workdays = int(self._workdays.value)
+        window.simplesettings.set("workdays", workdays)
 
     def _on_time_repr_change(self):
         time_repr = self._time_repr.value

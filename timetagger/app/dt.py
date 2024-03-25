@@ -400,6 +400,19 @@ def get_weeknumber(t):
     return res  # noqa
 
 
+def get_free_days_in_range(t1, t2, freeDays):
+    d1 = Date(t1 * 1000)
+    d2 = Date(t2 * 1000)
+    count = 0
+    while d1 < d2:
+        if d1.getDay() == 0 and freeDays >= 1:
+            count += 1
+        elif d1.getDay() == 6 and freeDays == 2:
+            count += 1
+        d1.setDate(d1.getDate() + 1)
+    return count
+
+
 if __name__ == "__main__":
     import pscript
 

@@ -2539,6 +2539,22 @@ class RecordsWidget(Widget):
         fullwidth = x2 - x1  # * (sumcount_full / (t2 - t1)) # ** 0.5
         fullheight = (y2 - y1) * (sumcount_full / (t2 - t1))  # ** 0.5
 
+        # Darken the colors for free days.
+        if (
+            dt.get_weekday_shortname(t) == "Sat"
+            and window.simplesettings.get("workdays") == 2
+            and stat_period == "1D"
+        ):
+            ctx.fillStyle = COLORS.button_text_disabled
+            ctx.fillRect(x1, y1, fullwidth, y2 - y1)
+        elif (
+            dt.get_weekday_shortname(t) == "Sun"
+            and window.simplesettings.get("workdays") >= 1
+            and stat_period == "1D"
+        ):
+            ctx.fillStyle = COLORS.button_text_disabled
+            ctx.fillRect(x1, y1, fullwidth, y2 - y1)
+
         # Show amount of time spend on each tag
         x = x1
         for i in range(len(stats_list)):
@@ -2562,15 +2578,26 @@ class RecordsWidget(Widget):
         # Draw big text in stronger color if it is the timerange containing today
 
         # Draw duration at the left
-        ctx.fillStyle = COLORS.prim1_clr if hover else COLORS.prim2_clr
-        fontsizeleft = bigfontsize * (0.7 if selected_tags else 0.9)
-        ctx.font = f"{fontsizeleft}px {FONT.default}"
-        ctx.textBaseline = "bottom"
-        ctx.textAlign = "left"
-        duration_text = dt.duration_string(sumcount_selected, False)
-        if selected_tags:
-            duration_text += " / " + dt.duration_string(sumcount_nominal, False)
-        ctx.fillText(duration_text, x1 + 10, y2 - ymargin)
+        if (
+            not (
+                dt.get_weekday_shortname(t) == "Sat"
+                and window.simplesettings.get("workdays") == 2
+            )
+            and not (
+                dt.get_weekday_shortname(t) == "Sun"
+                and window.simplesettings.get("workdays") >= 1
+            )
+            or not stat_period == "1D"
+        ):
+            ctx.fillStyle = COLORS.prim1_clr if hover else COLORS.prim2_clr
+            fontsizeleft = bigfontsize * (0.7 if selected_tags else 0.9)
+            ctx.font = f"{fontsizeleft}px {FONT.default}"
+            ctx.textBaseline = "bottom"
+            ctx.textAlign = "left"
+            duration_text = dt.duration_string(sumcount_selected, False)
+            if selected_tags:
+                duration_text += " / " + dt.duration_string(sumcount_nominal, False)
+            ctx.fillText(duration_text, x1 + 10, y2 - ymargin)
 
         # Draw time-range indication at the right
         isnow = t1 < self._canvas.now() < t2
@@ -3439,7 +3466,12 @@ class AnalyticsWidget(Widget):
             ctx.fillStyle = COLORS.prim2_clr
             if best_target:
                 done_this_period = total_time
-                target_this_period = 3600 * best_target.hours * best_target.factor
+                freeDays = dt.get_free_days_in_range(
+                    t1, t2, window.simplesettings.get("workdays")
+                )
+                target_this_period = (
+                    3600 * best_target.hours * (best_target.factor - freeDays)
+                )
                 perc = 100 * done_this_period / target_this_period
                 prefix = "" if 0.93 < best_target.factor < 1.034 else "~ "
                 ctx.fillText(
