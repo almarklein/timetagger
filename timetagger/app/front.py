@@ -2540,20 +2540,14 @@ class RecordsWidget(Widget):
         fullheight = (y2 - y1) * (sumcount_full / (t2 - t1))  # ** 0.5
 
         # Darken the colors for free days.
-        if (
-            dt.get_weekday_shortname(t) == "Sat"
-            and window.simplesettings.get("workdays") == 2
-            and stat_period == "1D"
-        ):
-            ctx.fillStyle = COLORS.button_text_disabled
-            ctx.fillRect(x1, y1, fullwidth, y2 - y1)
-        elif (
-            dt.get_weekday_shortname(t) == "Sun"
-            and window.simplesettings.get("workdays") >= 1
-            and stat_period == "1D"
-        ):
-            ctx.fillStyle = COLORS.button_text_disabled
-            ctx.fillRect(x1, y1, fullwidth, y2 - y1)
+        if stat_period == "1D":
+            workdays_setting = window.simplesettings.get("workdays")
+            is_free_day = (text == "Sat" and workdays_setting == 2) or (
+                text == "Sun" and workdays_setting >= 1
+            )
+            if is_free_day:
+                ctx.fillStyle = COLORS.button_text_disabled
+                ctx.fillRect(x1, y1, fullwidth, y2 - y1)
 
         # Show amount of time spend on each tag
         x = x1
@@ -2578,17 +2572,7 @@ class RecordsWidget(Widget):
         # Draw big text in stronger color if it is the timerange containing today
 
         # Draw duration at the left
-        if (
-            not (
-                dt.get_weekday_shortname(t) == "Sat"
-                and window.simplesettings.get("workdays") == 2
-            )
-            and not (
-                dt.get_weekday_shortname(t) == "Sun"
-                and window.simplesettings.get("workdays") >= 1
-            )
-            or not stat_period == "1D"
-        ):
+        if not stat_period == "1D" or not is_free_day:
             ctx.fillStyle = COLORS.prim1_clr if hover else COLORS.prim2_clr
             fontsizeleft = bigfontsize * (0.7 if selected_tags else 0.9)
             ctx.font = f"{fontsizeleft}px {FONT.default}"
