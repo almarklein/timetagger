@@ -3435,7 +3435,24 @@ class AnalyticsWidget(Widget):
                 target_hours = self._current_targets.get(period, 0)
                 if target_hours <= 0:
                     continue
-                factor = self._hours_in_range / divisor
+                free_hours = dt.get_free_hours_in_range(
+                    t1, t2, window.simplesettings.get("workdays")
+                )
+                cleaned_hours_in_range = self._hours_in_range - free_hours
+                if period == "day":
+                    factor = cleaned_hours_in_range / divisor
+                elif period == "week":
+                    factor = cleaned_hours_in_range / (
+                        divisor - window.simplesettings.get("workdays") * 24
+                    )
+                elif period == "month":
+                    factor = cleaned_hours_in_range / (
+                        divisor - window.simplesettings.get("workdays") * 24 * 4.33
+                    )
+                elif period == "year":
+                    factor = cleaned_hours_in_range / (
+                        divisor - window.simplesettings.get("workdays") * 24 * 52
+                    )
                 if factor > 0.93 or not best_target:
                     best_target = {
                         "period": period,
@@ -3450,19 +3467,17 @@ class AnalyticsWidget(Widget):
             ctx.fillStyle = COLORS.prim2_clr
             if best_target:
                 done_this_period = total_time
-                freeDays = dt.get_free_days_in_range(
-                    t1, t2, window.simplesettings.get("workdays")
-                )
-                target_this_period = (
-                    3600 * best_target.hours * (best_target.factor - freeDays)
-                )
-                perc = 100 * done_this_period / target_this_period
+                target_this_period = 3600 * best_target.hours * best_target.factor
                 prefix = "" if 0.93 < best_target.factor < 1.034 else "~ "
-                ctx.fillText(
-                    f"{best_target.period} target at {prefix}{perc:0.0f}%",
-                    tx,
-                    ty,
-                )
+                if target_this_period > 0:
+                    perc = 100 * done_this_period / target_this_period
+                    ctx.fillText(
+                        f"{best_target.period} target at {prefix}{perc:0.0f}%",
+                        tx,
+                        ty,
+                    )
+                else:
+                    ctx.fillText("No target", tx, ty)
                 left = target_this_period - done_this_period
                 left_s = dt.duration_string(abs(left), False)
                 left_prefix = "left" if left >= 0 else "over"

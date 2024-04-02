@@ -400,7 +400,7 @@ def get_weeknumber(t):
     return res  # noqa
 
 
-def get_free_days_in_range(t1, t2, freeDays):
+def get_free_hours_in_range(t1, t2, freeDays):
     d1 = Date(t1 * 1000)
     d2 = Date(t2 * 1000)
     count = 0
@@ -410,7 +410,7 @@ def get_free_days_in_range(t1, t2, freeDays):
         elif d1.getDay() == 6 and freeDays == 2:  # saturday
             count += 1
         d1.setDate(d1.getDate() + 1)  # next day
-    return count
+    return count * 24
 
 
 if __name__ == "__main__":
