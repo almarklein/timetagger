@@ -405,11 +405,11 @@ def get_free_days_in_range(t1, t2, freeDays):
     d2 = Date(t2 * 1000)
     count = 0
     while d1 < d2:
-        if d1.getDay() == 0 and freeDays >= 1:
+        if d1.getDay() == 0 and freeDays >= 1:  # sunday
             count += 1
-        elif d1.getDay() == 6 and freeDays == 2:
+        elif d1.getDay() == 6 and freeDays == 2:  # saturday   
             count += 1
-        d1.setDate(d1.getDate() + 1)
+        d1.setDate(d1.getDate() + 1)  # next day
     return count
 
 
