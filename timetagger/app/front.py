@@ -2572,7 +2572,7 @@ class RecordsWidget(Widget):
         # Draw big text in stronger color if it is the timerange containing today
 
         # Draw duration at the left
-        if not stat_period == "1D" or not is_free_day:
+        if not stat_period == "1D" or sumcount_nominal > 0 or not is_free_day:
             ctx.fillStyle = COLORS.prim1_clr if hover else COLORS.prim2_clr
             fontsizeleft = bigfontsize * (0.7 if selected_tags else 0.9)
             ctx.font = f"{fontsizeleft}px {FONT.default}"
