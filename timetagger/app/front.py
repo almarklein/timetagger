@@ -3428,31 +3428,28 @@ class AnalyticsWidget(Widget):
             ctx.fillText(duration, x_ref_duration, ty)
             # -- Row for target
             tx, ty = x_ref_labels, ymid - 2 + npixels * 0.85
+
             # Select the target that best matches the current time range
             best_target = None
-            m = {"day": 24, "week": 168, "month": 720, "year": 8760}
-            for period, divisor in m.items():
+            free_days_per_week = window.simplesettings.get("workdays")
+            free_hours_in_range = dt.get_free_hours_in_range(t1, t2, free_days_per_week)
+            work_hours_in_range = self._hours_in_range - free_hours_in_range
+            for period in ["day", "week", "month", "year"]:
                 target_hours = self._current_targets.get(period, 0)
                 if target_hours <= 0:
                     continue
-                free_hours = dt.get_free_hours_in_range(
-                    t1, t2, window.simplesettings.get("workdays")
-                )
-                cleaned_hours_in_range = self._hours_in_range - free_hours
+
+                # hours in period -> "day": 24, "week": 168, "month": 720, "year": 8760
                 if period == "day":
-                    factor = cleaned_hours_in_range / divisor
+                    work_hours_in_period = 24
                 elif period == "week":
-                    factor = cleaned_hours_in_range / (
-                        divisor - window.simplesettings.get("workdays") * 24
-                    )
-                elif period == "month":
-                    factor = cleaned_hours_in_range / (
-                        divisor - window.simplesettings.get("workdays") * 24 * 4.33
-                    )
+                    work_hours_in_period = 168 - free_days_per_week * 24
+                elif period == "month":  # ~4.33 weeks in a month
+                    work_hours_in_period = 720 - free_days_per_week * 24 * 4.33
                 elif period == "year":
-                    factor = cleaned_hours_in_range / (
-                        divisor - window.simplesettings.get("workdays") * 24 * 52
-                    )
+                    work_hours_in_period = 8760 - free_days_per_week * 24 * 52
+
+                factor = work_hours_in_range / work_hours_in_period
                 if factor > 0.93 or not best_target:
                     best_target = {
                         "period": period,
