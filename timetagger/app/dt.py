@@ -400,6 +400,50 @@ def get_weeknumber(t):
     return res  # noqa
 
 
+def get_remaining_hours_of_day(t):
+    d = Date(t * 1000)
+    return 24 - d.getHours() - d.getMinutes() / 60 - d.getSeconds() / 3600
+
+
+def get_elapsed_hours_of_day(t):
+    d = Date(t * 1000)
+    return d.getHours() + d.getMinutes() / 60 + d.getSeconds() / 3600
+
+
+def get_free_hours_in_range(t1, t2, free_days):
+    free_hours = 0
+    if free_days >= 1:
+        d1 = Date(t1 * 1000)
+        d2 = Date(t2 * 1000)
+        hours_in_range = (t2 - t1) / 3600
+
+        if hours_in_range > 24:  # scale > "1D"
+            while d1 < d2:
+                if d1.getDay() == 0:  # sunday
+                    free_hours += 24
+                elif d1.getDay() == 6 and free_days == 2:  # saturday
+                    free_hours += 24
+                d1.setDate(d1.getDate() + 1)  # next day
+        else:  # scale <= "1D"
+            # starts on sunday
+            if d1.getDay() == 0 and d2.getDay() != 0:
+                free_hours = get_remaining_hours_of_day(t1)
+            # only sunday
+            elif d1.getDay() == 0 and d2.getDay() == 0:
+                free_hours = hours_in_range
+            # ends on sunday
+            elif d1.getDay() != 0 and d2.getDay() == 0 and free_days != 2:
+                free_hours = get_elapsed_hours_of_day(t2)
+            # starts on saturday
+            elif d1.getDay() == 6 and free_days == 2:
+                free_hours = hours_in_range
+            # ends on saturday
+            elif d1.getDay() != 6 and d2.getDay() == 6 and free_days == 2:
+                free_hours = get_elapsed_hours_of_day(t2)
+
+    return free_hours
+
+
 if __name__ == "__main__":
     import pscript
 

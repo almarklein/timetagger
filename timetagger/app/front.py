@@ -2539,6 +2539,16 @@ class RecordsWidget(Widget):
         fullwidth = x2 - x1  # * (sumcount_full / (t2 - t1)) # ** 0.5
         fullheight = (y2 - y1) * (sumcount_full / (t2 - t1))  # ** 0.5
 
+        # Darken the colors for free days.
+        if stat_period == "1D":
+            workdays_setting = window.simplesettings.get("workdays")
+            is_free_day = (text == "Sat" and workdays_setting == 2) or (
+                text == "Sun" and workdays_setting >= 1
+            )
+            if is_free_day:
+                ctx.fillStyle = COLORS.button_text_disabled
+                ctx.fillRect(x1, y1, fullwidth, y2 - y1)
+
         # Show amount of time spend on each tag
         x = x1
         for i in range(len(stats_list)):
@@ -2562,15 +2572,16 @@ class RecordsWidget(Widget):
         # Draw big text in stronger color if it is the timerange containing today
 
         # Draw duration at the left
-        ctx.fillStyle = COLORS.prim1_clr if hover else COLORS.prim2_clr
-        fontsizeleft = bigfontsize * (0.7 if selected_tags else 0.9)
-        ctx.font = f"{fontsizeleft}px {FONT.default}"
-        ctx.textBaseline = "bottom"
-        ctx.textAlign = "left"
-        duration_text = dt.duration_string(sumcount_selected, False)
-        if selected_tags:
-            duration_text += " / " + dt.duration_string(sumcount_nominal, False)
-        ctx.fillText(duration_text, x1 + 10, y2 - ymargin)
+        if not stat_period == "1D" or sumcount_nominal > 0 or not is_free_day:
+            ctx.fillStyle = COLORS.prim1_clr if hover else COLORS.prim2_clr
+            fontsizeleft = bigfontsize * (0.7 if selected_tags else 0.9)
+            ctx.font = f"{fontsizeleft}px {FONT.default}"
+            ctx.textBaseline = "bottom"
+            ctx.textAlign = "left"
+            duration_text = dt.duration_string(sumcount_selected, False)
+            if selected_tags:
+                duration_text += " / " + dt.duration_string(sumcount_nominal, False)
+            ctx.fillText(duration_text, x1 + 10, y2 - ymargin)
 
         # Draw time-range indication at the right
         isnow = t1 < self._canvas.now() < t2
@@ -3417,14 +3428,28 @@ class AnalyticsWidget(Widget):
             ctx.fillText(duration, x_ref_duration, ty)
             # -- Row for target
             tx, ty = x_ref_labels, ymid - 2 + npixels * 0.85
+
             # Select the target that best matches the current time range
             best_target = None
-            m = {"day": 24, "week": 168, "month": 720, "year": 8760}
-            for period, divisor in m.items():
+            free_days_per_week = window.simplesettings.get("workdays")
+            free_hours_in_range = dt.get_free_hours_in_range(t1, t2, free_days_per_week)
+            work_hours_in_range = self._hours_in_range - free_hours_in_range
+            for period in ["day", "week", "month", "year"]:
                 target_hours = self._current_targets.get(period, 0)
                 if target_hours <= 0:
                     continue
-                factor = self._hours_in_range / divisor
+
+                # hours in period -> "day": 24, "week": 168, "month": 720, "year": 8760
+                if period == "day":
+                    work_hours_in_period = 24
+                elif period == "week":
+                    work_hours_in_period = 168 - free_days_per_week * 24
+                elif period == "month":  # ~4.33 weeks in a month
+                    work_hours_in_period = 720 - free_days_per_week * 24 * 4.33
+                elif period == "year":
+                    work_hours_in_period = 8760 - free_days_per_week * 24 * 52
+
+                factor = work_hours_in_range / work_hours_in_period
                 if factor > 0.93 or not best_target:
                     best_target = {
                         "period": period,
@@ -3440,13 +3465,16 @@ class AnalyticsWidget(Widget):
             if best_target:
                 done_this_period = total_time
                 target_this_period = 3600 * best_target.hours * best_target.factor
-                perc = 100 * done_this_period / target_this_period
                 prefix = "" if 0.93 < best_target.factor < 1.034 else "~ "
-                ctx.fillText(
-                    f"{best_target.period} target at {prefix}{perc:0.0f}%",
-                    tx,
-                    ty,
-                )
+                if target_this_period > 0:
+                    perc = 100 * done_this_period / target_this_period
+                    ctx.fillText(
+                        f"{best_target.period} target at {prefix}{perc:0.0f}%",
+                        tx,
+                        ty,
+                    )
+                else:
+                    ctx.fillText("No target", tx, ty)
                 left = target_this_period - done_this_period
                 left_s = dt.duration_string(abs(left), False)
                 left_prefix = "left" if left >= 0 else "over"
