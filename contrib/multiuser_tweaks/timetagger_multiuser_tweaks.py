@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """
 Some utilities to help running TimeTagger in a multi-user environment.
@@ -19,7 +19,7 @@ import binascii
 import json
 import logging
 import pathlib
-from pprint import pprint
+from pprint import pprint, pformat
 import sys
 import time
 
@@ -75,6 +75,11 @@ def setup_parser():
         default="tt_all",
         help="destination user database (default: '%(default)s')",
     )
+    records_merge_group.add_argument(
+        "--replace",
+        action="append",
+        help="Replace text entries. The format is '/original_text/replacement_text/'. You can use other separators instead of '/'. This parameter can be given multiple times.",
+    )
     parser_records.add_argument(
         "source_user", nargs="*", help="source user (default: <all>)"
     )
@@ -114,6 +119,21 @@ def itemdb_exists(db, table):
     if table not in db.get_table_names():
         return False
     return True
+
+
+def get_translation_table(replace):
+    if replace is None:
+        return None
+    table = {}
+    for i in replace:
+        sep = i[0]
+        strings = i.split(sep)
+        if len(strings) != 4 or len(strings[0]) != 0 or len(strings[3]) != 0:
+            raise ValueError(
+                f"Replacement string ('{i}') has an invalid form. Use '/original_text/replacement_text/'. You can use other separators instead of '|'."
+            )
+        table[strings[1]] = strings[2]
+    return table
 
 
 class TimeTaggerDB:
@@ -236,7 +256,7 @@ class Records(TimeTaggerDB):
             self.target_db.delete_table(self.TABLE)
             self.target_db.ensure_table(self.TABLE, *self.INDICES)
 
-    def merge_user_db(self, username):
+    def merge_user_db(self, username, replace_dict):
         if self.target_username is None:
             raise RuntimeError("Target database is not initialized")
         filename = user2filename(username)
@@ -254,14 +274,20 @@ class Records(TimeTaggerDB):
                     except KeyError:
                         row["ds"] = f"#user/{username}"
                     row["user"] = username
+                    if replace_dict:
+                        for orig, replacement in replace_dict.items():
+                            row["ds"] = row["ds"].replace(orig, replacement)
                     self.target_db.put(self.TMP_TABLE, row)
 
-    def merge(self, users=None):
+    def merge(self, users=None, replace=None):
         if not users:
             users = list(self.get_timetagger_usernames([self.target_username]))
+        replace_dict = get_translation_table(replace)
+        if replace_dict:
+            print("replacements: {}".format(pformat(replace_dict)))
         for username in users:
             print(f"merging user records of '{username}'")
-            self.merge_user_db(username)
+            self.merge_user_db(username, replace_dict)
         with self.target_db:
             # delete running timers
             self.target_db.delete(self.TMP_TABLE, "t1 = t2")
@@ -296,7 +322,7 @@ def handle_records_command(args):
         print(f"creating database for user '{args.dest}'")
         print(f"filename: {user2filename(args.dest)}")
         records = Records(args.dest)
-        records.merge(args.source_user)
+        records.merge(args.source_user, args.replace)
     else:
         args.parser.print_help()
 
