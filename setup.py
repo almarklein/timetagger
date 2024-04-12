@@ -33,6 +33,7 @@ setup(
     package_data={
         f"timetagger.{x}": ["*"] for x in ["common", "images", "app", "pages"]
     },
+    scripts=["contrib/multiuser_tweaks/timetagger_multiuser_tweaks.py"],
     python_requires=">=3.6.0",
     install_requires=runtime_deps,
     license="GPL-3.0",
