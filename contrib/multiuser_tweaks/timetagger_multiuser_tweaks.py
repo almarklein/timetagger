@@ -19,7 +19,7 @@ import binascii
 import json
 import logging
 import pathlib
-from pprint import pprint, pformat
+from pprint import pprint, pformat  # noqa
 import sys
 import time
 
@@ -33,7 +33,7 @@ def setup_parser():
     TimeTagger uses a separate Sqlite database per user.
     This tool directly accesses the databases and offers to manipulate them.
     Especially it can merge the records of multiple users
-    into one user database, replacing the existing records. 
+    into one user database, replacing the existing records.
     Every newly generated record is extended by the tag '#user/<username>'.
     This way each record still show to which user it belongs.
     """
