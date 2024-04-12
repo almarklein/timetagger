@@ -570,6 +570,7 @@ class TimeSelectionDialog(BaseDialog):
             presets.children[0].innerHTML += " <span class='keyhint'>d</span>"
             presets.children[1].innerHTML += " <span class='keyhint'>w</span>"
             presets.children[2].innerHTML += " <span class='keyhint'>m</span>"
+            presets.children[3].innerHTML += " <span class='keyhint'>q</span>"
 
         for i in range(presets.children.length):
             but = presets.children[i]
@@ -3765,6 +3766,7 @@ class SettingsDialog(BaseDialog):
             "D": "Select today",
             "W": "Select this week",
             "M": "Select this month",
+            "Q": "Select this quarter",
             "Y": "Select this year",
             "↑/PageUp": "Step back in time",
             "↓/PageDown": "Step forward in time",
