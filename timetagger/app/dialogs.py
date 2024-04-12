@@ -571,6 +571,7 @@ class TimeSelectionDialog(BaseDialog):
             presets.children[1].innerHTML += " <span class='keyhint'>w</span>"
             presets.children[2].innerHTML += " <span class='keyhint'>m</span>"
             presets.children[3].innerHTML += " <span class='keyhint'>q</span>"
+            presets.children[4].innerHTML += " <span class='keyhint'>y</span>"
 
         for i in range(presets.children.length):
             but = presets.children[i]
