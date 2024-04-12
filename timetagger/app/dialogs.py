@@ -3777,6 +3777,7 @@ class SettingsDialog(BaseDialog):
             "S": "Start the timer or add an earlier record",
             "Shift+S": "Resume the current/previous record",
             "X": "Stop the timer",
+            "F": "Open search dialog",
             "T": "Select time range",
             "R": "Open report dialog",
             "I": "Open the guide",
