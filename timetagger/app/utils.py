@@ -602,7 +602,7 @@ class SimpleSettings:
     Key-value pairs are stored in a cache for fast getters.
     The actual storage can be:
     * None / session only: unknown keys are not stored across sessions.
-    * Local storagee: a prefefined set of keys are stored in local storaged,
+    * Local storage: a prefefined set of keys are stored in local storaged,
       which means that they are device-specific.
     * Synced: synced to the server using the settings store.
     """
@@ -612,6 +612,7 @@ class SimpleSettings:
         self._local_keys = {
             "darkmode": 1,
             "width_mode": "auto",
+            "notifications": False,
             "pomodoro_enabled": False,
             "report_grouping": "date",
             "report_groupperiod": "none",
