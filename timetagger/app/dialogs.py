@@ -570,6 +570,8 @@ class TimeSelectionDialog(BaseDialog):
             presets.children[0].innerHTML += " <span class='keyhint'>d</span>"
             presets.children[1].innerHTML += " <span class='keyhint'>w</span>"
             presets.children[2].innerHTML += " <span class='keyhint'>m</span>"
+            presets.children[3].innerHTML += " <span class='keyhint'>q</span>"
+            presets.children[4].innerHTML += " <span class='keyhint'>y</span>"
 
         for i in range(presets.children.length):
             but = presets.children[i]
@@ -3765,6 +3767,7 @@ class SettingsDialog(BaseDialog):
             "D": "Select today",
             "W": "Select this week",
             "M": "Select this month",
+            "Q": "Select this quarter",
             "Y": "Select this year",
             "↑/PageUp": "Step back in time",
             "↓/PageDown": "Step forward in time",
@@ -3774,6 +3777,7 @@ class SettingsDialog(BaseDialog):
             "S": "Start the timer or add an earlier record",
             "Shift+S": "Resume the current/previous record",
             "X": "Stop the timer",
+            "F": "Open search dialog",
             "T": "Select time range",
             "R": "Open report dialog",
             "I": "Open the guide",

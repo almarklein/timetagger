@@ -1449,6 +1449,10 @@ class TopWidget(Widget):
     def _on_key(self, e):
         if e.ctrlKey or e.metaKey or e.altKey:
             return  # don't fight with the browser
+        #
+        elif e.key.lower() == "f":
+            self._handle_button_press("search")
+        #
         elif e.key.lower() == "arrowup" or e.key.lower() == "pageup":
             self._handle_button_press("nav_backward")
         elif e.key.lower() == "arrowdown" or e.key.lower() == "pagedown":
@@ -1466,6 +1470,8 @@ class TopWidget(Widget):
             self._handle_button_press("nav_snap_now1W")
         elif e.key.lower() == "m":
             self._handle_button_press("nav_snap_now1M")
+        elif e.key.lower() == "q":
+            self._handle_button_press("nav_snap_now3M")
         elif e.key.lower() == "y":
             self._handle_button_press("nav_snap_now1Y")
         elif e.key.lower() == "t":
@@ -1491,6 +1497,9 @@ class TopWidget(Widget):
 
         if action == "menu":
             self._canvas.menu_dialog.open()
+
+        elif action == "search":
+            self._canvas.search_dialog.open()
 
         elif action == "login":
             window.location.href = "../login"
