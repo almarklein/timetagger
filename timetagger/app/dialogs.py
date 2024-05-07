@@ -3826,6 +3826,7 @@ class SettingsDialog(BaseDialog):
             "T": "Select time range",
             "R": "Open report dialog",
             "I": "Open the guide",
+            "Backspace": "Unselect all tags",
         }
         shortcuts_html = ""
         for key, expl in shortcuts.items():
