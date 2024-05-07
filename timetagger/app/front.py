@@ -1452,6 +1452,8 @@ class TopWidget(Widget):
         #
         elif e.key.lower() == "f":
             self._handle_button_press("search")
+        elif e.key.lower() == "backspace":
+            self._handle_button_press("select_none")
         #
         elif e.key.lower() == "arrowup" or e.key.lower() == "pageup":
             self._handle_button_press("nav_backward")
@@ -1614,6 +1616,12 @@ class TopWidget(Widget):
                     self._canvas.range.animate_range(t1, t2, None, False)
             elif action == "nav_menu":
                 self._canvas.timeselection_dialog.open()
+
+        elif action.startswith("select_"):
+            # A selection action
+            if action == 'select_none':
+                self._canvas.widgets.AnalyticsWidget.selected_tags = []
+                self._canvas.widgets.AnalyticsWidget.update()
 
 
 class RecordsWidget(Widget):
