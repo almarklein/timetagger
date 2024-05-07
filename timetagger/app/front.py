@@ -1973,7 +1973,7 @@ class RecordsWidget(Widget):
         # Draw "now" - also if drawing stats
         t = self._canvas.now()
         y = y1 + (t - t1) * pps
-        ctx.strokeStyle = COLORS.prim1_clr
+        ctx.strokeStyle = COLORS.record_text
         ctx.lineWidth = 3  # Pretty thick so it sticks over other edges like week bounds
         ctx.setLineDash([4, 4])
         ctx.lineDashOffset = t % 8
