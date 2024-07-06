@@ -1096,7 +1096,7 @@ class TopWidget(Widget):
             {"ref": "topleft", "font": FONT.condensed},
         )
         x += margin
-
+        '''
         x += self._draw_button(
             ctx,
             x,
@@ -1125,6 +1125,7 @@ class TopWidget(Widget):
             text = "Handy guide!"
             options = {"ref": "middleleft", "color": "#000", "body": COLORS.acc_clr}
             self._draw_button(ctx, x + 30, y_balloon, None, 30, text, "", "", options)
+        '''
 
     def _draw_menu_button(self, ctx, x1, y1, x2, y2):
         if window.store.__name__.startswith("Demo"):

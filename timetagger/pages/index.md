@@ -1,3 +1,9 @@
+<script src='./app/tools.js'></script>
+
+<script>
+let state = tools.url2dict(location.hash);
+location.replace(state.page || "./login");
+</script>
 % TimeTagger - Tag your time, get the insight
 % An open source time tracker that feels lightweight and has powerful reporting.
 

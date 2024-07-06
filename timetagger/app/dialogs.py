@@ -433,21 +433,21 @@ class MenuDialog(BaseDialog):
 
         container = self.maindiv
         for icon, show, title, func in [
-            (None, True, "External pages", None),
-            ("\uf015", True, "Homepage", "/"),
-            ("\uf059", True, "Get tips and help", "https://timetagger.app/support"),
-            ("\uf0a1", True, whatsnew, whatsnew_url),
-            (None, store_valid, "Manage", None),
+            #(None, True, "External pages", None),
+            #("\uf015", True, "Homepage", "/"),
+            #("\uf059", True, "Get tips and help", "https://timetagger.app/support"),
+            #("\uf0a1", True, whatsnew, whatsnew_url),
+            #(None, store_valid, "Manage", None),
             ("\uf002", store_valid, "Search", self._search),
-            ("\uf56f", store_valid, "Import records", self._import),
+            #("\uf56f", store_valid, "Import records", self._import),
             ("\uf56e", store_valid, "Export all records", self._export),
-            (None, True, "User", None),
+            #(None, True, "User", None),
             ("\uf013", store_valid, "Settings", self._show_settings),
-            ("\uf2bd", True, "Account", "../account"),
+            #("\uf2bd", True, "Account", "../account"),
             ("\uf2f6", not logged_in, "Login", "../login"),
             ("\uf2f5", logged_in, "Logout", "../logout"),
             (None, is_installable, None, None),
-            ("\uf3fa", is_installable, "<b>Install this app</b>", self._do_install),
+            #("\uf3fa", is_installable, "<b>Install this app</b>", self._do_install),
         ]:
             if not show:
                 continue
@@ -1884,7 +1884,7 @@ class RecordDialog(BaseDialog):
             {"action": "stop", "title": "Stop"},
         ]
         options = {
-            "icon": "timetagger192_sf.png",
+            "icon": "web-logo-303.png",
             "body": record.ds or "",
             "requireInteraction": True,
             "tag": "timetagger-running",  # replace previous notifications
@@ -4319,7 +4319,7 @@ class PomodoroDialog(BaseDialog):
                 actions = []
 
             options = {
-                "icon": "timetagger192_sf.png",
+                "icon": "web-logo-303.png",
                 "body": "Click to open TimeTagger",
                 "requireInteraction": True,
                 "tag": "timetagger-pomodoro",  # replace previous notifications

@@ -1,4 +1,4 @@
-# Login
+<!-- # Login -->
 
 <script src='./app/tools.js'></script>
 
@@ -25,7 +25,7 @@ async function login(payload, silent) {
         if (!silent) {
             let text = await res.text();
             el.innerText = "Could not get token: " + text;
-            el.innerHTML = el.innerHTML + "<br><a href='../'>TimeTagger home</a>";
+            //el.innerHTML = el.innerHTML + "<br><a href='../'>TimeTagger home</a>";
         }
     } else {
         let token = JSON.parse(await res.text()).token;
@@ -66,11 +66,34 @@ async function load() {
 window.addEventListener('load', load);
 </script>
 
-<input id='input_u' type='text' placeholder='username' style='margin:4px;'/><br />
-<input id='input_p' type='password' placeholder='password' style='margin:4px;'/><br />
-<button id='submit_up' class='whitebutton' style='margin:4px;' >Submit</button>
-
-<br />
-<button id='submit_localhost' class='whitebutton' style='margin:4px; display: none;' >Login as default user (on localhost)</button>
-
-<p id='result'></p>
+<div class="center-block">
+    <!--
+    <input id='input_u' type='text' placeholder='username' style='margin:4px;'/><br />
+    <input id='input_p' type='password' placeholder='password' style='margin:4px;'/><br />
+    <button id='submit_up' class='whitebutton' style='margin:4px;' >Submit</button>
+    -->
+    <div class="login-container">
+        <div class="login-box">
+            <img src="wbcom-logo-transparent.png" alt="wbcom" class="logo">
+            <div class="form-group">
+                <div id='result'></div>
+            </div>
+            <div class="form-group">
+                <label for="username">Username:</label>
+                <input id='input_u' type='text' placeholder='username' required/>
+            </div>
+            <div class="form-group">
+                <label for="password">Password:</label>
+                <input id='input_p' type='password' placeholder='password' required/>
+            </div>
+            <div >
+                <button id='submit_up' class='whitebutton' >Submit</button>
+            </div>
+            
+        </div>
+    </div>
+    <!--
+    <br/><button id='submit_localhost' class='whitebutton' style='margin:4px; display: none;' >Login as default user (on localhost)</button>
+    <p id='result'></p>
+    -->
+</div>

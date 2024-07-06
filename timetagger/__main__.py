@@ -81,7 +81,8 @@ async def main_handler(request):
     We serve at /timetagger for a few reasons, one being that the service
     worker won't interfere with other stuff you might serve on localhost.
     """
-
+    # Original code
+    """
     if request.path == "/":
         return 307, {"Location": "/timetagger/"}, b""  # Redirect
 
@@ -100,6 +101,21 @@ async def main_handler(request):
 
     else:
         return 404, {}, "only serving at /timetagger/"
+    """
+    # Modified code
+    if request.path.startswith("/"):
+        if request.path == "/status":
+            return 200, {}, "ok"
+        elif request.path.startswith("/api/v2/"):
+            path = request.path[8:].strip("/")
+            return await api_handler(request, path)
+        elif request.path.startswith("/app/"):
+            path = request.path[5:].strip("/")
+            return await app_asset_handler(request, path)
+        else:
+            path = request.path.strip("/")
+            return await web_asset_handler(request, path)
+    return 200, {}, "ok"
 
 
 async def api_handler(request, path):
@@ -243,6 +259,8 @@ TRUSTED_PROXIES = load_trusted_proxies()
 
 
 if __name__ == "__main__":
+    kwargs = dict()
+    kwargs["workers"] = 2
     asgineer.run(
-        "timetagger.__main__:main_handler", "uvicorn", config.bind, log_level="warning"
+        "timetagger.__main__:main_handler", "uvicorn", config.bind, **kwargs
     )

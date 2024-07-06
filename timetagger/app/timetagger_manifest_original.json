@@ -11,25 +11,25 @@
     "background_color": "#E6E7E5",
     "icons": [
         {
-            "src": "web-logo-303.png",
+            "src": "timetagger192_sf.png",
             "sizes": "192x192",
             "type": "image/png",
             "purpose": "any"
         },
         {
-            "src": "web-logo-303.png",
+            "src": "timetagger512_sf.png",
             "sizes": "512x512",
             "type": "image/png",
             "purpose": "any"
         },
         {
-            "src": "web-logo-303.png",
+            "src": "timetagger192_sm.png",
             "sizes": "192x192",
             "type": "image/png",
             "purpose": "maskable"
         },
         {
-            "src": "web-logo-303.png",
+            "src": "timetagger512_sm.png",
             "sizes": "512x512",
             "type": "image/png",
             "purpose": "maskable"
