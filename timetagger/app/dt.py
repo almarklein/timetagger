@@ -110,7 +110,7 @@ def to_time_int(t):
                 t = datetime.datetime.strptime(t, "%Y-%m-%d %H:%M:%S").timestamp()
     if not isinstance(t, (int, float)):
         raise RuntimeError(f"Time must be a number, not {t!r}")
-    return int(t)
+    return max(int(t), 0)  # for dates before the epoch (1970) just clip
 
 
 def get_timezone_indicator(t, sep="", utc_offset=None):
@@ -290,11 +290,12 @@ def duration_string_colon(t, show_secs=False):
         return f"{sign}{m//60:.0f}:{m%60:02.0f}"
 
 
-def duration_string(t, show_secs=False):
+def duration_string(t, show_secs=False, repr=None):
     PSCRIPT_OVERLOAD = False  # noqa
-    repr = "hms"
-    if window.simplesettings:
-        repr = window.simplesettings.get("duration_repr", "hms")
+    if not repr:
+        repr = "hms"
+        if window.simplesettings:
+            repr = window.simplesettings.get("duration_repr", "hms")
     if repr == "hms" or repr == "dhms":
         sign = "-" if t < 0 else ""
         t = abs(t)
