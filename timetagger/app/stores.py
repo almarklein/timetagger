@@ -477,6 +477,18 @@ class RecordStore(BaseStore):
 
     def _update_bins(self, level, changed_bins):
         """Update bins of the given layer."""
+        # This uses a loop, because with recursion we too easily reach the recursion depth limit
+        PSCRIPT_OVERLOAD = False  # noqa
+
+        while True:
+            result = self._update_bins_at_level(level, changed_bins)
+            if result is not None:
+                changed_bins = result
+                level += 1
+            else:
+                break
+
+    def _update_bins_at_level(self, level, changed_bins):
         PSCRIPT_OVERLOAD = False  # noqa
 
         # Init
@@ -525,10 +537,12 @@ class RecordStore(BaseStore):
             # Remove this level and all levels above
             while len(self._heap) > level:
                 self._heap.pop(-1)
+            return None
         elif len(heaplayer.keys()) == 1:
             # Remove all levels above here
             while len(self._heap) > level + 1:
                 self._heap.pop(-1)
+            return None
         else:
             # Bubble the changes up the heap
             changed_bins2 = {}
@@ -539,7 +553,7 @@ class RecordStore(BaseStore):
                 self._heap.append({})  # New layer, update all of it
                 for nr in heaplayer.keys():
                     changed_bins2[int(nr) // 2] = True
-            self._update_bins(level + 1, changed_bins2)
+            return changed_bins2
 
     def get_running_records(self):
         """Get a list of (copies of) the running records."""
