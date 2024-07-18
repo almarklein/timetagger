@@ -1619,7 +1619,7 @@ class TopWidget(Widget):
 
         elif action.startswith("select_"):
             # A selection action
-            if action == 'select_none':
+            if action == "select_none":
                 self._canvas.widgets.AnalyticsWidget.selected_tags = []
                 self._canvas.widgets.AnalyticsWidget.update()
 
