@@ -727,7 +727,7 @@ class StartStopEdit:
 
         # Styling
         self.gridnode.style.display = "grid"
-        self.gridnode.style.gridTemplateColumns = "auto 130px 140px 2fr"
+        self.gridnode.style.gridTemplateColumns = "auto 140px 140px 2fr"
         self.gridnode.style.gridGap = "4px 0.5em"
         self.gridnode.style.justifyItems = "stretch"
         self.gridnode.style.alignItems = "stretch"
