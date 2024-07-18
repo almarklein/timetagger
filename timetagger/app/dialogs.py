@@ -665,6 +665,7 @@ class StartStopEdit:
             text_finished = "Stopped"
 
         self.node.innerHTML = f"""
+        <div style='color:#955;'></div>
         <div>
             <label style='user-select:none;'><input type='radio' name='runningornot' />&nbsp;{text_startnow}&nbsp;&nbsp;</label>
             <label style='user-select:none;'><input type='radio' name='runningornot' />&nbsp;{text_startrlr}&nbsp;&nbsp;</label>
@@ -696,8 +697,9 @@ class StartStopEdit:
         """
 
         # Unpack children
-        self.radionode = self.node.children[0]
-        self.gridnode = self.node.children[1]
+        self.warningnode = self.node.children[0]
+        self.radionode = self.node.children[1]
+        self.gridnode = self.node.children[2]
         self.radio_startnow = self.radionode.children[0].children[0]
         self.radio_startrlr = self.radionode.children[1].children[0]
         self.radio_finished = self.radionode.children[2].children[0]
@@ -937,6 +939,26 @@ class StartStopEdit:
             self.date2input.style.color = "#888"
         else:
             self.date2input.style.color = None
+
+        # Warn about some basic validity checks
+        warnings = []
+        if "1970" in t1_date:
+            warnings.append(f"Invalid date, clipped to 1970")
+        elif self.t1 < self.initial_t1 - 86400:
+            diff = dt.duration_string(self.initial_t1 - self.t1, False, "dhms")
+            warnings.append(f"moving start back {diff}")
+        if self.t2 > self.initial_t2 + 86400:
+            diff = dt.duration_string(self.t2 - self.initial_t2, False, "dhms")
+            warnings.append(f"moving end forward {diff}")
+        if self.t2 - self.t1 > 86400:
+            diff = dt.duration_string(self.t2 - self.t1, False)
+            warnings.append(f"duration is {diff}")
+        if warnings:
+            self.warningnode.innerHTML = "<i class='fas'>\uf071</i> " + ", ".join(
+                warnings
+            )
+        else:
+            self.warningnode.innerHTML = ""
 
     def onchanged(self, action):
         # step size used for time buttons
@@ -1736,6 +1758,7 @@ class RecordDialog(BaseDialog):
         self._record.t1 = self._time_edit.t1
         self._record.t2 = self._time_edit.t2
         is_running = self._record.t1 == self._record.t2
+
         self._mark_as_edited()
         # Swap mode?
         if was_running and not is_running:

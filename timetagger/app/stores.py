@@ -477,7 +477,7 @@ class RecordStore(BaseStore):
 
     def _update_bins(self, level, changed_bins):
         """Update bins of the given layer."""
-        # This uses a loop, because with recursion we too easily reach the recursion depth limit
+        # This uses a loop to avoid eaching the recursion depth limit
         PSCRIPT_OVERLOAD = False  # noqa
 
         while True:
