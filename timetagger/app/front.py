@@ -1255,11 +1255,17 @@ class TopWidget(Widget):
         running_summary = ""
         records = window.store.records.get_running_records()
         has_running = False
+        running_tag_color = None
         if len(records) > 0:
             has_running = True
             running_summary = "Timers running"
             if len(records) == 1:
-                tagz = window.store.records.tags_from_record(records[0]).join(" ")
+                running_tags = window.store.records.tags_from_record(records[0])
+                if len(running_tags) == 1:
+                    running_tag_color = window.store.settings.get_color_for_tag(
+                        running_tags[0]
+                    )
+                tagz = running_tags.join(" ")
                 stop_tt += " " + tagz
                 if window.simplesettings.get("show_stopwatch"):
                     running_summary = dt.duration_string(now - records[0].t1, True)
@@ -1284,7 +1290,11 @@ class TopWidget(Widget):
                 "fas-\uf04d",
                 "record_stopall",
                 stop_tt,
-                {"ref": "topright", "font": FONT.condensed, "color": COLORS.acc_clr},
+                {
+                    "ref": "topright",
+                    "font": FONT.condensed,
+                    "color": running_tag_color if running_tag_color else COLORS.acc_clr,
+                },
             )
             x -= dx + 3
             dx = self._draw_button(
