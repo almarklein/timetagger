@@ -1630,8 +1630,7 @@ class TopWidget(Widget):
         elif action.startswith("select_"):
             # A selection action
             if action == "select_none":
-                self._canvas.widgets.AnalyticsWidget.selected_tags = []
-                self._canvas.widgets.AnalyticsWidget.update()
+                self._canvas.widgets.AnalyticsWidget.unselect_all_tags()
 
 
 class RecordsWidget(Widget):
@@ -3700,6 +3699,11 @@ class AnalyticsWidget(Widget):
                 tx += 12 + self._draw_button(
                     ctx, tx, ty, None, but_height, tag, "select:" + tag, tt, opt
                 )
+
+    def unselect_all_tags(self):
+        self.selected_tags = []
+        self._tag_bars_dict = {}  # trigger animation
+        self.update()
 
     def on_pointer(self, ev):
         x, y = ev.pos[0], ev.pos[1]
