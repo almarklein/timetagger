@@ -164,11 +164,28 @@ def time2str(t, utc_offset=None):
 
 
 def time2localstr(t):
-    """Convert a time int into a textual local representation, and with a space instead of T."""
+    """Convert a time int into a textual local representation, and with a space instead of T. Note that the date is always yyyy-mm-dd"""
     s = time2str(t)
     s1, s2 = s.split("T")
     s2 = s2.split("-")[0].split("+")[0].rstrip("Z")
     return s1 + " " + s2
+
+
+def format_isodate(date, fmt=None):
+    "Format an iso date to a formatted date."
+    yyyy, mm, dd = date.split("-")
+    if fmt is None:
+        fmt = "dd-mm-yyyy"
+        if window.simplesettings:
+            fmt = window.simplesettings.get("date_repr", fmt)
+    if fmt == "yyyy-mm-dd":
+        return yyyy + "-" + mm + "-" + dd
+    elif fmt == "dd-mm-yyyy":
+        return dd + "-" + mm + "-" + yyyy
+    elif fmt == "mm/dd/yyyy":
+        return mm + "/" + dd + "/" + yyyy
+    else:
+        return date
 
 
 def round(t, res):

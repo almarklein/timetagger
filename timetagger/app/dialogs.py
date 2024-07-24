@@ -2837,7 +2837,9 @@ class ReportDialog(BaseDialog):
         close_but = self.maindiv.children[0].children[-1]
         close_but.onclick = self.close
         self._date_range.innerHTML = (
-            t1_date + "&nbsp;&nbsp;&ndash;&nbsp;&nbsp;" + t2_date
+            dt.format_isodate(t1_date)
+            + "&nbsp;&nbsp;&ndash;&nbsp;&nbsp;"
+            + dt.format_isodate(t2_date)
         )
         self._date_range.innerHTML += (
             "&nbsp;&nbsp;<button type='button'><i class='fas'>\uf073</i></button>"
@@ -3040,7 +3042,7 @@ class ReportDialog(BaseDialog):
                     date = dt.time2localstr(record.t1).split(" ")[0]
                     year = int(date.split("-")[0])
                     if group_period == "day":
-                        period = "-".join(reversed(date.split("-")))
+                        period = dt.format_isodate(date)
                     elif group_period == "week":
                         week = dt.get_weeknumber(record.t1)
                         period = f"{year}W{week}"
@@ -3114,7 +3116,7 @@ class ReportDialog(BaseDialog):
                             "record",
                             record.key,
                             duration,
-                            sd1,
+                            dt.format_isodate(sd1),
                             st1,
                             st2,
                             to_str(record.get("ds", "")),  # strip tabs and newlines
@@ -3261,8 +3263,8 @@ class ReportDialog(BaseDialog):
         # )
 
         tagname = self._tags.join(" ") if self._tags else "all"
-        d1 = reversed(self._t1_date.split("-")).join("-")
-        d2 = reversed(self._t2_date.split("-")).join("-")
+        d1 = dt.format_isodate(self._t1_date)
+        d2 = dt.format_isodate(self._t2_date)
         doc.setFontSize(11)
         doc.text("Tags:  ", margin + 20, margin + 15, {"align": "right"})
         doc.text(tagname, margin + 20, margin + 15)
@@ -3877,6 +3879,12 @@ class SettingsDialog(BaseDialog):
                     <option value='1'>Monday - Saturday</option>
                     <option value='0'>Monday - Sunday</option>
                 </select>
+                <div>Show dates as:</div>
+                <select>
+                    <option value='yyyy-mm-dd'>yyyy-mm-dd (ISO 8601)</option>
+                    <option value='dd-mm-yyyy'>dd-mm-yyyy (default)</option>
+                    <option value='mm/dd/yyyy'>mm/dd/yyyy (US)</option>
+                </select>
                 <div>Show time as:</div>
                 <select>
                     <option value='auto'>Auto</option>
@@ -3991,27 +3999,33 @@ class SettingsDialog(BaseDialog):
         self._workdays.value = workdays
         self._workdays.onchange = self._on_workdays_change
 
+        # Date representation
+        date_repr = window.simplesettings.get("date_repr")
+        self._date_repr = self._repr_form.children[5]
+        self._date_repr.value = date_repr
+        self._date_repr.onchange = self._on_date_repr_change
+
         # Time representation
         time_repr = window.simplesettings.get("time_repr")
-        self._time_repr = self._repr_form.children[5]
+        self._time_repr = self._repr_form.children[7]
         self._time_repr.value = time_repr
         self._time_repr.onchange = self._on_time_repr_change
 
         # Duration representation
         duration_repr = window.simplesettings.get("duration_repr")
-        self._duration_repr = self._repr_form.children[7]
+        self._duration_repr = self._repr_form.children[9]
         self._duration_repr.value = duration_repr
         self._duration_repr.onchange = self._on_duration_repr_change
 
         # Today snap time/offset
         today_snap_offset = window.simplesettings.get("today_snap_offset")
-        self._today_snap_offset = self._repr_form.children[9]
+        self._today_snap_offset = self._repr_form.children[11]
         self._today_snap_offset.value = today_snap_offset
         self._today_snap_offset.onchange = self._on_today_snap_offset_change
 
         # Today number of hours
         today_end_offset = window.simplesettings.get("today_end_offset")
-        self._today_end_offset = self._repr_form.children[11]
+        self._today_end_offset = self._repr_form.children[13]
         self._today_end_offset.value = today_end_offset
         self._today_end_offset.onchange = self._on_today_end_offset_change
 
@@ -4061,6 +4075,10 @@ class SettingsDialog(BaseDialog):
     def _on_workdays_change(self):
         workdays = int(self._workdays.value)
         window.simplesettings.set("workdays", workdays)
+
+    def _on_date_repr_change(self):
+        date_repr = self._date_repr.value
+        window.simplesettings.set("date_repr", date_repr)
 
     def _on_time_repr_change(self):
         time_repr = self._time_repr.value
