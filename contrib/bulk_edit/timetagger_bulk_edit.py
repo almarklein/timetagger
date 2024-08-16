@@ -80,66 +80,60 @@ from timetagger.server._utils import user2filename, filename2user, ROOT_USER_DIR
 
 def setup_parser():
     argparser = argparse.ArgumentParser(
-        description=(
-            'Bulk editor for Timetagger SQLite databases.'
-        )
-    )
-
-
-    argparser.add_argument(
-        'username',
-        default='_LIST',
-        help='The username. Use "_LIST" as the username to get a list of all usernames.'
+        description=("Bulk editor for Timetagger SQLite databases.")
     )
 
     argparser.add_argument(
-        '-d',
-        '--debug',
-        action='store_true',
-        help='enable debugging output'
+        "username",
+        default="_LIST",
+        help='The username. Use "_LIST" as the username to get a list of all usernames.',
     )
 
     argparser.add_argument(
-        '-c',
-        '--colorize',
+        "-d", "--debug", action="store_true", help="enable debugging output"
+    )
+
+    argparser.add_argument(
+        "-c",
+        "--colorize",
         nargs=2,
-        help='Colorizes the given tags with the given color: STRING|FILE COLOR.'
+        help="Colorizes the given tags with the given color: STRING|FILE COLOR.",
     )
 
     argparser.add_argument(
-        '-p',
-        '--priority',
+        "-p",
+        "--priority",
         nargs=2,
-        help='Set priority for the given tags with the given priority: STRING|FILE PRIORITY.'
+        help="Set priority for the given tags with the given priority: STRING|FILE PRIORITY.",
     )
 
     argparser.add_argument(
-        '-t',
-        '--targets',
+        "-t",
+        "--targets",
         nargs=2,
-        help='Set targets for the given tags with the given targets: STRING|FILE TARGETS.'
+        help="Set targets for the given tags with the given targets: STRING|FILE TARGETS.",
     )
 
     argparser.add_argument(
-        '-dr',
-        '--delete-range',
+        "-dr",
+        "--delete-range",
         nargs=2,
         help=(
-            'Delete records between FROM and TO (unix timestamps). When setting one or both to -1,'
-            + ' all records before, after or even ALL records will be deleted!'
-            + ' So use it like -d FROM TO; e.g. -d 1713520609 -1 will remove all entries '
-            + '  beginning from 19th April of 2024.'
-        )
+            "Delete records between FROM and TO (unix timestamps). When setting one or both to -1,"
+            + " all records before, after or even ALL records will be deleted!"
+            + " So use it like -d FROM TO; e.g. -d 1713520609 -1 will remove all entries "
+            + "  beginning from 19th April of 2024."
+        ),
     )
 
     argparser.add_argument(
-        '-dt',
-        '--delete-tags',
+        "-dt",
+        "--delete-tags",
         nargs=1,
         help=(
-            'Delete records which have all the given tags. Can be a file or a string,'
+            "Delete records which have all the given tags. Can be a file or a string,"
             + ' e.g. "-dt #clientA,#projectB'
-        )
+        ),
     )
 
     return argparser
@@ -174,25 +168,29 @@ class BulkEditor:
     def get_list_from_string_or_file(self, str_or_file):
         # try to load content from file, if it's a file
         if os.path.exists(str_or_file):
-            with open(str_or_file, 'r') as myfile:
+            with open(str_or_file, "r") as myfile:
                 data = myfile.read()
         else:
             data = str_or_file
 
         # split the given content by comma or newlines
-        if ',' in data:
+        if "," in data:
             # here I first remove any hash signs and add them new.
             # that way the given strings do not have to have hash
             # signs yet they may have.
-            return [f'#{i.strip().replace("#", "")}' for i in data.split(',') if i.strip()]
-        elif '\n' in data:
-            return [f'#{i.strip().replace("#", "")}' for i in data.splitlines() if i.strip()]
+            return [
+                f'#{i.strip().replace("#", "")}' for i in data.split(",") if i.strip()
+            ]
+        elif "\n" in data:
+            return [
+                f'#{i.strip().replace("#", "")}' for i in data.splitlines() if i.strip()
+            ]
         else:
             return [f'#{data.replace("#", "")}']
 
     def get_db_by_username(self, username):
         filename = user2filename(username)
-        self.logger.debug(f'Using file: {filename}')
+        self.logger.debug(f"Using file: {filename}")
         return ItemDB(filename)
 
 
@@ -203,7 +201,7 @@ class Settings(BulkEditor):
         self.TABLE = "settings"
 
     def get_settings_item_or_create_new(self, key):
-        selected = self.db.select_one(self.TABLE, 'key = ?', key)
+        selected = self.db.select_one(self.TABLE, "key = ?", key)
         if selected:
             return selected
         else:
@@ -215,14 +213,10 @@ class Settings(BulkEditor):
             # maybe I have to update this at some point, when
             # e.g. tags can get more settings values or so.
             return {
-                'key': key,
-                'value': {
-                    'targets': {},
-                    'priority': 0,
-                    'color': '#DEAA22'
-                },
-                'st': now,
-                'mt': now
+                "key": key,
+                "value": {"targets": {}, "priority": 0, "color": "#DEAA22"},
+                "st": now,
+                "mt": now,
             }
 
     def modify_tags(self, tags, color=None, priority=None, targets=None):
@@ -238,24 +232,32 @@ class Settings(BulkEditor):
         with self.db:
             for tag in tags:
                 # gettint the item and modify it, or get a blank new one
-                key = 'taginfo ' + tag
+                key = "taginfo " + tag
                 item = self.get_settings_item_or_create_new(key)
-                item = self.modify_single_tag(item, color=color, priority=priority, targets=targets)
+                item = self.modify_single_tag(
+                    item, color=color, priority=priority, targets=targets
+                )
                 self.db.put(self.TABLE, item)
 
     def modify_single_tag(self, item, color=None, priority=None, targets=None):
         now = int(time.time())
-        item['st'] = now
+        item["st"] = now
         if color is not None:
             color = f'#{color.replace("#", "")}'
-            self.logger.debug(f'Setting color to: {str(color)} for {item["key"].replace("taginfo ", "")}')
-            item['value']['color'] = color
+            self.logger.debug(
+                f'Setting color to: {str(color)} for {item["key"].replace("taginfo ", "")}'
+            )
+            item["value"]["color"] = color
         if priority is not None:
-            self.logger.debug(f'Setting priority to: {str(priority)} for {item["key"].replace("taginfo ", "")}')
-            item['value']['priority'] = priority
+            self.logger.debug(
+                f'Setting priority to: {str(priority)} for {item["key"].replace("taginfo ", "")}'
+            )
+            item["value"]["priority"] = priority
         if targets is not None:
-            self.logger.debug(f'Setting targets to: {str(targets)} for {item["key"].replace("taginfo ", "")}')
-            item['value']['targets'] = json.loads(targets)
+            self.logger.debug(
+                f'Setting targets to: {str(targets)} for {item["key"].replace("taginfo ", "")}'
+            )
+            item["value"]["targets"] = json.loads(targets)
         return item
 
 
@@ -280,7 +282,9 @@ class Records(BulkEditor):
                     # it's maybe (hopefully at least) in the format YYYY-MM-DD
                     dt = datetime.datetime.strptime(time_string, "%Y-%m-%d")
                     if end_of_day_on_missing_time:
-                        dt = dt.replace(hour=23, minute=59, second=59, microsecond=999999)
+                        dt = dt.replace(
+                            hour=23, minute=59, second=59, microsecond=999999
+                        )
                     return int(dt.timestamp())
                 except ValueError as e:
                     return time_string
@@ -291,15 +295,19 @@ class Records(BulkEditor):
         then uses the found items array with the delete_records()
         method.
         """
-        from_unix_timestamp = Records.get_unix_timestamp_from_string(from_unix_timestamp)
-        to_unix_timestamp = Records.get_unix_timestamp_from_string(to_unix_timestamp, True)
+        from_unix_timestamp = Records.get_unix_timestamp_from_string(
+            from_unix_timestamp
+        )
+        to_unix_timestamp = Records.get_unix_timestamp_from_string(
+            to_unix_timestamp, True
+        )
 
         all_items = self.db.select_all(self.TABLE)
         items = []
 
         # basically delete all entries ... :'-)
         if from_unix_timestamp == -1 and to_unix_timestamp == -1:
-            self.logger.debug(f'Deleting records in time range: ALL records!')
+            self.logger.debug(f"Deleting records in time range: ALL records!")
             items = all_items
         # delete entries from a given time
         elif from_unix_timestamp != -1 and to_unix_timestamp == -1:
@@ -307,14 +315,14 @@ class Records(BulkEditor):
             self.logger.debug(
                 f'Deleting records in time range: since {from_date.strftime("%Y-%m-%d %H:%M:%S")}!'
             )
-            items = [i for i in all_items if i['t1'] > from_unix_timestamp]
+            items = [i for i in all_items if i["t1"] > from_unix_timestamp]
         # delete entries to a given time
         elif from_unix_timestamp == -1 and to_unix_timestamp != -1:
             to_date = datetime.datetime.fromtimestamp(to_unix_timestamp)
             self.logger.debug(
                 f'Deleting records in time range: till {to_date.strftime("%Y-%m-%d %H:%M:%S")}!'
             )
-            items = [i for i in all_items if i['t2'] < to_unix_timestamp]
+            items = [i for i in all_items if i["t2"] < to_unix_timestamp]
         # delete entries between a given time range
         elif from_unix_timestamp != -1 and to_unix_timestamp != -1:
             from_date = datetime.datetime.fromtimestamp(from_unix_timestamp)
@@ -322,7 +330,11 @@ class Records(BulkEditor):
             self.logger.debug(
                 f'Deleting records in time range: from {from_date.strftime("%Y-%m-%d %H:%M:%S")} to {to_date.strftime("%Y-%m-%d %H:%M:%S")}!'
             )
-            items = [i for i in all_items if i['t1'] > from_unix_timestamp and i['t2'] < to_unix_timestamp]
+            items = [
+                i
+                for i in all_items
+                if i["t1"] > from_unix_timestamp and i["t2"] < to_unix_timestamp
+            ]
 
         self.delete_records(items)
 
@@ -353,11 +365,10 @@ class Records(BulkEditor):
         )
 
         for item in all_items:
-            if Records.description_has_tags(item['ds'], tags):
+            if Records.description_has_tags(item["ds"], tags):
                 items.append(item)
 
         self.delete_records(items)
-
 
     def delete_records(self, items):
         """
@@ -369,11 +380,10 @@ class Records(BulkEditor):
         with self.db:
             for item in items:
                 # line is basically copied from timetaggers stores.py
-                item['ds'] = "HIDDEN " + item.get("ds", "").split("HIDDEN")[-1].strip()
+                item["ds"] = "HIDDEN " + item.get("ds", "").split("HIDDEN")[-1].strip()
                 now = int(time.time())
-                item['st'] = now
+                item["st"] = now
                 self.db.put(self.TABLE, item)
-
 
 
 if __name__ == "__main__":
@@ -389,7 +399,7 @@ if __name__ == "__main__":
         logger.setLevel(logging.DEBUG)
         logger.debug(args)
 
-    if args.username == '_LIST':
+    if args.username == "_LIST":
         print(f'Users: {", ".join(BulkEditor.get_timetagger_usernames())}')
         exit()
 
