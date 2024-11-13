@@ -43,7 +43,7 @@ class Config:
     """
 
     _ITEMS = [
-        ("bind", str, "0.0.0.0:80"),
+        ("bind", str, "127.0.0.1:1000"),
         ("datadir", str, "~/_timetagger"),
         ("log_level", str, "info"),
         ("credentials", str, ""),
