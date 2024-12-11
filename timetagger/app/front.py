@@ -2009,7 +2009,7 @@ class RecordsWidget(Widget):
 
         y0, y3 = y1 - 50, self._canvas.h
         t1, t2 = self._canvas.range.get_range()
-        now = self._canvas.now()
+        # now = self._canvas.now()
 
         # Get range, in seconds and pixels for the time range
         npixels = y2 - y1  # number if logical pixels we can use
@@ -2032,7 +2032,10 @@ class RecordsWidget(Widget):
         #     self._help_text = "click a record to edit it"
 
         # Sort records by size, so records cannot be completely overlapped by another
-        records.sort(key=lambda r: r.t1 - (now if (r.t1 == r.t2) else r.t2))
+        # Or ... by t2, which works better when the labels are made to overlap in a cluster,
+        # see the distance = ref_distance - ... below
+        # records.sort(key=lambda r: r.t1 - (now if (r.t1 == r.t2) else r.t2))
+        records.sort(key=lambda r: -r.t2)
 
         # Prepare by collecting stuff per record, and determine selected record
         self._record_times = {}
@@ -2057,7 +2060,7 @@ class RecordsWidget(Widget):
                 clusters.push([pos])
 
         # Iteratively merge clusters
-        distance = 40 + 8
+        ref_distance = 40 + 8
         for iter in range(5):  # while-loop with max 5 iters, just in case
             # Try merging clusters if they're close. Do this from back to front,
             # so we can merge multiple together in one pass
@@ -2065,7 +2068,7 @@ class RecordsWidget(Widget):
             for i in range(len(clusters) - 2, -1, -1):
                 pos1 = clusters[i][-1]
                 pos2 = clusters[i + 1][0]
-                if pos2.y - pos1.y < distance:
+                if pos2.y - pos1.y < ref_distance:
                     merged_a_cluster = True
                     cluster = []
                     cluster.extend(clusters.pop(i))
@@ -2077,6 +2080,7 @@ class RecordsWidget(Widget):
             # Reposition the elements in each cluster. The strategy for setting
             # positions depends on whether the cluster is near the top/bottom.
             for cluster in clusters:
+                distance = ref_distance - min(20, 0.7 * len(cluster))
                 if cluster[0].visible == "top":
                     ref_y = cluster[0].y
                     for i, pos in enumerate(cluster):

@@ -1042,6 +1042,15 @@ class DemoDataStore(BaseDataStore):
         self._create_tags()
         self._create_one_year_of_data(self._years.pop(-1))
 
+        # Add many small records, for testing
+        # ds = "hello #there"
+        # t = dt.now()
+        # for i in range(20):
+        #     t2 = t + 220
+        #     record = self.records.create(t, t2, ds)
+        #     t = t2
+        #     self.records._put_received(record)
+
     async def _sync(self):
         """Emulate a sync action."""
         for kind in ["settings", "records"]:
