@@ -411,6 +411,9 @@ class TimeRange:
         # The math
         t1_actual = dt.floor(now, "1D")
         t1 = dt.add(t1_actual, today_snap_offset) if today_snap_offset else t1_actual
+        # If it's after midnight, we might still be in the previous offset day.
+        if t1 > now:
+            t1 = dt.add(t1, "-1D")
         t2 = dt.add(t1, "1D")
         t2 = dt.add(t2, today_end_offset) if today_end_offset else t2
         # Toggle to a full day (0h-24h) if the range already matches.
