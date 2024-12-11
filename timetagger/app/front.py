@@ -2009,7 +2009,7 @@ class RecordsWidget(Widget):
 
         y0, y3 = y1 - 50, self._canvas.h
         t1, t2 = self._canvas.range.get_range()
-        now = self._canvas.now()
+        # now = self._canvas.now()
 
         # Get range, in seconds and pixels for the time range
         npixels = y2 - y1  # number if logical pixels we can use
