@@ -3899,6 +3899,9 @@ class SettingsDialog(BaseDialog):
                 </select>
                 <div>Today starts at:</div>
                 <select>
+                    <option value='-3h'>21:00</option>
+                    <option value='-2h'>22:00</option>
+                    <option value='-1h'>23:00</option>
                     <option value=''>00:00</option>
                     <option value='1h'>01:00</option>
                     <option value='2h'>02:00</option>
