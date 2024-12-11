@@ -2129,6 +2129,10 @@ class RecordsWidget(Widget):
         ry1 = y0 + npixels * (record.t1 - t1) / nsecs
         ry2 = y0 + npixels * (t2_or_now - t1) / nsecs
 
+        # Get margin for making space for record before its visible
+        npixels_record = max(0, ry2 - ry1)
+        visible_margin = min(npixels_record, 40)
+
         # Determine preferred position
         pref = y = (ry1 + ry2) / 2
         visible = "main"
@@ -2138,7 +2142,7 @@ class RecordsWidget(Widget):
             if ry2 < y1:
                 # Start claiming space before it is visible
                 y -= 2 * (y1 - ry2)
-                if ry2 < y1 - 40:
+                if ry2 < y1 - visible_margin:
                     visible = ""
         elif y > y2 - 20:
             y = y2 - 20
@@ -2146,7 +2150,7 @@ class RecordsWidget(Widget):
             if ry1 > y2:
                 # Start claiming space before it is visible
                 y += 2 * (ry1 - y2)
-                if ry1 > y2 + 40:
+                if ry1 > y2 + visible_margin:
                     visible = ""
 
         return {"pref": pref, "y": y, "visible": visible}
