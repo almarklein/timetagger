@@ -12,11 +12,24 @@ services:
   timetagger:
     image: ghcr.io/almarklein/timetagger
     ports:
-      - "80:80"
+      - "8888:80"
     volumes:
-      - ./_timetagger:/root/_timetagger
+      - timetagger:/root/_timetagger
     environment:
       - TIMETAGGER_BIND=0.0.0.0:80
       - TIMETAGGER_DATADIR=/root/_timetagger
       - TIMETAGGER_LOG_LEVEL=info
-      - TIMETAGGER_CREDENTIALS=test:$$2a$$08$$0CD1NFiIbancwWsu3se1v.RNR/b7YeZd71yg3cZ/3whGlyU6Iny5i  # test:test
+      
+      # The default local auth test:test, comment this line if not used "i.e in production"
+      - TIMETAGGER_CREDENTIALS=test:$$2a$$08$$0CD1NFiIbancwWsu3se1v.RNR/b7YeZd71yg3cZ/3whGlyU6Iny5i
+
+      # Using the reverse proxy authintication
+      # I use cosmos-cloud.io, change corrosponding headers and ip for the proxy
+      # Uncomment the following 3 lines if not using proxy to auth
+      - TIMETAGGER_PROXY_AUTH_ENABLED=true 
+      - TIMETAGGER_PROXY_AUTH_TRUSTED=100.0.0.0/8
+      - TIMETAGGER_PROXY_AUTH_HEADER='X-cosmos-user'
+      
+volumes:
+  timetagger:
+    driver: local
