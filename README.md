@@ -52,6 +52,8 @@ pip install -U timetagger
 
 # Run
 python -m timetagger
+# or
+timetagger
 ```
 
 If the server runs on your local machine, you can use single-user mode out-of-the-box.

@@ -34,6 +34,7 @@ setup(
         f"timetagger.{x}": ["*"] for x in ["common", "images", "app", "pages"]
     },
     scripts=["contrib/multiuser_tweaks/timetagger_multiuser_tweaks.py"],
+    entry_points={"console_scripts": ["timetagger=timetagger.__main__:main"]},
     python_requires=">=3.6.0",
     install_requires=runtime_deps,
     license="GPL-3.0",
