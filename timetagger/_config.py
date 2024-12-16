@@ -13,7 +13,7 @@ def to_bool(value):
 class Config:
     """Object that holds config values.
 
-    * `bind (str)`: the address and port to bind on. Default "0.0.0.0:80".
+    * `bind (str)`: the address and port to bind on. Default "127.0.0.1:8080".
     * `datadir (str)`: the directory to store data. Default "~/_timetagger".
       The user db's are stored in `datadir/users`.
     * `log_level (str)`: the log level for timetagger and asgineer
@@ -43,7 +43,7 @@ class Config:
     """
 
     _ITEMS = [
-        ("bind", str, "0.0.0.0:80"),
+        ("bind", str, "127.0.0.1:8080"),
         ("datadir", str, "~/_timetagger"),
         ("log_level", str, "info"),
         ("credentials", str, ""),
