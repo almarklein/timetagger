@@ -3,7 +3,7 @@
 # Used by CI to build the image that is pushed to ghcr.
 # Unpriviliged version that installs and runs as UID 1000.
 
-FROM python:3.10-slim-buster
+FROM python:3.13-slim-bookworm
 
 # Create unpriviliged user and group, including directory structure
 RUN groupadd -g 1000 timetagger && \
