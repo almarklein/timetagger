@@ -36,12 +36,6 @@ jobs:
     strategy:
       matrix:
         include:
-          - name: Linux py37
-            os: ubuntu-latest
-            pyversion: '3.7'
-          - name: Linux py38
-            os: ubuntu-latest
-            pyversion: '3.8'
           - name: Linux py39
             os: ubuntu-latest
             pyversion: '3.9'
@@ -51,15 +45,21 @@ jobs:
           - name: Linux py311
             os: ubuntu-latest
             pyversion: '3.11'
+          - name: Linux py312
+            os: ubuntu-latest
+            pyversion: '3.12'
+          - name: Linux py313
+            os: ubuntu-latest
+            pyversion: '3.13'
           - name: Linux pypy3
             os: ubuntu-latest
             pyversion: 'pypy3.9'
-          - name: Windows py39
+          - name: Windows py313
             os: windows-latest
-            pyversion: '3.9'
-          - name: MacOS py39
+            pyversion: '3.13'
+          - name: MacOS py313
             os: macos-latest
-            pyversion: '3.9'
+            pyversion: '3.13'
     steps:
       - uses: actions/checkout@v3
       - name: Set up Python ${{ matrix.pyversion }}
