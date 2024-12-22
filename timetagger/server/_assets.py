@@ -29,9 +29,7 @@ AUDIO_EXTS = ".wav", ".mp3", ".ogg"
 re_fas = re.compile(r"\>(\\uf[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F])\<")
 
 default_template = (
-    open(resources.files("timetagger.common") / "_template.html", "rb")
-    .read()
-    .decode()
+    open(resources.files("timetagger.common") / "_template.html", "rb").read().decode()
 )
 
 
