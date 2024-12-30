@@ -2,7 +2,7 @@
 # Note that the build context must be the root of the repo.
 # Used by CI to build the image that is pushed to ghcr.
 
-FROM python:3.10-slim-buster
+FROM python:3.13-slim-bookworm
 
 WORKDIR /root
 COPY . .

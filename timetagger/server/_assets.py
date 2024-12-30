@@ -7,7 +7,7 @@ import os
 import re
 import hashlib
 import logging
-import pkg_resources
+from importlib import resources
 
 import jinja2
 import pscript
@@ -29,14 +29,12 @@ AUDIO_EXTS = ".wav", ".mp3", ".ogg"
 re_fas = re.compile(r"\>(\\uf[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F])\<")
 
 default_template = (
-    open(pkg_resources.resource_filename("timetagger.common", "_template.html"), "rb")
-    .read()
-    .decode()
+    open(resources.files("timetagger.common") / "_template.html", "rb").read().decode()
 )
 
 
 def _get_base_style():
-    fname = pkg_resources.resource_filename("timetagger.common", "_style_embed.scss")
+    fname = resources.files("timetagger.common") / "_style_embed.scss"
     with open(fname, "rb") as f:
         text = f.read().decode()
     return utils.get_scss_vars(text), utils.compile_scss_to_css(text)

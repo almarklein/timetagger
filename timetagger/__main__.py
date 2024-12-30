@@ -23,7 +23,7 @@ import sys
 import json
 import logging
 from base64 import b64decode
-from pkg_resources import resource_filename
+from importlib import resources
 
 import bcrypt
 import asgineer
@@ -55,10 +55,10 @@ if __name__ == "__main__" and len(sys.argv) >= 2:
 logger = logging.getLogger("asgineer")
 
 # Get sets of assets provided by TimeTagger
-common_assets = create_assets_from_dir(resource_filename("timetagger.common", "."))
-apponly_assets = create_assets_from_dir(resource_filename("timetagger.app", "."))
-image_assets = create_assets_from_dir(resource_filename("timetagger.images", "."))
-page_assets = create_assets_from_dir(resource_filename("timetagger.pages", "."))
+common_assets = create_assets_from_dir(resources.files("timetagger.common") / ".")
+apponly_assets = create_assets_from_dir(resources.files("timetagger.app") / ".")
+image_assets = create_assets_from_dir(resources.files("timetagger.images") / ".")
+page_assets = create_assets_from_dir(resources.files("timetagger.pages") / ".")
 
 # Combine into two groups. You could add/replace assets here.
 app_assets = dict(**common_assets, **image_assets, **apponly_assets)
