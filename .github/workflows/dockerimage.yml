@@ -77,7 +77,10 @@ jobs:
         uses: docker/metadata-action@v4
         with:
           images: ghcr.io/${{ github.repository }}
-          tags: type=ref,event=tag,suffix=-nonroot
+          tags: |
+            type=ref,event=tag,suffix=-nonroot
+            # set latest-nonroot tag for default branch
+            type=raw,value=latest-nonroot
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v4
