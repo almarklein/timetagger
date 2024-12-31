@@ -10,7 +10,7 @@
 version: "3"
 services:
   timetagger:
-    image: ghcr.io/almarklein/timetagger:v23.9.2-nonroot
+    image: ghcr.io/almarklein/timetagger:latest-nonroot
     ports:
       - "80:80"
     volumes:
