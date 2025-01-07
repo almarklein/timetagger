@@ -1,8 +1,12 @@
 """
-Default script to run timetagger.
+Default implementation to set up and run the server.
+
+The `serve` function of this module is used to start the server. It is
+called by `__main__.py` (when you run `python -m timetagger` or
+`timetagger_server`).
 
 The timetagger library behaves like a framework; it provides the
-building blocks to setup a timetracking app. This script puts things
+building blocks to setup a timetracking app. This module puts things
 together in the "default way". You can also create your own script to
 customize/extend timetagger or embed in it a larger application.
 
@@ -11,12 +15,12 @@ Timetagger implements its own token-based authentication, but it needs
 to be "bootstrapped": the server needs to provide the first webtoken
 when it has established trust in some way.
 
-This script implements two methods to do this:
+This module implements two methods to do this:
 * A single-user login when client and server are on the same machine (localhost).
 * Authentication with credentials specified as config params.
 
 If you want another form of login, you will need to implement that yourself,
-using a modified version of this script.
+using a modified version of this module.
 """
 
 import json
@@ -234,6 +238,9 @@ TRUSTED_PROXIES = load_trusted_proxies()
 
 
 def serve():
+    """
+    Run the server.
+    """
     asgineer.run(
         "timetagger._serve:main_handler", "uvicorn", config.bind, log_level="warning"
     )

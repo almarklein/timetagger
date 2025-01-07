@@ -1,3 +1,12 @@
+"""
+Default script to run timetagger.
+
+The script can be run by calling `python -m timetagger`, or
+`timetagger_server` if timetagger is properly installed.
+
+See `timetagger._serve` for the code that actually sets up and runs the server.
+"""
+
 import sys
 
 import asgineer
