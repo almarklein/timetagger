@@ -7,4 +7,3 @@ jinja2
 markdown
 bcrypt
 iptools
-setuptools; python_version >= "3.12"
