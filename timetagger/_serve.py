@@ -22,7 +22,7 @@ using a modified version of this script.
 import json
 import logging
 from base64 import b64decode
-from pkg_resources import resource_filename
+from importlib import resources
 
 import bcrypt
 import asgineer
@@ -41,10 +41,10 @@ from timetagger.server import (
 logger = logging.getLogger("asgineer")
 
 # Get sets of assets provided by TimeTagger
-common_assets = create_assets_from_dir(resource_filename("timetagger.common", "."))
-apponly_assets = create_assets_from_dir(resource_filename("timetagger.app", "."))
-image_assets = create_assets_from_dir(resource_filename("timetagger.images", "."))
-page_assets = create_assets_from_dir(resource_filename("timetagger.pages", "."))
+common_assets = create_assets_from_dir(resources.files("timetagger.common") / ".")
+apponly_assets = create_assets_from_dir(resources.files("timetagger.app") / ".")
+image_assets = create_assets_from_dir(resources.files("timetagger.images") / ".")
+page_assets = create_assets_from_dir(resources.files("timetagger.pages") / ".")
 
 # Combine into two groups. You could add/replace assets here.
 app_assets = dict(**common_assets, **image_assets, **apponly_assets)
@@ -188,7 +188,12 @@ async def get_webtoken_localhost(request, auth_info):
     """An authentication handler that provides a webtoken when the
     hostname is localhost. See `get_webtoken_unsafe()` for details.
     """
-
+    if not config.bind.startswith("127.0.0.1"):
+        return (
+            403,
+            {},
+            "Can only login via localhost if the server address (config.bind) is '127.0.0.1'",
+        )
     # Don't allow localhost validation when proxy auth is enabled
     if config.proxy_auth_enabled:
         return 403, {}, "forbidden: disabled when proxy auth is available"

@@ -7,7 +7,7 @@ from timetagger._config import set_config
 
 def test_config():
     # Defaults
-    default_bind = "0.0.0.0:80"
+    default_bind = "127.0.0.1:8080"
     set_config([], {})
     assert config.bind == default_bind
     assert config.datadir == "~/_timetagger"

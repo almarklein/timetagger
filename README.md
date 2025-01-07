@@ -11,6 +11,7 @@ interactive user experience and powerful reporting.
 * Demo: https://timetagger.app/demo
 * Docs: https://timetagger.readthedocs.io
 * CLI tool: https://github.com/almarklein/timetagger_cli
+* [TimeTagger_VSCodeExtension](https://github.com/Yamakaze-chan/TimeTagger_VSCodeExtension) (3d party)
 
 
 ## Introduction
@@ -68,7 +69,7 @@ There are two variants, one that runs the server as root inside the container an
 that runs as user 1000:
 - [docker-compose.yml](https://github.com/almarklein/timetagger/blob/main/deploy/docker-compose.yml)
 - [docker-compose.nonroot.yml](https://github.com/almarklein/timetagger/blob/main/deploy/docker-compose.nonroot.yml)
- 
+
 See [this article](https://timetagger.app/articles/selfhost2/) for more information about self hosting.
 
 ### Authentication using credentials
