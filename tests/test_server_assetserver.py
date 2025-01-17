@@ -1,6 +1,6 @@
 import sys
 import subprocess
-from pkg_resources import resource_filename
+from importlib import resources
 
 from timetagger.server import create_assets_from_dir
 import asgineer
@@ -11,9 +11,9 @@ from _common import run_tests
 
 # Create asset handler
 assets = {}
-assets.update(create_assets_from_dir(resource_filename("timetagger.app", ".")))
-assets.update(create_assets_from_dir(resource_filename("timetagger.common", ".")))
-assets.update(create_assets_from_dir(resource_filename("timetagger.images", ".")))
+assets.update(create_assets_from_dir(resources.files("timetagger.app")))
+assets.update(create_assets_from_dir(resources.files("timetagger.common")))
+assets.update(create_assets_from_dir(resources.files("timetagger.images")))
 asset_handler = asgineer.utils.make_asset_handler(assets, max_age=0)
 
 
@@ -74,12 +74,12 @@ def test_assets():
 
 
 hash_checker_code = """
-from pkg_resources import resource_filename
+from importlib import resources
 from timetagger.server import create_assets_from_dir, enable_service_worker
 assets = {}
-assets.update(create_assets_from_dir(resource_filename("timetagger.app", ".")))
-assets.update(create_assets_from_dir(resource_filename("timetagger.common", ".")))
-assets.update(create_assets_from_dir(resource_filename("timetagger.images", ".")))
+assets.update(create_assets_from_dir(resources.files("timetagger.app")))
+assets.update(create_assets_from_dir(resources.files("timetagger.common")))
+assets.update(create_assets_from_dir(resources.files("timetagger.images")))
 enable_service_worker(assets)
 cachename = assets["sw.js"].split("currentCacheName =")[1].split("\n")[0]
 print(cachename)
