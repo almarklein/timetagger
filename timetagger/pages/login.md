@@ -66,10 +66,11 @@ async function load() {
 window.addEventListener('load', load);
 </script>
 
-<input id='input_u' type='text' placeholder='username' style='margin:4px;'/><br />
-<input id='input_p' type='password' placeholder='password' style='margin:4px;'/><br />
-<button id='submit_up' class='whitebutton' style='margin:4px;' >Submit</button>
-
+<form onsubmit="event.preventDefault()">
+    <input id='input_u' type='text' placeholder='username' style='margin:4px;'><br />
+    <input id='input_p' type='password' placeholder='password' style='margin:4px;'><br />
+    <button id='submit_up' class='whitebutton' style='margin:4px;' >Submit</button>
+</form>
 <br />
 <button id='submit_localhost' class='whitebutton' style='margin:4px; display: none;' >Login as default user (on localhost)</button>
 
