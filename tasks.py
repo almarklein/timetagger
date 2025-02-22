@@ -1,5 +1,4 @@
-""" Invoke tasks for timetagger
-"""
+"""Invoke tasks for timetagger"""
 
 import os
 import sys
