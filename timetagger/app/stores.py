@@ -752,7 +752,7 @@ class BaseDataStore:
         for i in range(len(items)):
             item = items[i]
             self._to_push[kind][item.key] = item
-        self.sync_soon(3)
+        self.sync_soon(1.5)
         self._set_state("pending")
 
     def sync_soon(self, timeout=10):
