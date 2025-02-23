@@ -77,8 +77,12 @@ span.keyhint {
     border: 1px solid #ccc;
     padding: 2px 4px;
     border-radius: 3px;
-    font-size: 90%;
+    font-size: 80%;
     color: #ccc;
+}
+body.darkmode span.keyhint {
+    color: #aaa;
+    border-color: #aaa;
 }
 
 /**************** Tooltip ****************/
