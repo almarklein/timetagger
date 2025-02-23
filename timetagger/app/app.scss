@@ -228,6 +228,8 @@ body.darkmode .tooltipdiv {
 .dialog .formlayout > div {
     height: 1.5em;
     vertical-align: center;
+    display: flex;
+    align-items: center;
 }
 .dialog .formlayout > div:nth-child(odd) {
     justify-self: end;
