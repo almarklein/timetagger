@@ -77,8 +77,12 @@ span.keyhint {
     border: 1px solid #ccc;
     padding: 2px 4px;
     border-radius: 3px;
-    font-size: 90%;
+    font-size: 80%;
     color: #ccc;
+}
+body.darkmode span.keyhint {
+    color: #aaa;
+    border-color: #aaa;
 }
 
 /**************** Tooltip ****************/
@@ -224,6 +228,8 @@ body.darkmode .tooltipdiv {
 .dialog .formlayout > div {
     height: 1.5em;
     vertical-align: center;
+    display: flex;
+    align-items: center;
 }
 .dialog .formlayout > div:nth-child(odd) {
     justify-self: end;
