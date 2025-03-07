@@ -542,7 +542,7 @@ class TimeSelectionDialog(BaseDialog):
                 <a>last year</a>
             </div>
             <div style='min-height: 10px;'></div>
-            <div class='menu'>
+            <div class='menu' style='align-items: center;'>
                 <div style='flex: 0.5 0.5 auto; text-align: right;'>From:&nbsp;&nbsp;</div>
                 <input type="date" step="1" />
                 <div style='flex: 0.5 0.5 auto; text-align: right;'>To:&nbsp;&nbsp;</div>
