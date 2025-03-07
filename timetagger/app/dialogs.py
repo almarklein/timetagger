@@ -2148,7 +2148,7 @@ class TagDialog(BaseDialog):
         self._set_color(self._default_color)
 
     def _set_random_color(self):
-        clr = "#" + Math.floor(Math.random() * 16777215).toString(16)
+        clr = utils.color_random()
         self._set_color(clr)
 
     def _set_color(self, clr):
@@ -3920,9 +3920,18 @@ class SettingsDialog(BaseDialog):
                 </select>
             </div>
             <h2><i class='fas'>\uf085</i>&nbsp;&nbsp;Misc</h2>
+            <div class='formlayout'>
+                <div>Default tag color:</div>
+                <select>
+                    <option value='default'>Default</option>
+                    <option value='name'>From Tag Name</option>
+                    <option value='random'>Random</option>
+                </select>
+            </div>
             <label>
                 <input type='checkbox' checked='true'></input>
-                Show elapsed time below start-button</label>
+                Show elapsed time below start-button
+            </label>
 
             <hr style='margin-top: 1em;' />
 
@@ -3971,6 +3980,7 @@ class SettingsDialog(BaseDialog):
             _,  # Time repr header
             self._repr_form,
             _,  # Misc header
+            self._tag_form,
             self._stopwatch_label,
             _,  # hr
             _,  # Section: per device
@@ -4031,6 +4041,12 @@ class SettingsDialog(BaseDialog):
         self._today_end_offset = self._repr_form.children[13]
         self._today_end_offset.value = today_end_offset
         self._today_end_offset.onchange = self._on_today_end_offset_change
+
+        # Tag color
+        tag_color = window.simplesettings.get("tag_color")
+        self._tag_color = self._tag_form.children[1]
+        self._tag_color.value = tag_color
+        self._tag_color.onchange = self._on_tag_color_change
 
         # Stopwatch
         show_stopwatch = window.simplesettings.get("show_stopwatch")
@@ -4127,6 +4143,10 @@ class SettingsDialog(BaseDialog):
     def _on_stopwatch_check(self):
         show_stopwatch = bool(self._stopwatch_check.checked)
         window.simplesettings.set("show_stopwatch", show_stopwatch)
+
+    def _on_tag_color_change(self):
+        tag_color = self._tag_color.value
+        window.simplesettings.set("tag_color", tag_color)
 
 
 class GuideDialog(BaseDialog):
