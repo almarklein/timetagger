@@ -224,10 +224,8 @@ def floor(t, res):
         tup[-1] = int((tup[-1] - 1) / resFactor) * resFactor + 1  # days are 1-based
     elif resName == "W":
         day_offset = 7 - get_first_day_of_week()
-        d.setHours(0, 0, 0, 0)
         daysoff = (d.getDay() + day_offset) % 7  # Align to a sunday/monday
-        d = Date(d.getTime() - 86_400_000 * daysoff)
-        tup = d.getFullYear(), d.getMonth(), d.getDate()
+        tup = d.getFullYear(), d.getMonth(), (d.getDate() - daysoff)
     elif resName == "M":
         tup = tup[:2]  # Note that it is zero-based (jan is zero)
         tup[-1] = int(tup[-1] / resFactor) * resFactor
