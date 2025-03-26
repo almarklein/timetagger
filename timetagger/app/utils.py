@@ -104,6 +104,7 @@ def color_from_name(name):
         _lasthashedcolors[name] = PALETTE1[color % len(PALETTE1)]
     return _lasthashedcolors[name]
 
+
 def color_random():
     """Generate a random color"""
     clr = "#" + Math.floor(Math.random() * 16777215).toString(16)
