@@ -539,6 +539,10 @@ class TimeRange:
         scale_index = max(0, min(len(SCALES) - 1, scale_index))
         ran, res, _, _ = SCALES[scale_index]
 
+        # Short-circuit to avoid weirdness around summer/wintertime transitions
+        if dt.round(t1, res) == t1 and dt.add(t1, ran) == t2:
+            return t1, t2, res
+
         # Round
         t5 = 0.5 * (t1 + t2)  # center
         t3 = 0.5 * (t5 + dt.add(t5, "-" + ran))  # unrounded t3
