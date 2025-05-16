@@ -362,7 +362,7 @@ class SettingsStore(BaseStore):
             if window.simplesettings.get("tag_color") == "tag_name":
                 color = utils.color_from_name(tag)
             elif window.simplesettings.get("tag_color") == "random":
-                color = utils.color_random()
+                color = window.simplesettings.get("next_random_color")
             else:
                 color = window.front.COLORS.acc_clr
             self.set_tag_info(tag, {"color": color})

@@ -1646,6 +1646,10 @@ class RecordDialog(BaseDialog):
         self._delete_but2.onclick = self._delete2
         self.maindiv.addEventListener("click", self._autocompleter.clear)
 
+        # Generate the next random tag color
+        color = utils.color_random()
+        window.simplesettings.set("next_random_color", color)
+
         # Enable for some more info (e.g. during dev)
         if False:
             for x in [f"ID: {record.key}", f"Modified: {dt.time2localstr(record.mt)}"]:
@@ -3923,8 +3927,8 @@ class SettingsDialog(BaseDialog):
             <div class='formlayout'>
                 <div>Default tag color:</div>
                 <select>
-                    <option value='default'>Default</option>
-                    <option value='name'>From Tag Name</option>
+                    <option value='default'>Yellow</option>
+                    <option value='tag_name'>From Name</option>
                     <option value='random'>Random</option>
                 </select>
             </div>
