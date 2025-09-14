@@ -3025,10 +3025,10 @@ class ReportDialog(BaseDialog):
             group_list1 = [group]
             for i in range(len(records)):
                 record = records[i]
-                group.duration += record.duration
                 tagz1 = window.store.records.tags_from_record(record).join(" ")
                 if tagz1 not in name_map:
                     continue
+                group.duration += record.duration
                 group.records.push(record)
 
         # Perform grouping for time ...
