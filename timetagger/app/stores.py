@@ -793,6 +793,9 @@ class ConnectedDataStore(BaseDataStore):
         self._auth = window.tools.get_auth_info()
         self._auth_cantuse = None
 
+        # Load cache asynchronously without blocking
+        window.setTimeout(lambda: self._load_from_cache(), 0)
+
     def get_auth(self):
         """Get an auth info object that is guaranteed to match the username
         that the store had from the beginning. It gets automatically refreshed
