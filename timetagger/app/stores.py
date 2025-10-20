@@ -713,10 +713,6 @@ class BaseDataStore:
         window.addEventListener("beforeunload", self._beforeunload, False)
 
     def _beforeunload(self, ev):
-        if self.state == "pending":
-            msg = "The most recent changes have not yet been stored."
-            ev.returnValue = msg
-            return msg
         return None
 
     def reset(self):
