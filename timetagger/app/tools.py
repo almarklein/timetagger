@@ -10,12 +10,12 @@ from pscript.stubs import window, JSON, localStorage, location, console, fetch
 
 
 def sleepms(ms):
-    global RawJS
+    global RawJS  # noqa: F824
     return RawJS("new Promise(resolve => setTimeout(resolve, ms))")
 
 
 def copy_dom_node(node):
-    global document
+    global document  # noqa: F824
 
     # Select the node (https://stackoverflow.com/questions/400212)
     sel = None

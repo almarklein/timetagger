@@ -161,7 +161,7 @@ def csvsplit(s, sep, i=0):
     # "standard", but they *do* use quotes when the value has tabs or newlines :'(
     # In our own exports, we don't allow tabs or newlines, nor quotes at the start,
     # so we should be fine with our own data.
-    global RawJS
+    global RawJS  # noqa: F824
     parts = []
     RawJS(
         """
@@ -3589,7 +3589,7 @@ class ImportDialog(BaseDialog):
             self._import_but.disabled = False
 
     async def _do_analyse(self):
-        global JSON
+        global JSON  # noqa: F824
 
         def log(s):
             self._analysis_out.innerHTML += s + "<br />"

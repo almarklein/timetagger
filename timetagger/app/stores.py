@@ -59,7 +59,7 @@ if this_is_js():  # pragma: no cover
         return x
 
     def to_str(x):
-        global String
+        global String  # noqa: F824
         s = String(x).slice(0, STR_MAX)
         return s.replace("\r", "").replace("\n", " ").replace("\t", " ").lstrip(' "')
 
