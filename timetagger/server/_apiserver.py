@@ -70,6 +70,8 @@ INDICES = {
     "userinfo": ("!key", "st"),
 }
 
+FALSY_VALUES = ("false", "off", "no", "n", "0")
+
 
 class AuthException(Exception):
     """Exception raised when authentication fails.
@@ -356,11 +358,29 @@ async def get_records(request, auth_info, db):
             raise ValueError()
     except ValueError:
         return 400, {}, "bad request: /records timerange needs 2 numbers (timestamps)"
+    tr1, tr2 = int(timerange[0]), int(timerange[1])
+
+    # Parse optional running option
+    running_str = request.querydict.get("running", "").strip().lower()
+    if not running_str:
+        running = None
+    elif running_str in FALSY_VALUES:
+        running = False
+    else:
+        running = True
+
+    # Prepare query
+    query_parts = []
+    safe_params = []
+    query_parts.append(f"(t2 >= {tr1} AND t1 <= {tr2}) OR (t1 == t2 AND t1 <= {tr2})")
+    if running is True:
+        query_parts.append("t1 == t2")
+    if running is False:
+        query_parts.append("t1 != t2")
+    query = " AND ".join(f"({part})" for part in query_parts)
 
     # Collect records
-    tr1, tr2 = int(timerange[0]), int(timerange[1])
-    query = f"(t2 >= {tr1} AND t1 <= {tr2}) OR (t1 == t2 AND t1 <= {tr2})"
-    records = await db.select("records", query)
+    records = await db.select("records", query, *safe_params)
 
     # Return result
     result = dict(records=records)

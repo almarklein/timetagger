@@ -496,16 +496,16 @@ def test_records_get():
             assert set(r["key"] for r in d["records"]) == {"r13"}
 
         # Using a zero range works if that timestamp is inside a record
-        r = p.get(f"http://localhost/api/v2/records?timerange=120-120", headers=HEADERS)
+        r = p.get("http://localhost/api/v2/records?timerange=120-120", headers=HEADERS)
         assert r.status == 200
         assert set(r["key"] for r in dejsonize(r)["records"]) == {"r11"}
 
         # Using a reversed range works if that range is fully inside a record
-        r = p.get(f"http://localhost/api/v2/records?timerange=140-110", headers=HEADERS)
+        r = p.get("http://localhost/api/v2/records?timerange=140-110", headers=HEADERS)
         assert r.status == 200
         assert set(r["key"] for r in dejsonize(r)["records"]) == {"r11"}
         # And only fully
-        r = p.get(f"http://localhost/api/v2/records?timerange=151-110", headers=HEADERS)
+        r = p.get("http://localhost/api/v2/records?timerange=151-110", headers=HEADERS)
         assert r.status == 200
         assert set(r["key"] for r in dejsonize(r)["records"]) == set()
 
@@ -549,16 +549,187 @@ def test_records_get():
         assert set(keys) == {"r22", "r23"}
 
         # Fails
-        r = p.get(f"http://localhost/api/v2/records", headers=HEADERS)
+        r = p.get("http://localhost/api/v2/records", headers=HEADERS)
         assert r.status == 400  # no timerange
-        r = p.get(f"http://localhost/api/v2/records?timerange=foo-bar", headers=HEADERS)
+        r = p.get("http://localhost/api/v2/records?timerange=foo-bar", headers=HEADERS)
         assert r.status == 400  # timerange not numeric
-        r = p.get(f"http://localhost/api/v2/records?timerange=100", headers=HEADERS)
+        r = p.get("http://localhost/api/v2/records?timerange=100", headers=HEADERS)
         assert r.status == 400  # timerange not two nums
         r = p.get(
-            f"http://localhost/api/v2/records?timerange=100-200-300", headers=HEADERS
+            "http://localhost/api/v2/records?timerange=100-200-300", headers=HEADERS
         )
         assert r.status == 400  # timerange not two nums
+
+
+def test_records_get_running_filter():
+    """Test the `running` query parameter for filtering records by running state"""
+
+    clear_test_db()
+
+    with MockTestServer(our_api_handler) as p:
+        now = int(time.time())
+
+        # Add a mix of running and stopped records
+        records = [
+            dict(key="r1", mt=110, t1=100, t2=150, ds="#stopped1"),
+            dict(key="r2", mt=110, t1=200, t2=250, ds="#stopped2"),
+            dict(key="r3", mt=110, t1=300, t2=350, ds="#stopped3"),
+            dict(key="r4", mt=110, t1=now - 1000, t2=now - 1000, ds="#running1"),
+            dict(key="r5", mt=110, t1=now - 2000, t2=now - 2000, ds="#running2"),
+            dict(key="r6", mt=110, t1=now - 3000, t2=now - 3000, ds="#running3"),
+        ]
+        r = p.put(
+            "http://localhost/api/v2/records",
+            json.dumps(records).encode(),
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        assert dejsonize(r)["accepted"] == ["r1", "r2", "r3", "r4", "r5", "r6"]
+
+        # Test without running parameter - should return all records
+        r = p.get(
+            "http://localhost/api/v2/records?timerange=0-99999999999", headers=HEADERS
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        assert set(r["key"] for r in d["records"]) == {
+            "r1",
+            "r2",
+            "r3",
+            "r4",
+            "r5",
+            "r6",
+        }
+
+        # Test with running=true - should return only running records
+        r = p.get(
+            "http://localhost/api/v2/records?timerange=0-99999999999&running=true",
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        assert set(r["key"] for r in d["records"]) == {"r4", "r5", "r6"}
+
+        # Test with running=false - should return only stopped records
+        r = p.get(
+            "http://localhost/api/v2/records?timerange=0-99999999999&running=false",
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        assert set(r["key"] for r in d["records"]) == {"r1", "r2", "r3"}
+
+        # Test alternative truthy values
+        for truthy_value in ["yes", "on", "1", "y"]:
+            r = p.get(
+                f"http://localhost/api/v2/records?timerange=0-99999999999&running={truthy_value}",
+                headers=HEADERS,
+            )
+            assert r.status == 200
+            d = dejsonize(r)
+            assert set(r["key"] for r in d["records"]) == {"r4", "r5", "r6"}
+
+        # Test alternative falsy values
+        for falsy_value in ["no", "off", "0", "n"]:
+            r = p.get(
+                f"http://localhost/api/v2/records?timerange=0-99999999999&running={falsy_value}",
+                headers=HEADERS,
+            )
+            assert r.status == 200
+            d = dejsonize(r)
+            assert set(r["key"] for r in d["records"]) == {"r1", "r2", "r3"}
+
+        # Test case insensitivity on truthy values
+        for truthy_value in ["TRUE", "True", "YES", "Yes", "ON", "On"]:
+            r = p.get(
+                f"http://localhost/api/v2/records?timerange=0-99999999999&running={truthy_value}",
+                headers=HEADERS,
+            )
+            assert r.status == 200
+            d = dejsonize(r)
+            assert set(r["key"] for r in d["records"]) == {"r4", "r5", "r6"}
+
+        # Test case insensitivity on falsy values
+        for falsy_value in ["FALSE", "False", "NO", "No", "OFF", "Off"]:
+            r = p.get(
+                f"http://localhost/api/v2/records?timerange=0-99999999999&running={falsy_value}",
+                headers=HEADERS,
+            )
+            assert r.status == 200
+            d = dejsonize(r)
+            assert set(r["key"] for r in d["records"]) == {"r1", "r2", "r3"}
+
+        # Test empty running parameter - should return all records
+        r = p.get(
+            "http://localhost/api/v2/records?timerange=0-99999999999&running=",
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        assert set(r["key"] for r in d["records"]) == {
+            "r1",
+            "r2",
+            "r3",
+            "r4",
+            "r5",
+            "r6",
+        }
+
+        # Test unknown/invalid value - should interpret as truthy
+        r = p.get(
+            "http://localhost/api/v2/records?timerange=0-99999999999&running=maybe",
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        assert set(r["key"] for r in d["records"]) == {"r4", "r5", "r6"}
+
+        # Test running filter combined with specific timerange
+        # Timerange that includes only r1 and r4
+        timerange_start = 50
+        timerange_end = max(200, now - 950)
+
+        # Without filter - should get records overlapping this range
+        r = p.get(
+            f"http://localhost/api/v2/records?timerange={timerange_start}-{timerange_end}",
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        keys = set(r["key"] for r in d["records"])
+        # r1 (100-150) should be included
+        assert "r1" in keys
+        # Running records should be included if they started before timerange_end
+        assert "r4" in keys or "r5" in keys or "r6" in keys
+
+        # With running=true - should only get running records in range
+        r = p.get(
+            f"http://localhost/api/v2/records?timerange={timerange_start}-{timerange_end}&running=true",
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        keys = set(r["key"] for r in d["records"])
+        # Should not include stopped record r1
+        assert "r1" not in keys
+        # Should only include running records
+        for key in keys:
+            assert key in {"r4", "r5", "r6"}
+
+        # With running=false - should only get stopped records in range
+        r = p.get(
+            f"http://localhost/api/v2/records?timerange={timerange_start}-{timerange_end}&running=false",
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        keys = set(r["key"] for r in d["records"])
+        # Should not include running records
+        for key in keys:
+            assert key not in {"r4", "r5", "r6"}
+        # r1 should be included if in range
+        if "r1" in keys:
+            assert keys <= {"r1", "r2", "r3"}
 
 
 def test_updates():
