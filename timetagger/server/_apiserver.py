@@ -378,10 +378,25 @@ async def get_records(request, auth_info, db):
     else:
         hidden = True
 
+    # Parse tag option
+    tag_str = request.querydict.get("tag", "").strip()
+    tags = []
+    if tag_str:
+        # ignore client-provided hashtags
+        tag_str = tag_str.replace("#", "")
+        # escape special SQL LIKE characters
+        tag_str = tag_str.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        tags = [tag.strip() for tag in tag_str.split(",")]
+
     # Prepare query
     query_parts = []
     safe_params = []
     query_parts.append(f"(t2 >= {tr1} AND t1 <= {tr2}) OR (t1 == t2 AND t1 <= {tr2})")
+    for tag in tags:
+        query_parts.append(
+            "json_extract(_ob, '$.ds') LIKE ? ESCAPE '\\' OR json_extract(_ob, '$.ds') LIKE ? ESCAPE '\\'"
+        )
+        safe_params += [f"%#{tag} %", f"%#{tag}"]
     if running is True:
         query_parts.append("t1 == t2")
     if running is False:

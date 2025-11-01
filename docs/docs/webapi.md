@@ -43,7 +43,7 @@ All times and timestamps in this document are Unix timestamps (floating point nu
 See below for a description of record objects. To get records, the following request can be made:
 
 ```
-GET ./records?timerange=<timestamp1>-<timestamp2>&running=<running>&hidden=<hidden>
+GET ./records?timerange=<timestamp1>-<timestamp2>&running=<running>&hidden=<hidden>&tag=<tag>
 ```
 
 The timestamps are compared to the record's start and end times (`t1` and `t2`). A record
@@ -60,6 +60,10 @@ Optional query parameters:
 * `hidden`: Filter records by their hidden state (hidden records are considered deleted in the UI and CLI; see [Deleting records](#deleting-records)). If unset, all records matching the time range are returned.
   - Set to [`true` | `yes` | `on` | `1`] to return only hidden records
   - Set to [`false` | `no` | `off` | `0`] to return only non-hidden records
+* `tag`: Filter records by tags in their description. If unset, all records matching the time range are returned.
+  - Provide one or more comma-separated tags (e.g. `tag=work`, or `tag=work,urgent`)
+  - Omit the leading `#` character, or alternatively URL-encode it properly as `%23`
+  - Only records containing **all** specified tags in their description will be returned
 
 The fields in the JSON response:
 

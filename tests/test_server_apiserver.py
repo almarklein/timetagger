@@ -905,7 +905,13 @@ def test_records_get_hidden_filter():
         # Add some running hidden records
         records = [
             dict(key="r7", mt=110, t1=now - 1000, t2=now - 1000, ds="#running_visible"),
-            dict(key="r8", mt=110, t1=now - 2000, t2=now - 2000, ds="HIDDEN #running_hidden"),
+            dict(
+                key="r8",
+                mt=110,
+                t1=now - 2000,
+                t2=now - 2000,
+                ds="HIDDEN #running_hidden",
+            ),
         ]
         r = p.put(
             "http://localhost/api/v2/records",
@@ -954,6 +960,266 @@ def test_records_get_hidden_filter():
         d = dejsonize(r)
         keys = set(r["key"] for r in d["records"])
         assert keys == {"r4", "r5", "r6"}
+
+
+def test_records_get_tag_filter():
+    """Test the `tag` query parameter for filtering records by single and multiple tags"""
+
+    clear_test_db()
+
+    with MockTestServer(our_api_handler) as p:
+        # Add records with various tag combinations
+        records = [
+            dict(key="r1", mt=110, t1=100, t2=150, ds="#work"),
+            dict(key="r2", mt=110, t1=200, t2=250, ds="#personal"),
+            dict(key="r3", mt=110, t1=300, t2=350, ds="#work #urgent"),
+            dict(key="r4", mt=110, t1=400, t2=450, ds="#work #project1"),
+            dict(key="r5", mt=110, t1=500, t2=550, ds="#personal #urgent"),
+            dict(key="r6", mt=110, t1=600, t2=650, ds="no tags here"),
+            dict(key="r7", mt=110, t1=700, t2=750, ds="#work #urgent #project1"),
+        ]
+        r = p.put(
+            "http://localhost/api/v2/records",
+            json.dumps(records).encode(),
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        assert dejsonize(r)["accepted"] == ["r1", "r2", "r3", "r4", "r5", "r6", "r7"]
+
+        # Test without tag parameter - should return all records
+        r = p.get(
+            "http://localhost/api/v2/records?timerange=0-99999999999", headers=HEADERS
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        assert set(r["key"] for r in d["records"]) == {
+            "r1",
+            "r2",
+            "r3",
+            "r4",
+            "r5",
+            "r6",
+            "r7",
+        }
+
+        # Test with single tag filters
+        r = p.get(
+            "http://localhost/api/v2/records?timerange=0-99999999999&tag=work",
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        assert set(r["key"] for r in d["records"]) == {"r1", "r3", "r4", "r7"}
+
+        r = p.get(
+            "http://localhost/api/v2/records?timerange=0-99999999999&tag=personal",
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        assert set(r["key"] for r in d["records"]) == {"r2", "r5"}
+
+        r = p.get(
+            "http://localhost/api/v2/records?timerange=0-99999999999&tag=urgent",
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        assert set(r["key"] for r in d["records"]) == {"r3", "r5", "r7"}
+
+        r = p.get(
+            "http://localhost/api/v2/records?timerange=0-99999999999&tag=project1",
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        assert set(r["key"] for r in d["records"]) == {"r4", "r7"}
+
+        # Test with multiple tags - should return only records with ALL specified tags
+        r = p.get(
+            "http://localhost/api/v2/records?timerange=0-99999999999&tag=work,urgent",
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        assert set(r["key"] for r in d["records"]) == {"r3", "r7"}
+
+        r = p.get(
+            "http://localhost/api/v2/records?timerange=0-99999999999&tag=work,project1",
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        assert set(r["key"] for r in d["records"]) == {"r4", "r7"}
+
+        r = p.get(
+            "http://localhost/api/v2/records?timerange=0-99999999999&tag=work,urgent,project1",
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        assert set(r["key"] for r in d["records"]) == {"r7"}
+
+        r = p.get(
+            "http://localhost/api/v2/records?timerange=0-99999999999&tag=personal,urgent",
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        assert set(r["key"] for r in d["records"]) == {"r5"}
+
+        # Test with tag filter combined with specific timerange
+        timerange_start = 50
+        timerange_end = 499
+
+        r = p.get(
+            f"http://localhost/api/v2/records?timerange={timerange_start}-{timerange_end}",
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        keys = set(r["key"] for r in d["records"])
+        assert keys == {"r1", "r2", "r3", "r4"}
+
+        r = p.get(
+            f"http://localhost/api/v2/records?timerange={timerange_start}-{timerange_end}&tag=work",
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        keys = set(r["key"] for r in d["records"])
+        assert keys == {"r1", "r3", "r4"}
+
+        # Test with multiple tags and timerange
+        timerange_start = 250
+        timerange_end = 599
+
+        r = p.get(
+            f"http://localhost/api/v2/records?timerange={timerange_start}-{timerange_end}&tag=work,urgent",
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        keys = set(r["key"] for r in d["records"])
+        assert keys == {"r3"}
+
+        # Test empty tag parameter - should return all records
+        r = p.get(
+            "http://localhost/api/v2/records?timerange=0-99999999999&tag=",
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        assert set(r["key"] for r in d["records"]) == {
+            "r1",
+            "r2",
+            "r3",
+            "r4",
+            "r5",
+            "r6",
+            "r7",
+        }
+
+        # Test with non-existent tags
+        r = p.get(
+            "http://localhost/api/v2/records?timerange=0-99999999999&tag=nonexistent",
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        assert set(r["key"] for r in d["records"]) == set()
+
+        r = p.get(
+            "http://localhost/api/v2/records?timerange=0-99999999999&tag=work,nonexistent",
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        assert set(r["key"] for r in d["records"]) == set()
+
+        # Test tag matching at the end of description (without trailing space)
+        records = [
+            dict(key="r8", mt=110, t1=800, t2=850, ds="Some description #endtag"),
+        ]
+        r = p.put(
+            "http://localhost/api/v2/records",
+            json.dumps(records).encode(),
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        assert dejsonize(r)["accepted"] == ["r8"]
+
+        r = p.get(
+            "http://localhost/api/v2/records?timerange=0-99999999999&tag=endtag",
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        keys = set(r["key"] for r in d["records"])
+        assert "r8" in keys
+
+        # Test with whitespace in tag list - should trim whitespace
+        r = p.get(
+            "http://localhost/api/v2/records?timerange=0-99999999999&tag=work, urgent, project1",
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        assert set(r["key"] for r in d["records"]) == {"r7"}
+
+        # Test tag filtering with URL-encoded '#' prefix - should work the same as without prefix
+        # Note: '#' is URL-encoded as '%23'
+        r = p.get(
+            "http://localhost/api/v2/records?timerange=0-99999999999&tag=%23work",
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        assert set(r["key"] for r in d["records"]) == {"r1", "r3", "r4", "r7"}
+
+        r = p.get(
+            "http://localhost/api/v2/records?timerange=0-99999999999&tag=%23personal",
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        assert set(r["key"] for r in d["records"]) == {"r2", "r5"}
+
+        r = p.get(
+            "http://localhost/api/v2/records?timerange=0-99999999999&tag=%23endtag",
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        keys = set(r["key"] for r in d["records"])
+        assert "r8" in keys
+
+        # Test with URL-encoded '#' prefix on multiple tags
+        r = p.get(
+            "http://localhost/api/v2/records?timerange=0-99999999999&tag=%23work,%23urgent",
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        assert set(r["key"] for r in d["records"]) == {"r3", "r7"}
+
+        # Test with mixed URL-encoded '#' prefix and no prefix
+        r = p.get(
+            "http://localhost/api/v2/records?timerange=0-99999999999&tag=%23work,project1",
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        assert set(r["key"] for r in d["records"]) == {"r4", "r7"}
+
+        # Test with URL-encoded '#' prefix and whitespace
+        r = p.get(
+            "http://localhost/api/v2/records?timerange=0-99999999999&tag=%23work,%20%23urgent,%20%23project1",
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        assert set(r["key"] for r in d["records"]) == {"r7"}
 
 
 def test_updates():
