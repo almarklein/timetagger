@@ -738,8 +738,6 @@ def test_records_get_hidden_filter():
     clear_test_db()
 
     with MockTestServer(our_api_handler) as p:
-        now = int(time.time())
-
         # Add a mix of hidden and non-hidden records
         records = [
             dict(key="r1", mt=110, t1=100, t2=150, ds="#visible1"),
@@ -900,66 +898,6 @@ def test_records_get_hidden_filter():
             assert key not in {"r4", "r5", "r6"}
         # Should only include visible records
         assert keys <= {"r1", "r2", "r3"}
-
-        # Test combining running and hidden filters
-        # Add some running hidden records
-        records = [
-            dict(key="r7", mt=110, t1=now - 1000, t2=now - 1000, ds="#running_visible"),
-            dict(
-                key="r8",
-                mt=110,
-                t1=now - 2000,
-                t2=now - 2000,
-                ds="HIDDEN #running_hidden",
-            ),
-        ]
-        r = p.put(
-            "http://localhost/api/v2/records",
-            json.dumps(records).encode(),
-            headers=HEADERS,
-        )
-        assert r.status == 200
-        assert dejsonize(r)["accepted"] == ["r7", "r8"]
-
-        # Test running=true and hidden=false - should get only visible running records
-        r = p.get(
-            "http://localhost/api/v2/records?timerange=0-99999999999&running=true&hidden=false",
-            headers=HEADERS,
-        )
-        assert r.status == 200
-        d = dejsonize(r)
-        keys = set(r["key"] for r in d["records"])
-        assert keys == {"r7"}
-
-        # Test running=true and hidden=true - should get only hidden running records
-        r = p.get(
-            "http://localhost/api/v2/records?timerange=0-99999999999&running=true&hidden=true",
-            headers=HEADERS,
-        )
-        assert r.status == 200
-        d = dejsonize(r)
-        keys = set(r["key"] for r in d["records"])
-        assert keys == {"r8"}
-
-        # Test running=false and hidden=false - should get only visible stopped records
-        r = p.get(
-            "http://localhost/api/v2/records?timerange=0-99999999999&running=false&hidden=false",
-            headers=HEADERS,
-        )
-        assert r.status == 200
-        d = dejsonize(r)
-        keys = set(r["key"] for r in d["records"])
-        assert keys == {"r1", "r2", "r3"}
-
-        # Test running=false and hidden=true - should get only hidden stopped records
-        r = p.get(
-            "http://localhost/api/v2/records?timerange=0-99999999999&running=false&hidden=true",
-            headers=HEADERS,
-        )
-        assert r.status == 200
-        d = dejsonize(r)
-        keys = set(r["key"] for r in d["records"])
-        assert keys == {"r4", "r5", "r6"}
 
 
 def test_records_get_tag_filter():
@@ -1220,6 +1158,310 @@ def test_records_get_tag_filter():
         assert r.status == 200
         d = dejsonize(r)
         assert set(r["key"] for r in d["records"]) == {"r7"}
+
+
+def test_records_get_combined_filters():
+    """Test combining multiple query parameters (running, hidden, tag) together
+
+    This test ensures that all filter combinations work correctly and safely,
+    including protection against SQL injection attacks through parameterized queries.
+    """
+
+    clear_test_db()
+
+    with MockTestServer(our_api_handler) as p:
+        now = int(time.time())
+
+        # Create a comprehensive set of test records with various combinations
+        records = [
+            # Visible, stopped, work
+            dict(key="r1", mt=110, t1=100, t2=150, ds="#work"),
+            dict(key="r2", mt=110, t1=200, t2=250, ds="#work #urgent"),
+            dict(key="r3", mt=110, t1=300, t2=350, ds="#work #project1"),
+            # Visible, running, work
+            dict(key="r4", mt=110, t1=now - 1000, t2=now - 1000, ds="#work"),
+            dict(key="r5", mt=110, t1=now - 2000, t2=now - 2000, ds="#work #urgent"),
+            # Hidden, stopped, work
+            dict(key="r6", mt=110, t1=400, t2=450, ds="HIDDEN #work"),
+            dict(key="r7", mt=110, t1=500, t2=550, ds="HIDDEN #work #urgent"),
+            # Hidden, running, work
+            dict(
+                key="r8",
+                mt=110,
+                t1=now - 3000,
+                t2=now - 3000,
+                ds="HIDDEN #work",
+            ),
+            # Visible, stopped, personal
+            dict(key="r9", mt=110, t1=600, t2=650, ds="#personal"),
+            dict(key="r10", mt=110, t1=700, t2=750, ds="#personal #urgent"),
+            # Visible, running, personal
+            dict(key="r11", mt=110, t1=now - 4000, t2=now - 4000, ds="#personal"),
+            # Hidden, stopped, personal
+            dict(key="r12", mt=110, t1=800, t2=850, ds="HIDDEN #personal"),
+            # No tags
+            dict(key="r13", mt=110, t1=900, t2=950, ds="no tags"),
+            dict(key="r14", mt=110, t1=now - 5000, t2=now - 5000, ds="no tags running"),
+            dict(key="r15", mt=110, t1=1000, t2=1050, ds="HIDDEN no tags"),
+        ]
+        r = p.put(
+            "http://localhost/api/v2/records",
+            json.dumps(records).encode(),
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        assert len(dejsonize(r)["accepted"]) == 15
+
+        # Test: running=true + hidden=false (visible running records)
+        r = p.get(
+            "http://localhost/api/v2/records?timerange=0-99999999999&running=true&hidden=false",
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        keys = set(r["key"] for r in d["records"])
+        assert keys == {"r4", "r5", "r11", "r14"}
+
+        # Test: running=true + hidden=true (hidden running records)
+        r = p.get(
+            "http://localhost/api/v2/records?timerange=0-99999999999&running=true&hidden=true",
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        keys = set(r["key"] for r in d["records"])
+        assert keys == {"r8"}
+
+        # Test: running=false + hidden=false (visible stopped records)
+        r = p.get(
+            "http://localhost/api/v2/records?timerange=0-99999999999&running=false&hidden=false",
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        keys = set(r["key"] for r in d["records"])
+        assert keys == {"r1", "r2", "r3", "r9", "r10", "r13"}
+
+        # Test: running=false + hidden=true (hidden stopped records)
+        r = p.get(
+            "http://localhost/api/v2/records?timerange=0-99999999999&running=false&hidden=true",
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        keys = set(r["key"] for r in d["records"])
+        assert keys == {"r6", "r7", "r12", "r15"}
+
+        # Test: tag=work + hidden=false (visible work records)
+        r = p.get(
+            "http://localhost/api/v2/records?timerange=0-99999999999&tag=work&hidden=false",
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        keys = set(r["key"] for r in d["records"])
+        assert keys == {"r1", "r2", "r3", "r4", "r5"}
+
+        # Test: tag=work + hidden=true (hidden work records)
+        r = p.get(
+            "http://localhost/api/v2/records?timerange=0-99999999999&tag=work&hidden=true",
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        keys = set(r["key"] for r in d["records"])
+        assert keys == {"r6", "r7", "r8"}
+
+        # Test: tag=work + running=true (running work records)
+        r = p.get(
+            "http://localhost/api/v2/records?timerange=0-99999999999&tag=work&running=true",
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        keys = set(r["key"] for r in d["records"])
+        assert keys == {"r4", "r5", "r8"}
+
+        # Test: tag=work + running=false (stopped work records)
+        r = p.get(
+            "http://localhost/api/v2/records?timerange=0-99999999999&tag=work&running=false",
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        keys = set(r["key"] for r in d["records"])
+        assert keys == {"r1", "r2", "r3", "r6", "r7"}
+
+        # Test: ALL THREE - tag=work + running=true + hidden=false (visible running work)
+        r = p.get(
+            "http://localhost/api/v2/records?timerange=0-99999999999&tag=work&running=true&hidden=false",
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        keys = set(r["key"] for r in d["records"])
+        assert keys == {"r4", "r5"}
+
+        # Test: ALL THREE - tag=work + running=true + hidden=true (hidden running work)
+        r = p.get(
+            "http://localhost/api/v2/records?timerange=0-99999999999&tag=work&running=true&hidden=true",
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        keys = set(r["key"] for r in d["records"])
+        assert keys == {"r8"}
+
+        # Test: ALL THREE - tag=work + running=false + hidden=false (visible stopped work)
+        r = p.get(
+            "http://localhost/api/v2/records?timerange=0-99999999999&tag=work&running=false&hidden=false",
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        keys = set(r["key"] for r in d["records"])
+        assert keys == {"r1", "r2", "r3"}
+
+        # Test: ALL THREE - tag=work + running=false + hidden=true (hidden stopped work)
+        r = p.get(
+            "http://localhost/api/v2/records?timerange=0-99999999999&tag=work&running=false&hidden=true",
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        keys = set(r["key"] for r in d["records"])
+        assert keys == {"r6", "r7"}
+
+        # Test: Multiple tags + running + hidden
+        r = p.get(
+            "http://localhost/api/v2/records?timerange=0-99999999999&tag=work,urgent&running=false&hidden=false",
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        keys = set(r["key"] for r in d["records"])
+        assert keys == {"r2"}
+
+        # Test: Multiple tags with running filter
+        r = p.get(
+            "http://localhost/api/v2/records?timerange=0-99999999999&tag=work,urgent&running=true",
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        keys = set(r["key"] for r in d["records"])
+        assert keys == {"r5"}
+
+        # Test: Test with personal tag
+        r = p.get(
+            "http://localhost/api/v2/records?timerange=0-99999999999&tag=personal&running=false&hidden=false",
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        keys = set(r["key"] for r in d["records"])
+        assert keys == {"r9", "r10"}
+
+        # Test: Combine all filters with timerange
+        # Timerange that excludes later records
+        timerange_start = 50
+        timerange_end = 499
+
+        r = p.get(
+            f"http://localhost/api/v2/records?timerange={timerange_start}-{timerange_end}&tag=work&running=false&hidden=false",
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        keys = set(r["key"] for r in d["records"])
+        # Only r1, r2, r3 are in this timerange and match all filters
+        assert keys == {"r1", "r2", "r3"}
+
+        # Test: Combining filters with timerange that includes running records
+        timerange_start = 0
+        timerange_end = now + 1000
+
+        r = p.get(
+            f"http://localhost/api/v2/records?timerange={timerange_start}-{timerange_end}&tag=work&running=true&hidden=false",
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        keys = set(r["key"] for r in d["records"])
+        assert keys == {"r4", "r5"}
+
+        # Test: Test edge case - no results when combining incompatible filters
+        r = p.get(
+            "http://localhost/api/v2/records?timerange=0-99999999999&tag=nonexistent&running=true&hidden=false",
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        keys = set(r["key"] for r in d["records"])
+        assert keys == set()
+
+        # Test: Test with empty values for some filters (should be ignored)
+        r = p.get(
+            "http://localhost/api/v2/records?timerange=0-99999999999&tag=work&running=&hidden=false",
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        keys = set(r["key"] for r in d["records"])
+        # Should include both running and stopped visible work records
+        assert keys == {"r1", "r2", "r3", "r4", "r5"}
+
+        # Test: Test case insensitivity with combined filters
+        r = p.get(
+            "http://localhost/api/v2/records?timerange=0-99999999999&tag=work&running=TRUE&hidden=FALSE",
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        keys = set(r["key"] for r in d["records"])
+        assert keys == {"r4", "r5"}
+
+        # Test: Test alternative boolean values with combined filters
+        r = p.get(
+            "http://localhost/api/v2/records?timerange=0-99999999999&tag=personal&running=yes&hidden=no",
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        keys = set(r["key"] for r in d["records"])
+        assert keys == {"r11"}
+
+        # Test: SQL injection safety test - special characters in tags
+        # These should be safely escaped and not cause SQL errors or injection
+        r = p.get(
+            "http://localhost/api/v2/records?timerange=0-99999999999&tag=work%27%20OR%20%271%27=%271&running=false",
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        keys = set(r["key"] for r in d["records"])
+        # Should find no records because no tag matches the escaped string
+        assert keys == set()
+
+        # Test: URL-encoded tag with combined filters
+        r = p.get(
+            "http://localhost/api/v2/records?timerange=0-99999999999&tag=%23work&running=false&hidden=false",
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        keys = set(r["key"] for r in d["records"])
+        assert keys == {"r1", "r2", "r3"}
+
+        # Test: Multiple URL-encoded tags with combined filters
+        r = p.get(
+            "http://localhost/api/v2/records?timerange=0-99999999999&tag=%23work,%23urgent&running=true&hidden=false",
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        keys = set(r["key"] for r in d["records"])
+        assert keys == {"r5"}
 
 
 def test_updates():
