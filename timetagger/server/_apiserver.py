@@ -369,6 +369,15 @@ async def get_records(request, auth_info, db):
     else:
         running = True
 
+    # Parse optional hidden option
+    hidden_str = request.querydict.get("hidden", "").strip().lower()
+    if not hidden_str:
+        hidden = None
+    elif hidden_str in FALSY_VALUES:
+        hidden = False
+    else:
+        hidden = True
+
     # Prepare query
     query_parts = []
     safe_params = []
@@ -377,6 +386,10 @@ async def get_records(request, auth_info, db):
         query_parts.append("t1 == t2")
     if running is False:
         query_parts.append("t1 != t2")
+    if hidden is True:
+        query_parts.append("json_extract(_ob, '$.ds') LIKE 'HIDDEN%'")
+    if hidden is False:
+        query_parts.append("json_extract(_ob, '$.ds') NOT LIKE 'HIDDEN%'")
     query = " AND ".join(f"({part})" for part in query_parts)
 
     # Collect records

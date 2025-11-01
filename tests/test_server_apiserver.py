@@ -732,6 +732,230 @@ def test_records_get_running_filter():
             assert keys <= {"r1", "r2", "r3"}
 
 
+def test_records_get_hidden_filter():
+    """Test the `hidden` query parameter for filtering records by hidden state"""
+
+    clear_test_db()
+
+    with MockTestServer(our_api_handler) as p:
+        now = int(time.time())
+
+        # Add a mix of hidden and non-hidden records
+        records = [
+            dict(key="r1", mt=110, t1=100, t2=150, ds="#visible1"),
+            dict(key="r2", mt=110, t1=200, t2=250, ds="#visible2"),
+            dict(key="r3", mt=110, t1=300, t2=350, ds="#visible3"),
+            dict(key="r4", mt=110, t1=400, t2=450, ds="HIDDEN #deleted1"),
+            dict(key="r5", mt=110, t1=500, t2=550, ds="HIDDEN #deleted2"),
+            dict(key="r6", mt=110, t1=600, t2=650, ds="HIDDEN #deleted3"),
+        ]
+        r = p.put(
+            "http://localhost/api/v2/records",
+            json.dumps(records).encode(),
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        assert dejsonize(r)["accepted"] == ["r1", "r2", "r3", "r4", "r5", "r6"]
+
+        # Test without hidden parameter - should return all records
+        r = p.get(
+            "http://localhost/api/v2/records?timerange=0-99999999999", headers=HEADERS
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        assert set(r["key"] for r in d["records"]) == {
+            "r1",
+            "r2",
+            "r3",
+            "r4",
+            "r5",
+            "r6",
+        }
+
+        # Test with hidden=true - should return only hidden records
+        r = p.get(
+            "http://localhost/api/v2/records?timerange=0-99999999999&hidden=true",
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        assert set(r["key"] for r in d["records"]) == {"r4", "r5", "r6"}
+
+        # Test with hidden=false - should return only non-hidden records
+        r = p.get(
+            "http://localhost/api/v2/records?timerange=0-99999999999&hidden=false",
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        assert set(r["key"] for r in d["records"]) == {"r1", "r2", "r3"}
+
+        # Test alternative truthy values
+        for truthy_value in ["yes", "on", "1", "y"]:
+            r = p.get(
+                f"http://localhost/api/v2/records?timerange=0-99999999999&hidden={truthy_value}",
+                headers=HEADERS,
+            )
+            assert r.status == 200
+            d = dejsonize(r)
+            assert set(r["key"] for r in d["records"]) == {"r4", "r5", "r6"}
+
+        # Test alternative falsy values
+        for falsy_value in ["no", "off", "0", "n"]:
+            r = p.get(
+                f"http://localhost/api/v2/records?timerange=0-99999999999&hidden={falsy_value}",
+                headers=HEADERS,
+            )
+            assert r.status == 200
+            d = dejsonize(r)
+            assert set(r["key"] for r in d["records"]) == {"r1", "r2", "r3"}
+
+        # Test case insensitivity on truthy values
+        for truthy_value in ["TRUE", "True", "YES", "Yes", "ON", "On"]:
+            r = p.get(
+                f"http://localhost/api/v2/records?timerange=0-99999999999&hidden={truthy_value}",
+                headers=HEADERS,
+            )
+            assert r.status == 200
+            d = dejsonize(r)
+            assert set(r["key"] for r in d["records"]) == {"r4", "r5", "r6"}
+
+        # Test case insensitivity on falsy values
+        for falsy_value in ["FALSE", "False", "NO", "No", "OFF", "Off"]:
+            r = p.get(
+                f"http://localhost/api/v2/records?timerange=0-99999999999&hidden={falsy_value}",
+                headers=HEADERS,
+            )
+            assert r.status == 200
+            d = dejsonize(r)
+            assert set(r["key"] for r in d["records"]) == {"r1", "r2", "r3"}
+
+        # Test empty hidden parameter - should return all records
+        r = p.get(
+            "http://localhost/api/v2/records?timerange=0-99999999999&hidden=",
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        assert set(r["key"] for r in d["records"]) == {
+            "r1",
+            "r2",
+            "r3",
+            "r4",
+            "r5",
+            "r6",
+        }
+
+        # Test unknown/invalid value - should interpret as truthy
+        r = p.get(
+            "http://localhost/api/v2/records?timerange=0-99999999999&hidden=maybe",
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        assert set(r["key"] for r in d["records"]) == {"r4", "r5", "r6"}
+
+        # Test hidden filter combined with specific timerange
+        # Timerange that includes r1, r2, r3, r4
+        timerange_start = 50
+        timerange_end = 499
+
+        # Without filter - should get records overlapping this range
+        r = p.get(
+            f"http://localhost/api/v2/records?timerange={timerange_start}-{timerange_end}",
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        keys = set(r["key"] for r in d["records"])
+        # r1, r2, r3, r4 should be included
+        assert keys == {"r1", "r2", "r3", "r4"}
+
+        # With hidden=true - should only get hidden records in range
+        r = p.get(
+            f"http://localhost/api/v2/records?timerange={timerange_start}-{timerange_end}&hidden=true",
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        keys = set(r["key"] for r in d["records"])
+        # Should not include visible records
+        assert "r1" not in keys
+        assert "r2" not in keys
+        assert "r3" not in keys
+        # Should only include hidden records
+        for key in keys:
+            assert key in {"r4", "r5", "r6"}
+
+        # With hidden=false - should only get visible records in range
+        r = p.get(
+            f"http://localhost/api/v2/records?timerange={timerange_start}-{timerange_end}&hidden=false",
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        keys = set(r["key"] for r in d["records"])
+        # Should not include hidden records
+        for key in keys:
+            assert key not in {"r4", "r5", "r6"}
+        # Should only include visible records
+        assert keys <= {"r1", "r2", "r3"}
+
+        # Test combining running and hidden filters
+        # Add some running hidden records
+        records = [
+            dict(key="r7", mt=110, t1=now - 1000, t2=now - 1000, ds="#running_visible"),
+            dict(key="r8", mt=110, t1=now - 2000, t2=now - 2000, ds="HIDDEN #running_hidden"),
+        ]
+        r = p.put(
+            "http://localhost/api/v2/records",
+            json.dumps(records).encode(),
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        assert dejsonize(r)["accepted"] == ["r7", "r8"]
+
+        # Test running=true and hidden=false - should get only visible running records
+        r = p.get(
+            "http://localhost/api/v2/records?timerange=0-99999999999&running=true&hidden=false",
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        keys = set(r["key"] for r in d["records"])
+        assert keys == {"r7"}
+
+        # Test running=true and hidden=true - should get only hidden running records
+        r = p.get(
+            "http://localhost/api/v2/records?timerange=0-99999999999&running=true&hidden=true",
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        keys = set(r["key"] for r in d["records"])
+        assert keys == {"r8"}
+
+        # Test running=false and hidden=false - should get only visible stopped records
+        r = p.get(
+            "http://localhost/api/v2/records?timerange=0-99999999999&running=false&hidden=false",
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        keys = set(r["key"] for r in d["records"])
+        assert keys == {"r1", "r2", "r3"}
+
+        # Test running=false and hidden=true - should get only hidden stopped records
+        r = p.get(
+            "http://localhost/api/v2/records?timerange=0-99999999999&running=false&hidden=true",
+            headers=HEADERS,
+        )
+        assert r.status == 200
+        d = dejsonize(r)
+        keys = set(r["key"] for r in d["records"])
+        assert keys == {"r4", "r5", "r6"}
+
+
 def test_updates():
     clear_test_db()
 
