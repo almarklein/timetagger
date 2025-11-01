@@ -204,7 +204,7 @@ async def authenticate(request):
 async def get_webtoken(request, auth_info, db):
     # Get reset option
     reset = request.querydict.get("reset", "")
-    reset = reset.lower() not in ("", "false", "no", "0")
+    reset = reset.lower() not in ("", *FALSY_VALUES)
     # Auth
     if auth_info["expires"] > time.time() + WEBTOKEN_LIFETIME:
         return 403, {}, "forbidden: /webtoken needs auth with a web-token"
@@ -215,7 +215,7 @@ async def get_webtoken(request, auth_info, db):
 async def get_apitoken(request, auth_info, db):
     # Get reset option
     reset = request.querydict.get("reset", "")
-    reset = reset.lower() not in ("", "false", "no", "0")
+    reset = reset.lower() not in ("", *FALSY_VALUES)
     # Auth
     if auth_info["expires"] > time.time() + WEBTOKEN_LIFETIME:
         return 403, {}, "forbidden: /apitoken needs auth with a web-token"
