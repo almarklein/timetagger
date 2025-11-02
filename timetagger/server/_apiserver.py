@@ -11,6 +11,8 @@ import itemdb
 
 from ._utils import user2filename, create_jwt, decode_jwt
 
+from timetagger import __version__
+
 
 logger = logging.getLogger("asgineer")
 
@@ -88,7 +90,14 @@ class AuthException(Exception):
 async def api_handler_triage(request, path, auth_info, db):
     """The API handler that triages over the API options."""
 
-    if path == "updates":
+    if path == "version":
+        if request.method == "GET":
+            return await get_version(request, auth_info, db)
+        else:
+            expl = "/version can only be used with GET"
+            return 405, {}, "method not allowed: " + expl
+
+    elif path == "updates":
         if request.method == "GET":
             return await get_updates(request, auth_info, db)
         else:
@@ -289,6 +298,11 @@ async def get_webtoken_unsafe(username, reset=False):
 
 
 # %% The implementation
+
+
+async def get_version(request, auth_info, db):
+    result = {"version": __version__}
+    return 200, {}, result
 
 
 async def get_updates(request, auth_info, db):

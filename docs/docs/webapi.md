@@ -113,6 +113,20 @@ The fields in the JSON response:
 * `records`: a list of record objects that have changed since. Can be empty.
 * `settings`: a list of settings objects that have changed since. Can be empty.
 
+### GET version
+
+To get the server version, perform the following request:
+
+```
+GET ./version
+```
+
+The fields in the JSON response:
+
+* `version`: a string indicating the TimeTagger server version.
+
+This endpoint can be used to check the server version for compatibility or debugging purposes.
+
 ### Other endpoints
 
 If you look at the [source code](https://github.com/almarklein/timetagger/blob/main/timetagger/server/_apiserver.py), you'll see a few other endpoints, e.g. to refresh the web-token and obtain the api-token. These two endpoints are only available with a web-token (not with an api-token).
