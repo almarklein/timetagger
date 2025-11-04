@@ -426,10 +426,24 @@ class MenuDialog(BaseDialog):
                 text = "Not signed in"
         loggedinas.innerText = text
 
-        whatsnew = "What's new"
-        whatsnew_url = "https://github.com/almarklein/timetagger/releases"
-        if window.timetaggerversion:
-            whatsnew += " in version " + window.timetaggerversion.lstrip("v")
+        # Determine version and update notice
+        if not window.timetaggerversion:
+            whatsnew = "What's new"
+            whatsnew_url = "https://github.com/almarklein/timetagger/releases"
+        elif (
+            window.timetaggerversion == window.latest_release_version
+            or not window.latest_release_version
+        ):
+            whatsnew = "What's new in version " + window.timetaggerversion.lstrip("v")
+            whatsnew_url = f"https://github.com/almarklein/timetagger/releases/tag/{window.timetaggerversion}"
+        else:
+            whatsnew = (
+                "New version available: "
+                + window.timetaggerversion.lstrip("v")
+                + "&nbsp;<i class='fas' style='font-size: 0.8em;'>\uf061</i>&nbsp;"
+                + window.latest_release_version.lstrip("v")
+            )
+            whatsnew_url = f"https://github.com/almarklein/timetagger/releases/tag/{window.latest_release_version}"
 
         container = self.maindiv
         for icon, show, title, func in [
