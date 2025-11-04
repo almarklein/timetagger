@@ -73,6 +73,21 @@ body.darkmode .dialog.verticalmenu {
     text-align: center;
 }
 
+.verticalmenu a .icon-wrapper {
+    position: relative;
+    display: inline-block;
+}
+
+.verticalmenu a .icon-wrapper .notification-dot {
+    position: absolute;
+    top: -8px;
+    right: -10px;
+    width: 8px;
+    height: 8px;
+    background: $notification;
+    border-radius: 50%;
+}
+
 span.keyhint {
     border: 1px solid #ccc;
     padding: 2px 4px;
