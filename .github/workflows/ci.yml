@@ -61,7 +61,7 @@ jobs:
             os: macos-latest
             pyversion: '3.13'
     steps:
-      - uses: actions/checkout@5
+      - uses: actions/checkout@v5
       - name: Set up Python ${{ matrix.pyversion }}
         uses: actions/setup-python@v6
         with:
