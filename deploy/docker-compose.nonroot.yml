@@ -7,7 +7,6 @@
 # !! In docker-compose characters '$' should be escaped as '$$'    !!
 # !! If you use a .env file, use single quotes instead of escaping !!
 
-version: "3"
 services:
   timetagger:
     image: ghcr.io/almarklein/timetagger:latest-nonroot
