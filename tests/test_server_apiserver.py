@@ -6,6 +6,7 @@ import asyncio
 from asgineer.testutils import MockTestServer
 
 from _common import run_tests
+from timetagger import __version__ as timetagger_version
 from timetagger.server._utils import decode_jwt_nocheck
 from timetagger.server import _apiserver
 from timetagger.server import (
@@ -775,6 +776,26 @@ def test_apitoken():
         headers["authtoken"] = d["token"]
         r = p.get("http://localhost/api/v2/updates?since=0", headers=headers)
         assert r.status == 200
+
+
+def test_version():
+    """Test the version API endpoint."""
+    clear_test_db()
+
+    with MockTestServer(our_api_handler) as p:
+        # Test GET version endpoint
+        r = p.get("http://localhost/api/v2/version", headers=HEADERS)
+        assert r.status == 200
+        d = dejsonize(r)
+        assert set(d.keys()) == {"version"}
+        assert isinstance(d["version"], str)
+        assert d["version"] == timetagger_version
+
+        # Test that only GET is allowed
+        r = p.put("http://localhost/api/v2/version", headers=HEADERS)
+        assert r.status == 405
+        r = p.post("http://localhost/api/v2/version", headers=HEADERS)
+        assert r.status == 405
 
 
 if __name__ == "__main__":
