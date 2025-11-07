@@ -14,11 +14,11 @@ jobs:
     name: linting
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v5
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v6
         with:
-          python-version: 3.11
+          python-version: 3.13
       - name: Install dependencies
         shell: bash
         run: |
@@ -61,9 +61,9 @@ jobs:
             os: macos-latest
             pyversion: '3.13'
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v5
       - name: Set up Python ${{ matrix.pyversion }}
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.pyversion }}
       - name: Install dependencies

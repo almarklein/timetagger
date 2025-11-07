@@ -3,6 +3,8 @@ A small set of tools for authentication, storage, and communication with the ser
 Or ... the minimum tools to handle the above things.
 """
 
+# flake8: noqa: F824
+
 from pscript.stubs import window, JSON, localStorage, location, console, fetch
 
 
