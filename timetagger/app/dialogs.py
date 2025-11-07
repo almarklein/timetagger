@@ -827,7 +827,7 @@ class StartStopEdit:
 
         # Store original str duration
         t = t2 - t1
-        self.ori_duration = f"{t//3600:.0f}h {(t//60)%60:02.0f}m {t%60:02.0f}s"
+        self.ori_duration = f"{t // 3600:.0f}h {(t // 60) % 60:02.0f}m {t % 60:02.0f}s"
 
         self._set_time_input_visibility()
         self.render()
@@ -859,12 +859,12 @@ class StartStopEdit:
         if is_running:
             t = dt.now() - self.t1
             self.durationinput.value = (
-                f"{t//3600:.0f}h {(t//60)%60:02.0f}m {t%60:02.0f}s"
+                f"{t // 3600:.0f}h {(t // 60) % 60:02.0f}m {t % 60:02.0f}s"
             )
         else:
             t = self.t2 - self.t1
             m = Math.round(t / 60)
-            self.durationinput.value = f"{m//60:.0f}h {m%60:02.0f}m"
+            self.durationinput.value = f"{m // 60:.0f}h {m % 60:02.0f}m"
 
     def _days_between_dates(self, d1, d2):
         year1, month1, day1 = d1.split("-")
@@ -932,7 +932,7 @@ class StartStopEdit:
             self.date2input.value = t2_date
             self.time2input.value = t2_time[:5]
             m = Math.round(t / 60)
-            self.durationinput.value = f"{m//60:.0f}h {m%60:02.0f}m"
+            self.durationinput.value = f"{m // 60:.0f}h {m % 60:02.0f}m"
 
         # Tweak bgcolor of date2 field to hide it a bit
         if self.days2 == 0:
@@ -1715,7 +1715,7 @@ class RecordDialog(BaseDialog):
             self._ds_input.value = self._ds_input.value.slice(0, stores.STR_MAX)
             if "max" not in self._ds_header.innerHTML:
                 self._ds_header.innerHTML += (
-                    f" <small>(max {stores.STR_MAX-1} chars)</small>"
+                    f" <small>(max {stores.STR_MAX - 1} chars)</small>"
                 )
             self._ds_input.style.setProperty("outline", "dashed 2px red")
             reset = lambda: self._ds_input.style.setProperty("outline", "")
@@ -2029,7 +2029,7 @@ class TagComboDialog(BaseDialog):
     def _make_click_handler(self, tag, callback):
         def handler():
             self.close()
-            self._canvas.tag_dialog.open(tag, callback),
+            (self._canvas.tag_dialog.open(tag, callback),)
 
         return handler
 
@@ -2295,7 +2295,7 @@ class TagPresetsDialog(BaseDialog):
         if length >= stores.JSON_MAX:
             self._input_element.style.setProperty("outline", "dashed 2px red")
             self._analysis_out.innerHTML = (
-                f"Sorry, used {length} of max {stores.JSON_MAX-1} chars."
+                f"Sorry, used {length} of max {stores.JSON_MAX - 1} chars."
             )
             return
 
@@ -2918,19 +2918,19 @@ class ReportDialog(BaseDialog):
         format = self._format_but.value
         if format == "h0":
             round_duration = lambda t: Math.round(t / 3600) * 3600
-            duration2str = lambda t: f"{t/3600:0.0f}"
+            duration2str = lambda t: f"{t / 3600:0.0f}"
         elif format == "h1":
             round_duration = lambda t: Math.round(t / 360) * 360
-            duration2str = lambda t: f"{t/3600:0.1f}"
+            duration2str = lambda t: f"{t / 3600:0.1f}"
         elif format == "h2":
             round_duration = lambda t: Math.round(t / 36) * 36
-            duration2str = lambda t: f"{t/3600:0.2f}"
+            duration2str = lambda t: f"{t / 3600:0.2f}"
         elif format == "h3":
             round_duration = lambda t: Math.round(t / 3.6) * 3.6
-            duration2str = lambda t: f"{t/3600:0.3f}"
+            duration2str = lambda t: f"{t / 3600:0.3f}"
         elif format == "h4":
             round_duration = lambda t: Math.round(t / 0.36) * 0.36
-            duration2str = lambda t: f"{t/3600:0.4f}"
+            duration2str = lambda t: f"{t / 3600:0.4f}"
         elif format == "hms":
             round_duration = lambda t: Math.round(t)
             duration2str = lambda t: dt.duration_string_colon(t, True)

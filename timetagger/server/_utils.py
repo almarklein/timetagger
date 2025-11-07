@@ -157,7 +157,7 @@ def compile_scss_to_css(text, **extra_vars):
     for i in range(len(lines)):
         line = lines[i]
         if "$" in line:
-            raise ValueError(f"Found unreplaced SCSS variable on line {i+1}:\n{line}")
+            raise ValueError(f"Found unreplaced SCSS variable on line {i + 1}:\n{line}")
     for i in reversed(lines2remove):
         lines.pop(i)
     return "\n".join(lines)
