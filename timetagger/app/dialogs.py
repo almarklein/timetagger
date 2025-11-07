@@ -3028,6 +3028,7 @@ class ReportDialog(BaseDialog):
                 tagz1 = window.store.records.tags_from_record(record).join(" ")
                 if tagz1 not in name_map:
                     continue
+                group.duration += record.duration
                 group.records.push(record)
 
         # Perform grouping for time ...
