@@ -713,10 +713,6 @@ class BaseDataStore:
         window.addEventListener("beforeunload", self._beforeunload, False)
 
     def _beforeunload(self, ev):
-        if self.state == "pending":
-            msg = "The most recent changes have not yet been stored."
-            ev.returnValue = msg
-            return msg
         return None
 
     def reset(self):
@@ -747,11 +743,16 @@ class BaseDataStore:
         else:
             self.state = state
 
+    def _save_to_cache(self):
+        # No-op by default
+        pass
+
     def _put(self, kind, *items):
         """Called by the substores for new/modified items."""
         for i in range(len(items)):
             item = items[i]
             self._to_push[kind][item.key] = item
+        self._save_to_cache()
         self.sync_soon(1.5)
         self._set_state("pending")
 
@@ -791,6 +792,9 @@ class ConnectedDataStore(BaseDataStore):
         self._pull_statuses = [0, 0, 0, 0, 0]
         self._auth = window.tools.get_auth_info()
         self._auth_cantuse = None
+
+        # Load cache asynchronously without blocking
+        window.setTimeout(lambda: self._load_from_cache(), 0)
 
     def get_auth(self):
         """Get an auth info object that is guaranteed to match the username
