@@ -2,6 +2,8 @@
 Implementation of HTML-based dialogs.
 """
 
+# flake8: noqa: F824
+
 from pscript import this_is_js
 from pscript.stubs import (
     window,

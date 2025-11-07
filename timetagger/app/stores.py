@@ -22,6 +22,8 @@ When do ranges overlap?
 
 """
 
+# flake8: noqa: F824
+
 from pscript import this_is_js
 from pscript.stubs import Math, Date, JSON, window, console, RawJS
 
