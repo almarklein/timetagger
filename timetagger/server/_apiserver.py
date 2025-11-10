@@ -72,6 +72,8 @@ INDICES = {
     "userinfo": ("!key", "st"),
 }
 
+FALSY_VALUES = ("false", "off", "no", "n", "0")
+
 
 class AuthException(Exception):
     """Exception raised when authentication fails.
@@ -211,7 +213,7 @@ async def authenticate(request):
 async def get_webtoken(request, auth_info, db):
     # Get reset option
     reset = request.querydict.get("reset", "")
-    reset = reset.lower() not in ("", "false", "no", "0")
+    reset = reset.lower() not in ("", *FALSY_VALUES)
     # Auth
     if auth_info["expires"] > time.time() + WEBTOKEN_LIFETIME:
         return 403, {}, "forbidden: /webtoken needs auth with a web-token"
@@ -222,7 +224,7 @@ async def get_webtoken(request, auth_info, db):
 async def get_apitoken(request, auth_info, db):
     # Get reset option
     reset = request.querydict.get("reset", "")
-    reset = reset.lower() not in ("", "false", "no", "0")
+    reset = reset.lower() not in ("", *FALSY_VALUES)
     # Auth
     if auth_info["expires"] > time.time() + WEBTOKEN_LIFETIME:
         return 403, {}, "forbidden: /apitoken needs auth with a web-token"
@@ -370,11 +372,57 @@ async def get_records(request, auth_info, db):
             raise ValueError()
     except ValueError:
         return 400, {}, "bad request: /records timerange needs 2 numbers (timestamps)"
+    tr1, tr2 = int(timerange[0]), int(timerange[1])
+
+    # Parse optional running option
+    running_str = request.querydict.get("running", "").strip().lower()
+    if not running_str:
+        running = None
+    elif running_str in FALSY_VALUES:
+        running = False
+    else:
+        running = True
+
+    # Parse optional hidden option
+    hidden_str = request.querydict.get("hidden", "").strip().lower()
+    if not hidden_str:
+        hidden = None
+    elif hidden_str in FALSY_VALUES:
+        hidden = False
+    else:
+        hidden = True
+
+    # Parse tag option
+    tag_str = request.querydict.get("tag", "").strip()
+    tags = []
+    if tag_str:
+        # ignore client-provided hashtags
+        tag_str = tag_str.replace("#", "")
+        # escape special SQL LIKE characters
+        tag_str = tag_str.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        tags = [tag.strip() for tag in tag_str.split(",")]
+
+    # Prepare query
+    query_parts = []
+    safe_params = []
+    query_parts.append(f"(t2 >= {tr1} AND t1 <= {tr2}) OR (t1 == t2 AND t1 <= {tr2})")
+    for tag in tags:
+        query_parts.append(
+            "json_extract(_ob, '$.ds') LIKE ? ESCAPE '\\' OR json_extract(_ob, '$.ds') LIKE ? ESCAPE '\\'"
+        )
+        safe_params += [f"%#{tag} %", f"%#{tag}"]
+    if running is True:
+        query_parts.append("t1 == t2")
+    if running is False:
+        query_parts.append("t1 != t2")
+    if hidden is True:
+        query_parts.append("json_extract(_ob, '$.ds') LIKE 'HIDDEN%'")
+    if hidden is False:
+        query_parts.append("json_extract(_ob, '$.ds') NOT LIKE 'HIDDEN%'")
+    query = " AND ".join(f"({part})" for part in query_parts)
 
     # Collect records
-    tr1, tr2 = int(timerange[0]), int(timerange[1])
-    query = f"(t2 >= {tr1} AND t1 <= {tr2}) OR (t1 == t2 AND t1 <= {tr2})"
-    records = await db.select("records", query)
+    records = await db.select("records", query, *safe_params)
 
     # Return result
     result = dict(records=records)
