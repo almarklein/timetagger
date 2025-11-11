@@ -428,28 +428,56 @@ class MenuDialog(BaseDialog):
                 text = "Not signed in"
         loggedinas.innerText = text
 
-        whatsnew = "What's new"
-        whatsnew_url = "https://github.com/almarklein/timetagger/releases"
-        if window.timetaggerversion:
-            whatsnew += " in version " + window.timetaggerversion.lstrip("v")
+        # Determine version and update notice
+        whatsnew_notify = False
+        if not window.timetaggerversion:
+            whatsnew = "What's new"
+            whatsnew_url = "https://github.com/almarklein/timetagger/releases"
+        elif (
+            window.timetaggerversion == window.latest_release_version
+            or not window.latest_release_version
+        ):
+            whatsnew = "What's new in version " + window.timetaggerversion.lstrip("v")
+            whatsnew_url = f"https://github.com/almarklein/timetagger/releases/tag/{window.timetaggerversion}"
+        else:
+            whatsnew = (
+                "New version available: "
+                + window.timetaggerversion.lstrip("v")
+                + "&nbsp;<i class='fas' style='font-size: 0.8em;'>\uf061</i>&nbsp;"
+                + window.latest_release_version.lstrip("v")
+            )
+            whatsnew_url = f"https://github.com/almarklein/timetagger/releases/tag/{window.latest_release_version}"
+            whatsnew_notify = True
 
         container = self.maindiv
-        for icon, show, title, func in [
-            (None, True, "External pages", None),
-            ("\uf015", True, "Homepage", "/"),
-            ("\uf059", True, "Get tips and help", "https://timetagger.app/support"),
-            ("\uf0a1", True, whatsnew, whatsnew_url),
-            (None, store_valid, "Manage", None),
-            ("\uf002", store_valid, "Search", self._search),
-            ("\uf56f", store_valid, "Import records", self._import),
-            ("\uf56e", store_valid, "Export all records", self._export),
-            (None, True, "User", None),
-            ("\uf013", store_valid, "Settings", self._show_settings),
-            ("\uf2bd", True, "Account", "../account"),
-            ("\uf2f6", not logged_in, "Login", "../login"),
-            ("\uf2f5", logged_in, "Logout", "../logout"),
-            (None, is_installable, None, None),
-            ("\uf3fa", is_installable, "<b>Install this app</b>", self._do_install),
+        for icon, show, notify, title, func in [
+            (None, True, False, "External pages", None),
+            ("\uf015", True, False, "Homepage", "/"),
+            (
+                "\uf059",
+                True,
+                False,
+                "Get tips and help",
+                "https://timetagger.app/support",
+            ),
+            ("\uf0a1", True, whatsnew_notify, whatsnew, whatsnew_url),
+            (None, store_valid, False, "Manage", None),
+            ("\uf002", store_valid, False, "Search", self._search),
+            ("\uf56f", store_valid, False, "Import records", self._import),
+            ("\uf56e", store_valid, False, "Export all records", self._export),
+            (None, True, False, "User", None),
+            ("\uf013", store_valid, False, "Settings", self._show_settings),
+            ("\uf2bd", True, False, "Account", "../account"),
+            ("\uf2f6", not logged_in, False, "Login", "../login"),
+            ("\uf2f5", logged_in, False, "Logout", "../logout"),
+            (None, is_installable, False, None, None),
+            (
+                "\uf3fa",
+                is_installable,
+                False,
+                "<b>Install this app</b>",
+                self._do_install,
+            ),
         ]:
             if not show:
                 continue
@@ -464,7 +492,13 @@ class MenuDialog(BaseDialog):
                 el = document.createElement("a")
                 html = ""
                 if icon:
-                    html += f"<i class='fas'>{icon}</i>&nbsp;&nbsp;"
+                    if notify:
+                        html += "<span class='icon-wrapper'>"
+                        html += f"<i class='fas'>{icon}</i>"
+                        html += "<span class='notification-dot'></span>"
+                        html += "</span>&nbsp;&nbsp;"
+                    else:
+                        html += f"<i class='fas'>{icon}</i>&nbsp;&nbsp;"
                 html += title
                 el.innerHTML = html
                 if isinstance(func, str):

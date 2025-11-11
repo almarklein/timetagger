@@ -86,6 +86,7 @@ def set_colors():
     COLORS.sec1_clr = "#E6E7E5"
     COLORS.sec2_clr = "#F4F4F4"
     COLORS.acc_clr = "#DEAA22"
+    COLORS.notification = "#ff4444"
 
     # Grays chosen to work in both light and dark mode
     COLORS.tick_text = "rgba(130, 130, 130, 1)"
@@ -786,7 +787,19 @@ class Widget:
     def on_draw(self, ctx):
         pass
 
-    def _draw_button(self, ctx, x, y, given_w, h, text, action, tt, options):
+    def _draw_button(
+        self,
+        ctx,
+        x,
+        y,
+        given_w,
+        h,
+        text,
+        action,
+        tt,
+        options,
+        show_notification_dot=False,
+    ):
         PSCRIPT_OVERLOAD = False  # noqa
 
         # Set and collect options
@@ -906,6 +919,18 @@ class Widget:
             else:
                 ctx.fillText(text, x, 0.5 * (y1 + y2))
             x += width + opt.space
+
+        # Draw notification dot if requested
+        if show_notification_dot:
+            dot_radius = 4
+            dot_x = x2 - dot_radius + 6
+            dot_y = y1 + dot_radius + 8
+
+            # Draw red circle
+            ctx.fillStyle = COLORS.notification
+            ctx.beginPath()
+            ctx.arc(dot_x, dot_y, dot_radius, 0, 2 * PI)
+            ctx.fill()
 
         return w
 
@@ -1154,8 +1179,26 @@ class TopWidget(Widget):
             "ref": "centermiddle",
             "color": COLORS.sec2_clr,
         }
+
+        show_notification_dot = False
+        if (
+            window.latest_release_version
+            and window.timetaggerversion
+            and window.latest_release_version != window.timetaggerversion
+        ):  # new release available
+            show_notification_dot = True
+
         dx = self._draw_button(
-            ctx, x, y + yoffset, None, 48, "fas-\uf0c9", "menu", "", opt
+            ctx,
+            x,
+            y + yoffset,
+            None,
+            48,
+            "fas-\uf0c9",
+            "menu",
+            "",
+            opt,
+            show_notification_dot,
         )
 
         # Draw title
