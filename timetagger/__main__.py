@@ -83,8 +83,11 @@ async def main_handler(request):
     """
 
     # Handle redirects
-    if request.path == "/" and config.path_prefix != "/":
-        return 307, {"Location": config.path_prefix}, b""
+    if request.path == "/":
+        if config.app_redirect:
+            return 307, {"Location": f"{config.path_prefix}app/"}, b""
+        elif config.path_prefix != "/":
+            return 307, {"Location": config.path_prefix}, b""
 
     # Handle application requests
     elif request.path.startswith(config.path_prefix):

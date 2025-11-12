@@ -39,6 +39,8 @@ class Config:
     * `proxy_auth_header (str)`: name of the proxy header which contains the
       username of the logged in user. Default "X-Remote-User".
     * `path_prefix (str)`: the path prefix where timetagger is served. Default "/timetagger/".
+    * `app_redirect (bool)`: whether to redirect the root path "/" directly to the timetagger app,
+      instead of the promotional landing page. Default "False".
 
     The values can be configured using CLI arguments and environment variables.
     For CLI arguments, the following formats are supported:
@@ -62,6 +64,7 @@ class Config:
         ("proxy_auth_trusted", str, "127.0.0.1"),
         ("proxy_auth_header", str, "X-Remote-User"),
         ("path_prefix", to_path_prefix, "/timetagger/"),
+        ("app_redirect", to_bool, False),
     ]
     __slots__ = [name for name, _, _ in _ITEMS]
 
