@@ -92,21 +92,22 @@ def _reset_config_to_defaults():
 def _update_config_from_argv(argv):
     for i in range(len(argv)):
         arg = argv[i]
-        for name, conv, _ in Config._ITEMS:
-            if arg.startswith(f"--{name}="):
-                _, _, raw_value = arg.partition("=")
-            elif arg == f"--{name}":
-                if i + 1 < len(argv):
-                    raw_value = argv[i + 1]
+        for config_attr, conv, _ in Config._ITEMS:
+            for name in (config_attr, config_attr.replace("_", "-")):
+                if arg.startswith(f"--{name}="):
+                    _, _, raw_value = arg.partition("=")
+                elif arg == f"--{name}":
+                    if i + 1 < len(argv):
+                        raw_value = argv[i + 1]
+                    else:
+                        raise RuntimeError(f"Value for {arg} not given")
                 else:
-                    raise RuntimeError(f"Value for {arg} not given")
-            else:
-                continue
-            try:
-                setattr(config, name, conv(raw_value))
-            except Exception as err:
-                raise RuntimeError(f"Could not set config.{name}: {err}")
-            break
+                    continue
+                try:
+                    setattr(config, config_attr, conv(raw_value))
+                except Exception as err:
+                    raise RuntimeError(f"Could not set config.{config_attr}: {err}")
+                break
 
 
 def _update_config_from_env(env):
