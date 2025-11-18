@@ -67,6 +67,7 @@ Author: Manuel Senfft (info@tagirijus.de)
 """
 
 import argparse
+import binascii
 import datetime
 from itemdb import ItemDB
 import json
@@ -286,7 +287,7 @@ class Records(BulkEditor):
                             hour=23, minute=59, second=59, microsecond=999999
                         )
                     return int(dt.timestamp())
-                except ValueError as e:
+                except ValueError:
                     return time_string
 
     def delete_records_in_range(self, from_unix_timestamp, to_unix_timestamp):
