@@ -1919,8 +1919,7 @@ class RecordDialog(BaseDialog):
         # Get overlapping records
         overlapping_records = window.store.records.get_records(t1, t2)
 
-        for key in overlapping_records.keys():
-            existing = overlapping_records[key]
+        for key, existing in overlapping_records.items():
             # Skip the record being edited
             if existing.key == new_record.key:
                 continue
@@ -1945,6 +1944,11 @@ class RecordDialog(BaseDialog):
 
                 window.store.records.put(first_part)
                 window.store.records.put(second_part)
+
+            elif existing.t1 >= t1 and existing.t2 <= t2:
+                # Existing record is fully inside the new record - no action needed
+                # The user is placing a record that completely covers this one
+                pass
 
             elif existing.t1 < t1 and existing.t2 > t1 and existing.t2 <= t2:
                 # Partial overlap at start - trim end of existing record
