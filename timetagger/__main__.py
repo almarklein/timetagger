@@ -90,7 +90,7 @@ async def main_handler(request):
             return 307, {"Location": config.path_prefix}, b""
 
     # Handle application requests
-    elif request.path.startswith(config.path_prefix):
+    if request.path.startswith(config.path_prefix):
         if request.path == f"{config.path_prefix}status":
             return 200, {}, "ok"
         elif request.path.startswith(f"{config.path_prefix}api/v2/"):
