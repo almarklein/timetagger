@@ -4014,10 +4014,10 @@ class SettingsDialog(BaseDialog):
                 </select>
             </div>
             <h2><i class='fas'>\uf085</i>&nbsp;&nbsp;Misc</h2>
-            <label>
+            <label style='display:block;'>
                 <input type='checkbox' checked='true'></input>
                 Show elapsed time below start-button</label>
-            <label>
+            <label style='display:block;'>
                 <input type='checkbox' checked='false'></input>
                 Split overlapping records when adding a new record</label>
 
