@@ -82,24 +82,30 @@ async def main_handler(request):
     worker won't interfere with other stuff you might serve on localhost.
     """
 
+    # Handle redirects
     if request.path == "/":
-        return 307, {"Location": "/timetagger/"}, b""  # Redirect
+        if config.app_redirect:
+            return 307, {"Location": f"{config.path_prefix}app/"}, b""
+        elif config.path_prefix != "/":
+            return 307, {"Location": config.path_prefix}, b""
 
-    elif request.path.startswith("/timetagger/"):
-        if request.path == "/timetagger/status":
+    # Handle application requests
+    if request.path.startswith(config.path_prefix):
+        if request.path == f"{config.path_prefix}status":
             return 200, {}, "ok"
-        elif request.path.startswith("/timetagger/api/v2/"):
-            path = request.path[19:].strip("/")
+        elif request.path.startswith(f"{config.path_prefix}api/v2/"):
+            path = request.path.removeprefix(f"{config.path_prefix}api/v2/").strip("/")
             return await api_handler(request, path)
-        elif request.path.startswith("/timetagger/app/"):
-            path = request.path[16:].strip("/")
+        elif request.path.startswith(f"{config.path_prefix}app/"):
+            path = request.path.removeprefix(f"{config.path_prefix}app/").strip("/")
             return await app_asset_handler(request, path)
         else:
-            path = request.path[12:].strip("/")
+            path = request.path.removeprefix(f"{config.path_prefix}").strip("/")
             return await web_asset_handler(request, path)
 
+    # Fallback Error 404
     else:
-        return 404, {}, "only serving at /timetagger/"
+        return 404, {}, f"only serving at {config.path_prefix}"
 
 
 async def api_handler(request, path):
