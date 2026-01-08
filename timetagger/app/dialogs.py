@@ -837,6 +837,20 @@ class StartStopEdit:
                 if self.radio_startrlr.checked:
                     self.reset(t1, t1)
                 else:
+                    if self.radio_finished.checked: # If the user just checked the finished radio butotn
+                        range_t1, range_t2 = window.canvas.range.get_range()
+                        now = dt.now()
+                        # If the current time is on the currently viewed day, assume that
+                        #   the user forgot to hit "start now" and use the current time as
+                        #   the default end of the event, and -1 hour as the default start time.
+                        if range_t1 <= now <= range_t2:
+                            t1 = now - 3600
+                            t2 = now
+                        else: # Otherwise assume the user is filling in a historical event on the viewed day
+                            t1, t2 = window.canvas.range.get_range()
+                            # If t2 - t1 is exactly 1 day, subtract 5 minutes from t2 to make it the same day as t1
+                            if t2 - t1 == 86400:
+                                t2 = t2 - 300
                     self.reset(t1, t2)
         else:
             # Switch between "already running" and "finished".
@@ -1072,10 +1086,11 @@ class StartStopEdit:
                     mm, ss = mm + self._stepwise_delta(mm, -(_stepsize)), 0
                 d1 = window.Date(year1, month1 - 1, day1, hh, mm, ss)
                 self.t1 = dt.to_time_int(d1)
-            if self.ori_t1 == self.ori_t2:
-                self.t2 = self.t1 = min(self.t1, now)
-            elif self.t1 >= self.t2:
-                self.t2 = self.t1 + 1
+
+                if self.ori_t1 == self.ori_t2:
+                    self.t2 = self.t1 = min(self.t1, now)
+                elif self.t1 >= self.t2:
+                    self.t2 = self.t1 + 1
 
         elif what == "time2":
             # Changing time2 -> update t2, keep t1 and t2 in check
@@ -1094,11 +1109,12 @@ class StartStopEdit:
                     mm, ss = mm + self._stepwise_delta(mm, -(_stepsize)), 0
                 d2 = window.Date(year2, month2 - 1, day2, hh, mm, ss)
                 self.t2 = dt.to_time_int(d2)
-            if self.ori_t1 == self.ori_t2:
-                self.t2 = self.t1
-            elif self.t2 <= self.t1:
-                self.t1 = self.t2
-                self.t2 = self.t1 + 1
+
+                if self.ori_t1 == self.ori_t2:
+                    self.t2 = self.t1
+                elif self.t2 <= self.t1:
+                    self.t1 = self.t2
+                    self.t2 = self.t1 + 1
 
         elif what == "duration":
             # Changing duration -> update t2, but keep it in check
