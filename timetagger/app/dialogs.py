@@ -1086,10 +1086,11 @@ class StartStopEdit:
                     mm, ss = mm + self._stepwise_delta(mm, -(_stepsize)), 0
                 d1 = window.Date(year1, month1 - 1, day1, hh, mm, ss)
                 self.t1 = dt.to_time_int(d1)
-            if self.ori_t1 == self.ori_t2:
-                self.t2 = self.t1 = min(self.t1, now)
-            elif self.t1 >= self.t2:
-                self.t2 = self.t1 + 1
+
+                if self.ori_t1 == self.ori_t2:
+                    self.t2 = self.t1 = min(self.t1, now)
+                elif self.t1 >= self.t2:
+                    self.t2 = self.t1 + 1
 
         elif what == "time2":
             # Changing time2 -> update t2, keep t1 and t2 in check
@@ -1108,11 +1109,12 @@ class StartStopEdit:
                     mm, ss = mm + self._stepwise_delta(mm, -(_stepsize)), 0
                 d2 = window.Date(year2, month2 - 1, day2, hh, mm, ss)
                 self.t2 = dt.to_time_int(d2)
-            if self.ori_t1 == self.ori_t2:
-                self.t2 = self.t1
-            elif self.t2 <= self.t1:
-                self.t1 = self.t2
-                self.t2 = self.t1 + 1
+
+                if self.ori_t1 == self.ori_t2:
+                    self.t2 = self.t1
+                elif self.t2 <= self.t1:
+                    self.t1 = self.t2
+                    self.t2 = self.t1 + 1
 
         elif what == "duration":
             # Changing duration -> update t2, but keep it in check
