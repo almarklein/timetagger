@@ -837,6 +837,20 @@ class StartStopEdit:
                 if self.radio_startrlr.checked:
                     self.reset(t1, t1)
                 else:
+                    if self.radio_finished.checked: # If the user just checked the finished radio butotn
+                        range_t1, range_t2 = window.canvas.range.get_range()
+                        now = dt.now()
+                        # If the current time is on the currently viewed day, assume that
+                        #   the user forgot to hit "start now" and use the current time as
+                        #   the default end of the event, and -1 hour as the default start time.
+                        if range_t1 <= now <= range_t2:
+                            t1 = now - 3600
+                            t2 = now
+                        else: # Otherwise assume the user is filling in a historical event on the viewed day
+                            t1, t2 = window.canvas.range.get_range()
+                            # If t2 - t1 is exactly 1 day, subtract 5 minutes from t2 to make it the same day as t1
+                            if t2 - t1 == 86400:
+                                t2 = t2 - 300
                     self.reset(t1, t2)
         else:
             # Switch between "already running" and "finished".
