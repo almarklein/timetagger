@@ -1904,6 +1904,13 @@ class RecordDialog(BaseDialog):
         # Prevent multiple timers at once
         if self._record.t1 == self._record.t2:
             self._stop_all_running_records(self._record.t1)
+        # Handle overlapping records if enabled (only for non-running records)
+        if (
+            window.simplesettings.get("split_overlapping_records")
+            and self._record.t1 != self._record.t2
+            and self._lmode in ("new", "edit")
+        ):
+            self._split_overlapping_records(self._record)
         # Apply
         window.store.records.put(self._record)
         super().submit(self._record)
@@ -1916,6 +1923,56 @@ class RecordDialog(BaseDialog):
                 self._canvas.pomodoro_dialog.start_work()
             elif self._lmode == "stop":
                 self._canvas.pomodoro_dialog.stop()
+
+    def _split_overlapping_records(self, new_record):
+        """Split existing records that overlap with the new record."""
+        t1, t2 = new_record.t1, new_record.t2
+
+        # Get overlapping records
+        overlapping_records = window.store.records.get_records(t1, t2)
+
+        for key, existing in overlapping_records.items():
+            # Skip the record being edited
+            if existing.key == new_record.key:
+                continue
+            # Skip running records
+            if existing.t1 == existing.t2:
+                continue
+
+            # Check overlap type:
+            # - existing.t1 < t1 and existing.t2 > t2: new record is fully inside existing
+            # - existing.t1 >= t1 and existing.t2 <= t2: existing is fully inside new (do nothing)
+            # - existing.t1 < t1 and existing.t2 > t1 and existing.t2 <= t2: partial overlap at start
+            # - existing.t1 >= t1 and existing.t1 < t2 and existing.t2 > t2: partial overlap at end
+
+            if existing.t1 < t1 and existing.t2 > t2:
+                # New record is fully inside existing - split into two records
+                # First part: existing.t1 to new_record.t1
+                # Second part: new_record.t2 to existing.t2
+                first_part = existing.copy()
+                first_part.t2 = t1
+
+                second_part = window.store.records.create(t2, existing.t2, existing.ds)
+
+                window.store.records.put(first_part)
+                window.store.records.put(second_part)
+
+            elif existing.t1 >= t1 and existing.t2 <= t2:
+                # Existing record is fully inside the new record - no action needed
+                # The user is placing a record that completely covers this one
+                pass
+
+            elif existing.t1 < t1 and existing.t2 > t1 and existing.t2 <= t2:
+                # Partial overlap at start - trim end of existing record
+                trimmed = existing.copy()
+                trimmed.t2 = t1
+                window.store.records.put(trimmed)
+
+            elif existing.t1 >= t1 and existing.t1 < t2 and existing.t2 > t2:
+                # Partial overlap at end - trim start of existing record
+                trimmed = existing.copy()
+                trimmed.t1 = t2
+                window.store.records.put(trimmed)
 
     def resume_record(self):
         """Start a new record with the same description."""
@@ -3995,9 +4052,12 @@ class SettingsDialog(BaseDialog):
                 </select>
             </div>
             <h2><i class='fas'>\uf085</i>&nbsp;&nbsp;Misc</h2>
-            <label>
+            <label style='display:block;'>
                 <input type='checkbox' checked='true'></input>
                 Show elapsed time below start-button</label>
+            <label style='display:block;'>
+                <input type='checkbox' checked='false'></input>
+                Split overlapping records when adding a new record</label>
 
             <hr style='margin-top: 1em;' />
 
@@ -4047,6 +4107,7 @@ class SettingsDialog(BaseDialog):
             self._repr_form,
             _,  # Misc header
             self._stopwatch_label,
+            self._split_overlapping_label,
             _,  # hr
             _,  # Section: per device
             _,  # Appearance header
@@ -4112,6 +4173,12 @@ class SettingsDialog(BaseDialog):
         self._stopwatch_check = self._stopwatch_label.children[0]
         self._stopwatch_check.checked = show_stopwatch
         self._stopwatch_check.onchange = self._on_stopwatch_check
+
+        # Split overlapping records
+        split_overlapping = window.simplesettings.get("split_overlapping_records")
+        self._split_overlapping_check = self._split_overlapping_label.children[0]
+        self._split_overlapping_check.checked = split_overlapping
+        self._split_overlapping_check.onchange = self._on_split_overlapping_check
 
         # Device settings
 
@@ -4202,6 +4269,10 @@ class SettingsDialog(BaseDialog):
     def _on_stopwatch_check(self):
         show_stopwatch = bool(self._stopwatch_check.checked)
         window.simplesettings.set("show_stopwatch", show_stopwatch)
+
+    def _on_split_overlapping_check(self):
+        split_overlapping = bool(self._split_overlapping_check.checked)
+        window.simplesettings.set("split_overlapping_records", split_overlapping)
 
 
 class GuideDialog(BaseDialog):
