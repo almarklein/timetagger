@@ -5,7 +5,6 @@ PScript implementation of datetime utilities.
 from pscript import this_is_js, RawJS
 from pscript.stubs import Date, isNaN, Math, window
 
-
 DAYS_SHORT = [
     "Sun",
     "Mon",
@@ -401,8 +400,7 @@ def get_weeknumber(t):
     # From https://weeknumber.net/how-to/javascript
     date = Date(t * 1000)  # noqa
     day_offfset = 7 - get_first_day_of_week()  # noqa
-    RawJS(
-        """
+    RawJS("""
     date.setHours(0, 0, 0, 0);
     // Thursday in current week decides the year.
     date.setDate(date.getDate() + 3 - (date.getDay() + day_offfset) % 7);
@@ -411,8 +409,7 @@ def get_weeknumber(t):
     // Adjust to Thursday in week 1 and count number of weeks from date to week1.
     var res = 1 + Math.round(((date.getTime() - week1.getTime()) / 86400000
                                - 3 + (week1.getDay() + 6) % 7) / 7);
-    """
-    )
+    """)
     return res  # noqa
 
 

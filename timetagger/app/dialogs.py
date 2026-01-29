@@ -17,7 +17,6 @@ from pscript.stubs import (
     isNaN,
 )
 
-
 if this_is_js():
     tools = window.tools
     dt = window.dt
@@ -165,8 +164,7 @@ def csvsplit(s, sep, i=0):
     # so we should be fine with our own data.
     global RawJS
     parts = []
-    RawJS(
-        """
+    RawJS("""
     var mode = 0; // 0: between fields, 1: unescaped, 2: escaped
     var sepcode = sep.charCodeAt(0);
     var lastsplit = i;
@@ -215,8 +213,7 @@ def csvsplit(s, sep, i=0):
             parts[j] = val.slice(1, val.length-1).replace('""', '"');
         }
     }
-    """
-    )
+    """)
     return parts, i
 
 
@@ -2757,8 +2754,7 @@ class SearchDialog(BaseDialog):
             record = window.store.records.get_by_key(key)
             ds = record.ds or ""
             date = dt.time2str(record.t1).split("T")[0]
-            lines.append(
-                f"""
+            lines.append(f"""
                 <a href='#date={date}'
                     style='cursor: pointer;'>
                     <span>{date}</span>
@@ -2768,8 +2764,7 @@ class SearchDialog(BaseDialog):
                     <i class='fas'>\uf682</i>
                     <span>{ds}</span>
                 </a>
-                """
-            )
+                """)
         self._records_node.innerHTML = "<br />\n".join(lines)
 
     def _open_record(self, key):

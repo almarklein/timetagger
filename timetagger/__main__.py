@@ -41,7 +41,6 @@ from timetagger.server import (
     enable_service_worker,
 )
 
-
 # Special hooks exit early
 if __name__ == "__main__" and len(sys.argv) >= 2:
     if sys.argv[1] in ("--version", "version"):

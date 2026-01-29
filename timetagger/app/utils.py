@@ -22,8 +22,7 @@ def looks_like_desktop():
 # hue is a number between 0 and 360, saturation and lightness are numbers between 0 and 100.
 # returns an array of 3 numbers between 0 and 1, for the r, g, and b channel.
 def _get_hsluv2rgb():
-    RawJS(
-        """
+    RawJS("""
     function f(a){var c=[],b=Math.pow(a+16,3)/1560896;b=b>g?b:a/k;for(var d=0;3>d;){var e=d++,h=l[e][0],w=l[e][1];e=l[e][2];for(var x=0;2>x;){var y=x++,z=(632260*e-126452*w)*b+126452*y;c.push({b:(284517*h-94839*e)*b/z,a:((838422*e+769860*w+731718*h)*a*b-769860*y*a)/z})}}return c}
     function m(a){a=f(a);for(var c=Infinity,b=0;b<a.length;){var d=a[b];++b;c=Math.min(c,Math.abs(d.a)/Math.sqrt(Math.pow(d.b,2)+1))}return c}
     function n(a,c){c=c/360*Math.PI*2;a=f(a);for(var b=Infinity,d=0;d<a.length;){var e=a[d];++d;e=e.a/(Math.sin(c)-e.b*Math.cos(c));0<=e&&(b=Math.min(b,e))}return b}
@@ -41,8 +40,7 @@ def _get_hsluv2rgb():
 
     // hsluvToRgb:Q, hpluvToRgb:S
     function hsluv2rgb(h, s, l) {return Q([h, s, l]);}
-    """
-    )
+    """)
     return hsluv2rgb
 
 

@@ -16,7 +16,6 @@ import markdown
 from . import _utils as utils
 from .. import __version__
 
-
 versionstring = "v" + __version__
 
 

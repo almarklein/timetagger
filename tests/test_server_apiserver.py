@@ -19,7 +19,6 @@ from timetagger.server import (
 
 import itemdb
 
-
 USER = "test"
 HEADERS = {}
 

@@ -4,7 +4,6 @@ from _common import run_tests
 
 import timetagger
 
-
 server_fname = os.path.dirname(timetagger.server.__file__)
 client_fname = os.path.dirname(timetagger.app.__file__)
 

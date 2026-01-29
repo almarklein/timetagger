@@ -27,7 +27,6 @@ When do ranges overlap?
 from pscript import this_is_js
 from pscript.stubs import Math, Date, JSON, window, console, RawJS
 
-
 if this_is_js():  # pragma: no cover
     tools = window.tools
     utils = window.utils
@@ -35,29 +34,25 @@ if this_is_js():  # pragma: no cover
     random = Math.random
 
     def to_int(x):
-        RawJS(
-            """
+        RawJS("""
         x = Number(x)
         if (!isFinite(x)) {
             var e = new  Error("TypeError: Cannot convert to int");
             e.name = "TypeError";
             throw e;
         }
-        """
-        )
+        """)
         return Math.floor(x)
 
     def to_float(x):
-        RawJS(
-            """
+        RawJS("""
         x = Number(x)
         if (!isFinite(x)) {
             var e = new  Error("TypeError: Cannot convert to int");
             e.name = "TypeError";
             throw e;
         }
-        """
-        )
+        """)
         return x
 
     def to_str(x):
