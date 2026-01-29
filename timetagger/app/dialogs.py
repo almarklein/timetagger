@@ -1689,8 +1689,12 @@ class RecordDialog(BaseDialog):
 
         # Keep track of composing state (e.g. entering JCK characters) to avoid prematurely submitting on enter (#594)
         self._is_composing = False
-        self._ds_input.addEventListener('compositionstart', lambda:self._set_compose_state(True))
-        self._ds_input.addEventListener('compositionend', lambda:self._set_compose_state(False))
+        self._ds_input.addEventListener(
+            "compositionstart", lambda: self._set_compose_state(True)
+        )
+        self._ds_input.addEventListener(
+            "compositionend", lambda: self._set_compose_state(False)
+        )
 
         # Almost done. Focus on ds if this looks like desktop; it's anoying on mobile
         super().open(callback)
@@ -2416,9 +2420,21 @@ class TagRenameDialog(BaseDialog):
 
         self._records = []
 
+        # Keep track of composing state (e.g. entering JCK characters)
+        self._is_composing = False
+        self._tagname2.addEventListener(
+            "compositionstart", lambda: self._set_compose_state(True)
+        )
+        self._tagname2.addEventListener(
+            "compositionend", lambda: self._set_compose_state(False)
+        )
+
         super().open(callback)
         if utils.looks_like_desktop():
             self._tagname2.focus()
+
+    def _set_compose_state(self, value):
+        self._is_composing = value
 
     def close(self):
         self._records = []
@@ -2438,6 +2454,8 @@ class TagRenameDialog(BaseDialog):
 
     def _on_key2(self, e):
         key = e.key.lower()
+        if self._is_composing:
+            pass
         if key == "enter" or key == "return":
             e.stopPropagation()
             e.preventDefault()
@@ -2588,6 +2606,18 @@ class SearchDialog(BaseDialog):
         if utils.looks_like_desktop():
             self._search_input.focus()
 
+        # Keep track of composing state (e.g. entering JCK characters)
+        self._is_composing = False
+        self._search_input.addEventListener(
+            "compositionstart", lambda: self._set_compose_state(True)
+        )
+        self._search_input.addEventListener(
+            "compositionend", lambda: self._set_compose_state(False)
+        )
+
+    def _set_compose_state(self, value):
+        self._is_composing = value
+
     def close(self):
         self._autocompleter.close()
         self._records = []
@@ -2664,6 +2694,8 @@ class SearchDialog(BaseDialog):
         if self._autocompleter.on_key(e):
             e.stopPropagation()
             return
+        elif self._is_composing:
+            pass
         elif key == "enter" or key == "return":
             e.stopPropagation()
             e.preventDefault()
