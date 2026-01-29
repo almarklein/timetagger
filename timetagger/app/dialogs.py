@@ -1552,7 +1552,7 @@ class Autocompleter:
         tag_list = []
         for tag, tag_t2 in tags_dict.items():
             tag_list.push((tag, tag_t2))
-        tag_list.sort(key=lambda x: x[0])
+        tag_list.sort(key=lambda x: -x[1])
         return tag_list
 
 
