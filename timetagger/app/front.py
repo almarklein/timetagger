@@ -5,7 +5,6 @@ Front end implementation in PScript.
 from pscript import this_is_js
 from pscript.stubs import window, Math, time, perf_counter
 
-
 if this_is_js():
     dt = window.dt
     utils = window.utils

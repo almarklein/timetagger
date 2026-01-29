@@ -12,7 +12,6 @@ import jwt
 
 from .. import config
 
-
 # Init directory paths
 ROOT_TT_DIR = os.path.expanduser(config.datadir)
 ROOT_USER_DIR = os.path.join(ROOT_TT_DIR, "users")

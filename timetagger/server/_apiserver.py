@@ -13,7 +13,6 @@ from ._utils import user2filename, create_jwt, decode_jwt
 
 from timetagger import __version__
 
-
 logger = logging.getLogger("asgineer")
 
 

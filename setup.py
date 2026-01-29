@@ -2,7 +2,6 @@ import re
 
 from setuptools import find_packages, setup
 
-
 with open("timetagger/__init__.py") as fh:
     VERSION = re.search(r"__version__ = \"(.*?)\"", fh.read()).group(1)
 

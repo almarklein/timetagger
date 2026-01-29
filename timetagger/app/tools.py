@@ -7,7 +7,6 @@ Or ... the minimum tools to handle the above things.
 
 from pscript.stubs import window, JSON, localStorage, location, console, fetch
 
-
 # %% General
 
 

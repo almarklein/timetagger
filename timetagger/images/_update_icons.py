@@ -1,7 +1,6 @@
 # import imageio
 import webruntime
 
-
 sizes = 16, 32, 48, 64, 128, 256
 
 icon = webruntime.util.icon.Icon()
