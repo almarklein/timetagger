@@ -1863,11 +1863,11 @@ class RecordDialog(BaseDialog):
 
     def _on_key(self, e):
         key = e.key.lower()
-        if self._autocompleter.on_key(e):
+        if self._is_composing:
+            pass
+        elif self._autocompleter.on_key(e):
             e.stopPropagation()
             return
-        elif self._is_composing:
-            pass
         elif key == "enter" or key == "return":
             self.submit_soon()
         else:
@@ -2456,7 +2456,7 @@ class TagRenameDialog(BaseDialog):
         key = e.key.lower()
         if self._is_composing:
             pass
-        if key == "enter" or key == "return":
+        elif key == "enter" or key == "return":
             e.stopPropagation()
             e.preventDefault()
             self._on_name2_done()
@@ -2691,11 +2691,11 @@ class SearchDialog(BaseDialog):
 
     def _on_key(self, e):
         key = e.key.lower()
-        if self._autocompleter.on_key(e):
+        if self._is_composing:
+            pass
+        elif self._autocompleter.on_key(e):
             e.stopPropagation()
             return
-        elif self._is_composing:
-            pass
         elif key == "enter" or key == "return":
             e.stopPropagation()
             e.preventDefault()
