@@ -838,9 +838,24 @@ class StartStopEdit:
         else:
             # Switch between "already running" and "finished".
             # Since this is an existing record, we should maintain initial values.
-            if self.radio_startrlr.checked:
+            if self.radio_startrlr.checked: # If the "Started earlier" radio button is checked
                 self.reset(self.initial_t1, self.initial_t1)
-            else:
+            elif self.radio_finished.checked: # If the "Already done" radio button is checked
+                range_t1, range_t2 = window.canvas.range.get_range()
+                now = dt.now()
+                if not (range_t1 <= now <= range_t2):
+                    # If the current time is not in the currently viewed range assume 
+                    #   the user is filling a historical event in the viewed range.
+                    #   We will pick the hour in the center of the range as the default filled time.
+                    center_time = (range_t1 + range_t2) // 2
+                    t1 = center_time - 1800
+                    t2 = center_time + 1800
+                    self.reset(t1, t2)
+                else:
+                    # If the current time IS in the currently viewed range, 
+                    #   set the start time to one hour ago and the stop time to now.
+                    self.reset(now-3600, now)
+            else: # This should never trigger since currently the only options are "start now", "started earlier", and "already done"
                 t2 = max(self.initial_t1 + 1, dt.now())
                 self.reset(self.initial_t1, t2)
 
