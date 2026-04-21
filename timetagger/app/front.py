@@ -10,8 +10,10 @@ if this_is_js():
     utils = window.utils
     dialogs = window.dialogs
     BaseCanvas = window.utils.BaseCanvas
+    pomo_logic = window.pomodoro_logic
 else:
     BaseCanvas = object
+    from . import pomodoro_logic as pomo_logic
 
 
 SMALLER = 0.85
@@ -1618,10 +1620,10 @@ class TopWidget(Widget):
                 for record in records:
                     record.t2 = max(record.t1 + 2, now)
                     window.store.records.put(record)
-                if window.simplesettings.get("pomodoro_enabled") and not window.simplesettings.get(
-                    "pomodoro_preserve_on_record_change"
-                ):
-                    self._canvas.pomodoro_dialog.stop()
+                if window.simplesettings.get("pomodoro_enabled"):
+                    preserve = window.simplesettings.get("pomodoro_preserve_on_record_change")
+                    if pomo_logic.should_reset_pomodoro_on_record_stop(preserve):
+                        self._canvas.pomodoro_dialog.stop()
 
         elif action.startswith("nav_"):
             # A navigation action

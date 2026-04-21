@@ -22,6 +22,9 @@ if this_is_js():
     dt = window.dt
     utils = window.utils
     stores = window.stores
+    pomo_logic = window.pomodoro_logic
+else:
+    from . import pomodoro_logic as pomo_logic
 
 # A stack of dialogs
 stack = []
@@ -1929,12 +1932,11 @@ class RecordDialog(BaseDialog):
         if window.simplesettings.get("pomodoro_enabled"):
             preserve = window.simplesettings.get("pomodoro_preserve_on_record_change")
             current_pomo_state = self._canvas.pomodoro_dialog._state[0]
-            is_running = current_pomo_state in ("work", "break")
             if self._lmode == "start":
-                if not preserve or not is_running:
+                if pomo_logic.should_reset_pomodoro_on_record_start(preserve, current_pomo_state):
                     self._canvas.pomodoro_dialog.start_work()
             elif self._lmode == "stop":
-                if not preserve:
+                if pomo_logic.should_reset_pomodoro_on_record_stop(preserve):
                     self._canvas.pomodoro_dialog.stop()
 
     def resume_record(self):
@@ -1964,8 +1966,7 @@ class RecordDialog(BaseDialog):
         if window.simplesettings.get("pomodoro_enabled"):
             preserve = window.simplesettings.get("pomodoro_preserve_on_record_change")
             current_pomo_state = self._canvas.pomodoro_dialog._state[0]
-            is_running = current_pomo_state in ("work", "break")
-            if not preserve or not is_running:
+            if pomo_logic.should_reset_pomodoro_on_record_start(preserve, current_pomo_state):
                 self._canvas.pomodoro_dialog.start_work()
 
     def send_notification(self, record):
@@ -4345,35 +4346,25 @@ class PomodoroDialog(BaseDialog):
         self._button.onclick = self._on_button_click
 
     def _init_state(self):
-        if window.simplesettings.get("pomodoro_enabled") and window.simplesettings.get(
-            "pomodoro_preserve_on_record_change"
-        ):
+        pomo_enabled = window.simplesettings.get("pomodoro_enabled")
+        preserve_enabled = window.simplesettings.get("pomodoro_preserve_on_record_change")
+        if pomo_logic.should_try_restore_pomodoro_state(pomo_enabled, preserve_enabled):
             state_data = self._load_state_from_storage()
             if state_data:
                 state, etime = state_data
-                if state in ("work", "break"):
-                    if etime > dt.now():
-                        self._set_state(state, etime)
-                        return
-                    else:
-                        if state == "work":
-                            self._set_state("pre-break")
-                        else:
-                            self._set_state("pre-work")
-                        return
-                else:
-                    self._set_state(state)
+                restore_result = pomo_logic.determine_restored_pomodoro_state(state, etime, dt.now())
+                if restore_result:
+                    restored_state, restored_etime = restore_result
+                    self._set_state(restored_state, restored_etime)
                     return
         self._set_state("pre-work")
 
     def _save_state_to_storage(self, state, etime):
-        if window.simplesettings.get("pomodoro_preserve_on_record_change"):
-            if state in ("work", "break"):
-                data = JSON.stringify({"state": state, "etime": etime})
-                localStorage.setItem("timetagger_pomodoro_state", data)
-            else:
-                self._clear_state_from_storage()
-        else:
+        preserve_enabled = window.simplesettings.get("pomodoro_preserve_on_record_change")
+        if pomo_logic.should_save_pomodoro_state_to_storage(preserve_enabled, state):
+            data = JSON.stringify({"state": state, "etime": etime})
+            localStorage.setItem("timetagger_pomodoro_state", data)
+        elif pomo_logic.should_clear_pomodoro_state_from_storage(preserve_enabled, state):
             self._clear_state_from_storage()
 
     def _clear_state_from_storage(self):
