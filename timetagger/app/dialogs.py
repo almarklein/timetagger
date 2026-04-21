@@ -4368,8 +4368,11 @@ class PomodoroDialog(BaseDialog):
 
     def _save_state_to_storage(self, state, etime):
         if window.simplesettings.get("pomodoro_preserve_on_record_change"):
-            data = JSON.stringify({"state": state, "etime": etime})
-            localStorage.setItem("timetagger_pomodoro_state", data)
+            if state in ("work", "break"):
+                data = JSON.stringify({"state": state, "etime": etime})
+                localStorage.setItem("timetagger_pomodoro_state", data)
+            else:
+                self._clear_state_from_storage()
         else:
             self._clear_state_from_storage()
 
