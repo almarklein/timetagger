@@ -4232,10 +4232,14 @@ class SettingsDialog(BaseDialog):
     def _on_pomodoro_check(self):
         pomo_enabled = bool(self._pomodoro_check.checked)
         window.simplesettings.set("pomodoro_enabled", pomo_enabled)
+        if not pomo_enabled:
+            self._canvas.pomodoro_dialog._clear_state_from_storage()
 
     def _on_pomodoro_preserve_check(self):
         pomo_preserve = bool(self._pomodoro_preserve_check.checked)
         window.simplesettings.set("pomodoro_preserve_on_record_change", pomo_preserve)
+        if not pomo_preserve:
+            self._canvas.pomodoro_dialog._clear_state_from_storage()
 
     def _on_stopwatch_check(self):
         show_stopwatch = bool(self._stopwatch_check.checked)
@@ -4366,6 +4370,11 @@ class PomodoroDialog(BaseDialog):
         if window.simplesettings.get("pomodoro_preserve_on_record_change"):
             data = JSON.stringify({"state": state, "etime": etime})
             localStorage.setItem("timetagger_pomodoro_state", data)
+        else:
+            self._clear_state_from_storage()
+
+    def _clear_state_from_storage(self):
+        localStorage.removeItem("timetagger_pomodoro_state")
 
     def _load_state_from_storage(self):
         data = localStorage.getItem("timetagger_pomodoro_state")
