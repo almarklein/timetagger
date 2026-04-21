@@ -1927,10 +1927,15 @@ class RecordDialog(BaseDialog):
             self.send_notification(self._record)
         # Start pomo?
         if window.simplesettings.get("pomodoro_enabled"):
+            preserve = window.simplesettings.get("pomodoro_preserve_on_record_change")
+            current_pomo_state = self._canvas.pomodoro_dialog._state[0]
+            is_running = current_pomo_state in ("work", "break")
             if self._lmode == "start":
-                self._canvas.pomodoro_dialog.start_work()
+                if not preserve or not is_running:
+                    self._canvas.pomodoro_dialog.start_work()
             elif self._lmode == "stop":
-                self._canvas.pomodoro_dialog.stop()
+                if not preserve:
+                    self._canvas.pomodoro_dialog.stop()
 
     def resume_record(self):
         """Start a new record with the same description."""
@@ -1957,7 +1962,11 @@ class RecordDialog(BaseDialog):
         self.send_notification(record)
         # Start pomo?
         if window.simplesettings.get("pomodoro_enabled"):
-            self._canvas.pomodoro_dialog.start_work()
+            preserve = window.simplesettings.get("pomodoro_preserve_on_record_change")
+            current_pomo_state = self._canvas.pomodoro_dialog._state[0]
+            is_running = current_pomo_state in ("work", "break")
+            if not preserve or not is_running:
+                self._canvas.pomodoro_dialog.start_work()
 
     def send_notification(self, record):
         if not window.simplesettings.get("notifications"):
@@ -4041,6 +4050,9 @@ class SettingsDialog(BaseDialog):
             <label>
                 <input type='checkbox' checked='false'></input>
                 Enable pomodoro (experimental) </label>
+            <label>
+                <input type='checkbox' checked='false'></input>
+                Preserve pomodoro on record changes </label>
 
             <hr style='margin-top: 1em;' />
 
@@ -4070,6 +4082,7 @@ class SettingsDialog(BaseDialog):
             self._notification_label,
             _,  # Pomodoro header
             self._pomodoro_label,
+            self._pomodoro_preserve_label,
             _,  # hr
             _,  # Section: info
             _,  # Timezone header
@@ -4154,6 +4167,12 @@ class SettingsDialog(BaseDialog):
         self._pomodoro_check.checked = pomo_enabled
         self._pomodoro_check.onchange = self._on_pomodoro_check
 
+        # Pomodoro preserve on record change
+        pomo_preserve = window.simplesettings.get("pomodoro_preserve_on_record_change")
+        self._pomodoro_preserve_check = self._pomodoro_preserve_label.children[0]
+        self._pomodoro_preserve_check.checked = pomo_preserve
+        self._pomodoro_preserve_check.onchange = self._on_pomodoro_preserve_check
+
         # Static settings
 
         # Set timezone info
@@ -4214,6 +4233,10 @@ class SettingsDialog(BaseDialog):
         pomo_enabled = bool(self._pomodoro_check.checked)
         window.simplesettings.set("pomodoro_enabled", pomo_enabled)
 
+    def _on_pomodoro_preserve_check(self):
+        pomo_preserve = bool(self._pomodoro_preserve_check.checked)
+        window.simplesettings.set("pomodoro_preserve_on_record_change", pomo_preserve)
+
     def _on_stopwatch_check(self):
         show_stopwatch = bool(self._stopwatch_check.checked)
         window.simplesettings.set("show_stopwatch", show_stopwatch)
@@ -4258,7 +4281,7 @@ class PomodoroDialog(BaseDialog):
 
         # Init
         self._init()
-        self._set_state("pre-work")
+        self._init_state()
 
         # Setup callbacks
         window.setInterval(self._update, 250)
@@ -4317,6 +4340,43 @@ class PomodoroDialog(BaseDialog):
 
         self._button.onclick = self._on_button_click
 
+    def _init_state(self):
+        if window.simplesettings.get("pomodoro_enabled") and window.simplesettings.get(
+            "pomodoro_preserve_on_record_change"
+        ):
+            state_data = self._load_state_from_storage()
+            if state_data:
+                state, etime = state_data
+                if state in ("work", "break"):
+                    if etime > dt.now():
+                        self._set_state(state, etime)
+                        return
+                    else:
+                        if state == "work":
+                            self._set_state("pre-break")
+                        else:
+                            self._set_state("pre-work")
+                        return
+                else:
+                    self._set_state(state)
+                    return
+        self._set_state("pre-work")
+
+    def _save_state_to_storage(self, state, etime):
+        if window.simplesettings.get("pomodoro_preserve_on_record_change"):
+            data = JSON.stringify({"state": state, "etime": etime})
+            localStorage.setItem("timetagger_pomodoro_state", data)
+
+    def _load_state_from_storage(self):
+        data = localStorage.getItem("timetagger_pomodoro_state")
+        if data:
+            try:
+                parsed = JSON.parse(data)
+                return parsed.get("state"), parsed.get("etime", 0)
+            except Exception as err:
+                window.console.warn("Cannot parse pomodoro state from storage: " + str(err))
+        return None
+
     def open(self, callback=None):
         super().open(callback)
         self._update()
@@ -4330,21 +4390,25 @@ class PomodoroDialog(BaseDialog):
         if promise:
             promise.catch(lambda err: None)
 
-    def _set_state(self, state):
+    def _set_state(self, state, etime=None):
         if state == "pre-work":
-            etime = 0
+            if etime is None:
+                etime = 0
             pretitle = ""
             self._button.innerHTML = "Start working"
         elif state == "work":
-            etime = dt.now() + 25 * 60
+            if etime is None:
+                etime = dt.now() + 25 * 60
             pretitle = "Working | "
             self._button.innerHTML = "Stop"
         elif state == "pre-break":
-            etime = 0
+            if etime is None:
+                etime = 0
             pretitle = ""
             self._button.innerHTML = "Start break"
         elif state == "break":
-            etime = dt.now() + 5 * 60
+            if etime is None:
+                etime = dt.now() + 5 * 60
             pretitle = "Break | "
             self._button.innerHTML = "Stop"
         else:
@@ -4353,6 +4417,7 @@ class PomodoroDialog(BaseDialog):
         window.document.title = pretitle + self._original_title
         self._state = state, etime
         self._update()
+        self._save_state_to_storage(state, etime)
 
     def time_left(self):
         etime = self._state[1]

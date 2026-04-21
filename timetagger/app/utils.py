@@ -612,6 +612,7 @@ class SimpleSettings:
             "width_mode": "auto",
             "notifications": False,
             "pomodoro_enabled": False,
+            "pomodoro_preserve_on_record_change": False,
             "report_grouping": "date",
             "report_groupperiod": "none",
             "report_hidesecondary": False,

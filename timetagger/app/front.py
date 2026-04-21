@@ -1618,7 +1618,9 @@ class TopWidget(Widget):
                 for record in records:
                     record.t2 = max(record.t1 + 2, now)
                     window.store.records.put(record)
-                if window.simplesettings.get("pomodoro_enabled"):
+                if window.simplesettings.get("pomodoro_enabled") and not window.simplesettings.get(
+                    "pomodoro_preserve_on_record_change"
+                ):
                     self._canvas.pomodoro_dialog.stop()
 
         elif action.startswith("nav_"):
