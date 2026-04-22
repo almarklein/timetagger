@@ -3299,7 +3299,7 @@ class ReportDialog(BaseDialog):
 
         lines = []
         lines.append(
-            "subtotals,tag_groups,group_start,group_end,duration,date,start,stop,description,user,tags"
+            "subtotals,tag_groups,duration,date,start,stop,description,user,tags,group_start,group_end"
         )
         lines.append("")
 
@@ -3317,7 +3317,7 @@ class ReportDialog(BaseDialog):
                 end_time = row[5] if len(row) > 5 else ""
                 lines.append(
                     RawJS(
-                        'row[1] + "," + row[2] + "," + start_time + "," + end_time + ",,,,,,,,'
+                        'row[1] + "," + row[2] + ",,,,,,,," + start_time + "," + end_time'
                     )
                 )
             elif row[0] == "record":
@@ -3325,7 +3325,7 @@ class ReportDialog(BaseDialog):
                 ds = '"' + ds.replace('"', '""') + '"'
                 lines.append(
                     RawJS(
-                        """',,,,' + duration + ',' + sd1 + ',' + st1 + ',' + st2 + ',' + ds + ',' + user + ',' + tagz"""
+                        """',,' + duration + ',' + sd1 + ',' + st1 + ',' + st2 + ',' + ds + ',' + user + ',' + tagz + ',' + ','"""
                     )
                 )
 
