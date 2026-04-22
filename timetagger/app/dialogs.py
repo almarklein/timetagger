@@ -3161,11 +3161,18 @@ class ReportDialog(BaseDialog):
                             "duration": 0,
                             "records": [],
                             "sortkey": sortkey,
+                            "min_t1": None,
+                            "max_t2": None,
                         }
                     # Append
                     group = groups[title]
                     group.records.push(record)
                     group.duration += record.duration
+                    # Update min_t1 and max_t2 for the group
+                    if group.min_t1 is None or record.t1 < group.min_t1:
+                        group.min_t1 = record.t1
+                    if group.max_t2 is None or record.t2 > group.max_t2:
+                        group.max_t2 = record.t2
 
             # Get new groups, sorted by period
             group_list2 = groups.values()
@@ -3184,10 +3191,22 @@ class ReportDialog(BaseDialog):
             # Add row for total of this tag combi
             duration = duration2str(group.duration)
             pad = 1
+            # Calculate start and end time for the group (if available)
+            group_start_time = ""
+            group_end_time = ""
+            if group.min_t1 is not None and group.max_t2 is not None:
+                _, st1 = dt.time2localstr(group.min_t1).split(" ")
+                _, st2 = dt.time2localstr(group.max_t2).split(" ")
+                if True:  # st1.endsWith(":00"):
+                    st1 = st1[:-3]
+                if True:  # st2.endsWith(":00"):
+                    st2 = st2[:-3]
+                group_start_time = st1
+                group_end_time = st2
             if showrecords:
                 rows.append(["blank"])
             if group.title != "hidden":
-                rows.append(["head", duration, group.title, pad])
+                rows.append(["head", duration, group.title, pad, group_start_time, group_end_time])
 
             # Add row for each record
             if showrecords:
@@ -3224,8 +3243,13 @@ class ReportDialog(BaseDialog):
             if row[0] == "blank":
                 lines.append(blank_row)
             elif row[0] == "head":
+                start_time = row[4] if len(row) > 4 else ""
+                end_time = row[5] if len(row) > 5 else ""
+                time_range = ""
+                if start_time and end_time:
+                    time_range = f"<span style='font-size:0.85em;color:#666;margin-left:1em;'>{start_time} - {end_time}</span>"
                 lines.append(
-                    f"<tr><th>{row[1]}</th><th class='pad{row[3]}'>{row[2]}</th><th></th>"
+                    f"<tr><th>{row[1]}</th><th class='pad{row[3]}'>{row[2]}{time_range}</th><th></th>"
                     + "<th></th><th></th><th></th><th></th></tr>"
                 )
             elif row[0] == "record":
@@ -3275,7 +3299,7 @@ class ReportDialog(BaseDialog):
 
         lines = []
         lines.append(
-            "subtotals,tag_groups,duration,date,start,stop,description,user,tags"
+            "subtotals,tag_groups,duration,date,start,stop,description,user,tags,group_start,group_end"
         )
         lines.append("")
 
@@ -3287,15 +3311,21 @@ class ReportDialog(BaseDialog):
 
         for row in rows:
             if row[0] == "blank":
-                lines.append(",,,,,,,,")
+                lines.append(",,,,,,,,,,")
             elif row[0] == "head":
-                lines.append(RawJS('row[1] + "," + row[2] + ",,,,,,,"'))
+                start_time = row[4] if len(row) > 4 else ""
+                end_time = row[5] if len(row) > 5 else ""
+                lines.append(
+                    RawJS(
+                        'row[1] + "," + row[2] + ",,,,,,,," + start_time + "," + end_time'
+                    )
+                )
             elif row[0] == "record":
                 _, key, duration, sd1, st1, st2, ds, tagz = row
                 ds = '"' + ds.replace('"', '""') + '"'
                 lines.append(
                     RawJS(
-                        """',,' + duration + ',' + sd1 + ',' + st1 + ',' + st2 + ',' + ds + ',' + user + ',' + tagz"""
+                        """',,' + duration + ',' + sd1 + ',' + st1 + ',' + st2 + ',' + ds + ',' + user + ',' + tagz + ',' + ','"""
                     )
                 )
 
@@ -3409,6 +3439,17 @@ class ReportDialog(BaseDialog):
                     doc.setTextColor("#000")
                     x += doc.getTextWidth(basename)
                     doc.text(lastname, x, y + rowheight2, left_middle)
+                    # Add start and end time if available (for day grouping)
+                    start_time = row[4] if len(row) > 4 else ""
+                    end_time = row[5] if len(row) > 5 else ""
+                    if start_time and end_time:
+                        x += doc.getTextWidth(lastname)
+                        time_range = f"  {start_time} - {end_time}"
+                        doc.setTextColor("#555")
+                        doc.setFontSize(9)
+                        doc.text(time_range, x, y + rowheight2, left_middle)
+                        doc.setFontSize(10)
+                        doc.setTextColor("#000")
 
                 elif row[0] == "record":
                     doc.setFillColor("#f3f3f3" if rownr % 2 else "#eaeaea")
