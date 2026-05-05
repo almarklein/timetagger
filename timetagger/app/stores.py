@@ -403,20 +403,23 @@ class RecordStore(BaseStore):
 
     def get_all_tags_stats(self):
         """Get stats for all tags across all records, ignoring time range.
-        Returns dict of tag -> {total_t, last_t2}. Excludes #untagged.
+        Returns dict of tag -> {total_t, last_t2, count}. Excludes #untagged.
         """
         result = {}
+        now = dt.now()
         for record in self.get_dump():
             tags = self.tags_from_record(record)
             if tags[0] == "#untagged":
                 continue
-            duration = max(0, record.t2 - record.t1)
+            effective_t2 = now if record.t1 == record.t2 else record.t2
+            duration = max(0, effective_t2 - record.t1)
             for tag in tags:
                 if tag not in result:
-                    result[tag] = {"total_t": 0, "last_t2": 0}
+                    result[tag] = {"total_t": 0, "last_t2": 0, "count": 0}
                 result[tag]["total_t"] += duration
-                if record.t2 > result[tag]["last_t2"]:
-                    result[tag]["last_t2"] = record.t2
+                result[tag]["count"] += 1
+                if effective_t2 > result[tag]["last_t2"]:
+                    result[tag]["last_t2"] = effective_t2
         return result
 
     def _normalize_more(self, items):

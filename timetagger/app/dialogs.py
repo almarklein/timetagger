@@ -2588,6 +2588,58 @@ class TagRenameDialog(BaseDialog):
         else:
             window.store.settings.set_tag_info(tag_from, {})
 
+    def bulk_rename_tags_in_records(self, mapping):
+        """Rename multiple source tags to a single target in one pass over records.
+        mapping is a dict of {tag_from: tag_to}. Avoids repeated overwrites of
+        target tag settings that would occur when calling rename_tag_in_records
+        multiple times.
+        """
+        source_set = {}
+        for tag_from in mapping.keys():
+            source_set[tag_from] = True
+
+        for record in window.store.records.get_dump():
+            tags = window.store.records.tags_from_record(record)
+            has_source = False
+            for tag in tags:
+                if source_set.get(tag, False):
+                    has_source = True
+                    break
+            if not has_source:
+                continue
+
+            # Pre-seed with existing record tags to avoid duplicating target
+            added_targets = {}
+            for tag in tags:
+                added_targets[tag] = True
+
+            _, parts = utils.get_tags_and_parts_from_string(record.ds)
+            new_parts = []
+            for part in parts:
+                if part.startswith("#") and source_set.get(part, False):
+                    tag_to = mapping[part]
+                    if not added_targets.get(tag_to, False):
+                        added_targets[tag_to] = True
+                        new_parts.push(tag_to)
+                    # else: target already present, skip to avoid duplicate
+                else:
+                    new_parts.push(part)
+            record.ds = "".join(new_parts)
+            window.store.records.put(record)
+
+        # Transfer settings: keep existing target settings; clear all sources
+        target_settings_set = False
+        for tag_from in mapping.keys():
+            tag_to = mapping[tag_from]
+            if not target_settings_set:
+                target_settings_set = True
+                existing = window.store.settings.get_tag_info(tag_to)
+                if not existing.get("color", ""):
+                    info = window.store.settings.get_tag_info(tag_from)
+                    window.store.settings.set_tag_info(tag_to, info)
+                    continue
+            window.store.settings.set_tag_info(tag_from, {})
+
 
 class SearchDialog(BaseDialog):
     """Dialog to search for records and tags."""
@@ -4533,6 +4585,11 @@ class TagManagementDialog(BaseDialog):
                 <input type='search' placeholder='Filter tags ...'
                        spellcheck='false' style='width:100%;' />
             </div>
+            <div style='display:flex; align-items:center; gap:0.5em;
+                        padding-bottom:0.3em;'>
+                <input type='checkbox' id='tmgmt-select-all' />
+                <label for='tmgmt-select-all'>Select all</label>
+            </div>
             <div id='tmgmt-list' style='overflow-y:auto; max-height:55vh;
                                         margin-bottom:0.5em;'>
             </div>
@@ -4589,6 +4646,10 @@ class TagManagementDialog(BaseDialog):
         search_div = self.maindiv.children[1]
         self._search_input = search_div.children[0]
         self._search_input.oninput = self._on_search
+
+        select_all_div = self.maindiv.children[2]
+        self._select_all_cb = select_all_div.children[0]
+        self._select_all_cb.onchange = self._on_select_all_change
 
         self._list_div = document.getElementById("tmgmt-list")
 
@@ -4822,19 +4883,37 @@ class TagManagementDialog(BaseDialog):
         self._bulk_color_input.value = hex
         self._bulk_color_input.style.borderColor = hex
 
-    def _on_checkbox_change(self):
-        has_checked = False
+    def _on_select_all_change(self):
+        checked = self._select_all_cb.checked
         for i in range(self._list_div.children.length):
             row = self._list_div.children[i]
             if row.getAttribute("data-tag") is None:
                 continue
+            if row.style.display == "none":
+                continue
+            row.children[0].checked = checked
+        self._on_checkbox_change()
+
+    def _on_checkbox_change(self):
+        has_checked = False
+        all_visible_checked = True
+        has_visible = False
+        for i in range(self._list_div.children.length):
+            row = self._list_div.children[i]
+            if row.getAttribute("data-tag") is None:
+                continue
+            if row.style.display == "none":
+                continue
+            has_visible = True
             cb = row.children[0]
             if cb.checked:
                 has_checked = True
-                break
+            else:
+                all_visible_checked = False
         self._rename_toggle.disabled = not has_checked
         self._color_toggle.disabled = not has_checked
         self._priority_toggle.disabled = not has_checked
+        self._select_all_cb.checked = has_visible and all_visible_checked and has_checked
 
     def _on_search(self):
         query = self._search_input.value.lower()
@@ -4847,6 +4926,7 @@ class TagManagementDialog(BaseDialog):
                 row.style.display = "flex"
             else:
                 row.style.display = "none"
+        self._select_all_cb.checked = False
         self._update_empty_state()
 
     def _update_empty_state(self):
@@ -4874,6 +4954,7 @@ class TagManagementDialog(BaseDialog):
 
     def _reload_after_action(self):
         self._search_input.value = ""
+        self._select_all_cb.checked = False
         for bid in ["tmgmt-rename-body", "tmgmt-color-body", "tmgmt-priority-body"]:
             el = document.getElementById(bid)
             if el:
@@ -4907,7 +4988,8 @@ class TagManagementDialog(BaseDialog):
         self._bulk_color_input.style.borderColor = clr
 
     def _bulk_set_random_color(self):
-        clr = "#" + Math.floor(Math.random() * 16777215).toString(16)
+        hex = Math.floor(Math.random() * 16777215).toString(16)
+        clr = "#" + ("000000" + hex).slice(-6)
         self._bulk_color_input.value = clr
         self._bulk_color_input.style.borderColor = clr
 
@@ -4964,10 +5046,15 @@ class TagManagementDialog(BaseDialog):
 
     def _make_bulk_confirm_handler(self, selected, tag_to):
         def handler():
-            for tag_from in selected:
+            if len(selected) == 1:
                 self._canvas.tag_rename_dialog.rename_tag_in_records(
-                    tag_from, tag_to
+                    selected[0], tag_to
                 )
+            else:
+                mapping = {}
+                for tag_from in selected:
+                    mapping[tag_from] = tag_to
+                self._canvas.tag_rename_dialog.bulk_rename_tags_in_records(mapping)
             self._reload_after_action()
 
         return handler
