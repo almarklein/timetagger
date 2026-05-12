@@ -1551,6 +1551,11 @@ class TopWidget(Widget):
             self._handle_button_press("guide")
         else:
             return
+
+        # Avoid double handling by canvas and window both
+        if e.currentTarget is self._canvas.node:
+            e.stopPropagation()
+
         e.preventDefault()
 
     def _handle_button_press(self, action):
