@@ -460,6 +460,7 @@ class MenuDialog(BaseDialog):
             ("\uf0a1", True, whatsnew_notify, whatsnew, whatsnew_url),
             (None, store_valid, False, "Manage", None),
             ("\uf002", store_valid, False, "Search", self._search),
+            ("\uf02c", store_valid, False, "Manage tags", self._manage_tags),
             ("\uf56f", store_valid, False, "Import records", self._import),
             ("\uf56e", store_valid, False, "Export all records", self._export),
             (None, True, False, "User", None),
@@ -539,6 +540,10 @@ class MenuDialog(BaseDialog):
     def _import(self):
         self.close()
         self._canvas.import_dialog.open()
+
+    def _manage_tags(self):
+        self.close()
+        self._canvas.tag_management_dialog.open()
 
 
 class TimeSelectionDialog(BaseDialog):
@@ -2555,6 +2560,90 @@ class TagRenameDialog(BaseDialog):
         self._button_replace_comfirm.disabled = True
         window.setTimeout(self._hide_confirm_button, 500)
 
+    def rename_tag_in_records(self, tag_from, tag_to):
+        """Replace or remove a single tag across all matching records.
+        tag_to=None strips the tag token; otherwise it replaces it.
+        """
+        search_tags = [tag_from]
+        replacement_tags = [] if tag_to is None else [tag_to]
+        for record in window.store.records.get_dump():
+            tags = window.store.records.tags_from_record(record)
+            if tag_from not in tags:
+                continue
+            _, parts = utils.get_tags_and_parts_from_string(record.ds)
+            new_parts = []
+            replacement_made = False
+            for part in parts:
+                if part.startswith("#") and (
+                    part in search_tags or part in replacement_tags
+                ):
+                    if not replacement_made:
+                        replacement_made = True
+                        if len(replacement_tags) > 0:
+                            new_parts.push(replacement_tags[0])
+                else:
+                    new_parts.push(part)
+            record.ds = "".join(new_parts)
+            window.store.records.put(record)
+        if tag_to is not None:
+            info = window.store.settings.get_tag_info(tag_from)
+            window.store.settings.set_tag_info(tag_from, {})
+            window.store.settings.set_tag_info(tag_to, info)
+        else:
+            window.store.settings.set_tag_info(tag_from, {})
+
+    def bulk_rename_tags_in_records(self, mapping):
+        """Rename multiple source tags to a single target in one pass over records.
+        mapping is a dict of {tag_from: tag_to}. Avoids repeated overwrites of
+        target tag settings that would occur when calling rename_tag_in_records
+        multiple times.
+        """
+        source_set = {}
+        for tag_from in mapping.keys():
+            source_set[tag_from] = True
+
+        for record in window.store.records.get_dump():
+            tags = window.store.records.tags_from_record(record)
+            has_source = False
+            for tag in tags:
+                if source_set.get(tag, False):
+                    has_source = True
+                    break
+            if not has_source:
+                continue
+
+            # Pre-seed with existing record tags to avoid duplicating target
+            added_targets = {}
+            for tag in tags:
+                added_targets[tag] = True
+
+            _, parts = utils.get_tags_and_parts_from_string(record.ds)
+            new_parts = []
+            for part in parts:
+                if part.startswith("#") and source_set.get(part, False):
+                    tag_to = mapping[part]
+                    if not added_targets.get(tag_to, False):
+                        added_targets[tag_to] = True
+                        new_parts.push(tag_to)
+                    # else: target already present, skip to avoid duplicate
+                else:
+                    new_parts.push(part)
+            record.ds = "".join(new_parts)
+            window.store.records.put(record)
+
+        # Transfer settings: keep existing target settings; clear all sources
+        target_settings_set = False
+        for tag_from in mapping.keys():
+            tag_to = mapping[tag_from]
+            if not target_settings_set:
+                target_settings_set = True
+                existing = window.store.settings.get_tag_info(tag_to)
+                if not existing.get("color", ""):
+                    info = window.store.settings.get_tag_info(tag_from)
+                    window.store.settings.set_tag_info(tag_to, info)
+                    continue
+            window.store.settings.set_tag_info(tag_from, {})
+
 
 class SearchDialog(BaseDialog):
     """Dialog to search for records and tags."""
@@ -4486,3 +4575,490 @@ class PomodoroDialog(BaseDialog):
         elif event.action == "break":
             self._set_state("break")
             self._play_sound("wind")
+
+
+class TagManagementDialog(BaseDialog):
+    """Dialog to list and manage all tags across all records."""
+
+    def open(self, callback=None):
+        self.maindiv.innerHTML = """
+            <h1><i class='fas'></i>&nbsp;&nbsp;Manage tags
+                <button type='button'><i class='fas'></i></button>
+            </h1>
+            <div style='margin-bottom:0.5em;'>
+                <input type='search' placeholder='Filter tags ...'
+                       spellcheck='false' style='width:100%;' />
+            </div>
+            <div style='display:flex; align-items:center; gap:0.5em;
+                        padding-bottom:0.3em;'>
+                <input type='checkbox' id='tmgmt-select-all' />
+                <label for='tmgmt-select-all'>Select all</label>
+            </div>
+            <div id='tmgmt-list' style='overflow-y:auto; max-height:55vh;
+                                        margin-bottom:0.5em;'>
+            </div>
+            <div style='font-size:0.78em; color:#aaa; margin-bottom:0.4em;'>
+                Tags exist only while used in records — to create a tag,
+                include it in a record's description.
+            </div>
+            <div id='tmgmt-footer' style='padding-top:0.5em; border-top:1px solid #ccc;'>
+                <div style='font-size:0.85em; color:#888; margin-bottom:0.4em;'>
+                    Bulk operations for selected tags:
+                </div>
+                <div style='display:flex; gap:0.4em; flex-wrap:wrap; margin-bottom:0.4em;'>
+                    <button type='button' id='tmgmt-rename-toggle'>Rename</button>
+                    <button type='button' id='tmgmt-color-toggle'>Set color</button>
+                    <button type='button' id='tmgmt-priority-toggle'>Set priority</button>
+                </div>
+                <div id='tmgmt-rename-body' style='display:none; margin-top:0.5em; border-top:1px solid #ccc; padding-top:0.5em;'>
+                    <div style='display:flex; align-items:center; gap:0.5em; flex-wrap:wrap;'>
+                        <span>Rename to:</span>
+                        <input type='text' placeholder='#newtag' spellcheck='false'
+                               style='flex:1; min-width:6em;' />
+                        <button type='button'>Rename</button>
+                    </div>
+                </div>
+                <div id='tmgmt-color-body' style='display:none; margin-top:0.5em; border-top:1px solid #ccc; padding-top:0.5em;'>
+                    <div style='display:flex; align-items:center; gap:0.5em; flex-wrap:wrap;
+                                margin-bottom:0.3em;'>
+                        <span>Color:</span>
+                        <input type='text' placeholder='#hex' spellcheck='false'
+                               style='width:7em; border:3px solid #eee;' />
+                        <button type='button'><i class='fas'></i> Default</button>
+                        <button type='button'><i class='fas'></i> Random</button>
+                        <button type='button' style='margin-left:auto;'>Apply</button>
+                    </div>
+                    <div id='tmgmt-color-swatches' style='display:grid; gap:3px;'>
+                    </div>
+                </div>
+                <div id='tmgmt-priority-body' style='display:none; margin-top:0.5em; border-top:1px solid #ccc; padding-top:0.5em;'>
+                    <div style='display:flex; align-items:center; gap:0.5em; flex-wrap:wrap;'>
+                        <span>Priority:</span>
+                        <select>
+                            <option value='1'>Primary (default)</option>
+                            <option value='2'>Secondary (for "extra" tags)</option>
+                        </select>
+                        <button type='button'>Apply</button>
+                    </div>
+                </div>
+            </div>
+        """
+
+        close_but = self.maindiv.children[0].children[-1]
+        close_but.onclick = self.close
+
+        search_div = self.maindiv.children[1]
+        self._search_input = search_div.children[0]
+        self._search_input.oninput = self._on_search
+
+        select_all_div = self.maindiv.children[2]
+        self._select_all_cb = select_all_div.children[0]
+        self._select_all_cb.onchange = self._on_select_all_change
+
+        self._list_div = document.getElementById("tmgmt-list")
+
+        footer = document.getElementById("tmgmt-footer")
+        # children[0] = headline, children[1] = toggle row,
+        # children[2] = rename body, children[3] = color body, children[4] = priority body
+
+        toggle_row = footer.children[1]
+        self._rename_toggle = toggle_row.children[0]
+        self._color_toggle = toggle_row.children[1]
+        self._priority_toggle = toggle_row.children[2]
+        self._rename_toggle.onclick = self._make_accordion_toggle("tmgmt-rename-body", self._rename_toggle)
+        self._color_toggle.onclick = self._make_accordion_toggle("tmgmt-color-body", self._color_toggle)
+        self._priority_toggle.onclick = self._make_accordion_toggle("tmgmt-priority-body", self._priority_toggle)
+        self._rename_toggle.disabled = True
+        self._color_toggle.disabled = True
+        self._priority_toggle.disabled = True
+
+        rename_body = footer.children[2]
+        rename_inner = rename_body.children[0]
+        self._bulk_target = rename_inner.children[1]
+        self._bulk_button = rename_inner.children[2]
+        self._bulk_button.onclick = self._bulk_rename
+
+        color_body = footer.children[3]
+        color_inner = color_body.children[0]
+        self._bulk_color_input = color_inner.children[1]
+        self._bulk_color_input.oninput = self._on_bulk_color_input
+        self._bulk_color_default_button = color_inner.children[2]
+        self._bulk_color_default_button.onclick = self._bulk_set_default_color
+        self._bulk_color_random_button = color_inner.children[3]
+        self._bulk_color_random_button.onclick = self._bulk_set_random_color
+        self._bulk_color_button = color_inner.children[4]
+        self._bulk_color_button.onclick = self._bulk_set_color
+
+        color_grid = document.getElementById("tmgmt-color-swatches")
+        color_grid.style.gridTemplateColumns = "auto ".repeat(utils.PALETTE_COLS)
+        for hex in utils.PALETTE2:
+            swatch = document.createElement("span")
+            swatch.style.background = hex
+            swatch.style.width = "24px"
+            swatch.style.height = "24px"
+            swatch.style.display = "inline-block"
+            swatch.style.borderRadius = "3px"
+            swatch.style.cursor = "pointer"
+            self._make_swatch_handler(swatch, hex)
+            color_grid.appendChild(swatch)
+
+        priority_body = footer.children[4]
+        priority_inner = priority_body.children[0]
+        self._bulk_priority_select = priority_inner.children[1]
+        self._bulk_priority_button = priority_inner.children[2]
+        self._bulk_priority_button.onclick = self._bulk_set_priority
+
+        self._load_tags()
+        super().open(callback)
+
+    def _load_tags(self):
+        stats = window.store.records.get_all_tags_stats()
+        self._list_div.innerHTML = ""
+
+        tags = []
+        for tag in stats.keys():
+            tags.push(tag)
+        tags.sort()
+
+        if len(tags) == 0:
+            empty = document.createElement("div")
+            empty.style.color = "#888"
+            empty.style.padding = "1em 0"
+            empty.innerText = "No tags found"
+            self._list_div.appendChild(empty)
+            return
+
+        for tag in tags:
+            self._render_tag_row(tag, stats[tag])
+
+        self._update_empty_state()
+
+    def _render_tag_row(self, tag, stat):
+        color = window.store.settings.get_color_for_tag(tag)
+        info = window.store.settings.get_tag_info(tag)
+        priority = info.get("priority", 0) or 0
+        total_t = stat["total_t"]
+        last_t2 = stat["last_t2"]
+
+        hours = int(total_t) // 3600
+        minutes = (int(total_t) % 3600) // 60
+        if hours > 0:
+            time_str = f"{hours}h {minutes:02.0f}m"
+        else:
+            time_str = f"{minutes}m"
+
+        if last_t2 > 0:
+            date_str = "Last: " + dt.time2str(last_t2).split("T")[0]
+        else:
+            date_str = "\u2014"
+
+        row = document.createElement("div")
+        row.setAttribute("data-tag", tag)
+        row.style.display = "flex"
+        row.style.alignItems = "center"
+        row.style.flexWrap = "wrap"
+        row.style.gap = "0.3em"
+        row.style.padding = "3px 0"
+        row.style.borderBottom = "1px solid #eee"
+
+        cb = document.createElement("input")
+        cb.type = "checkbox"
+        cb.onchange = self._on_checkbox_change
+        row.appendChild(cb)
+
+        label = document.createElement("span")
+        label.innerText = tag
+        label.style.color = color
+        label.style.fontWeight = "bold"
+        label.style.minWidth = "120px"
+        label.style.flex = "1"
+        row.appendChild(label)
+
+        if priority == 2:
+            prio_badge = document.createElement("span")
+            prio_badge.innerText = "Secondary"
+            prio_badge.title = "Secondary priority"
+            prio_badge.style.fontSize = "0.72em"
+            prio_badge.style.color = "#aaa"
+            prio_badge.style.border = "1px solid #ddd"
+            prio_badge.style.borderRadius = "3px"
+            prio_badge.style.padding = "0 4px"
+            prio_badge.style.whiteSpace = "nowrap"
+            row.appendChild(prio_badge)
+
+        hours_span = document.createElement("span")
+        hours_span.innerText = time_str
+        hours_span.title = "Total time tracked with this tag across all records"
+        hours_span.style.color = "#888"
+        hours_span.style.minWidth = "60px"
+        row.appendChild(hours_span)
+
+        date_span = document.createElement("span")
+        date_span.innerText = date_str
+        date_span.title = "Date this tag was last used in any record"
+        date_span.style.color = "#888"
+        date_span.style.minWidth = "90px"
+        row.appendChild(date_span)
+
+        conf_but = document.createElement("button")
+        conf_but.type = "button"
+        conf_but.innerHTML = "<i class='fas'></i>"
+        conf_but.title = "Configure"
+        conf_but.onclick = self._make_configure_handler(tag)
+        row.appendChild(conf_but)
+
+        ren_but = document.createElement("button")
+        ren_but.type = "button"
+        ren_but.innerHTML = "<i class='fas'></i>"
+        ren_but.title = "Rename"
+        ren_but.onclick = self._make_rename_handler(tag)
+        row.appendChild(ren_but)
+
+        del_but = document.createElement("button")
+        del_but.type = "button"
+        del_but.innerHTML = "<i class='fas'></i>"
+        del_but.title = "Delete"
+        del_but.onclick = self._make_delete_handler(tag, row, del_but)
+        row.appendChild(del_but)
+
+        self._list_div.appendChild(row)
+
+    def _make_configure_handler(self, tag):
+        def handler():
+            self._canvas.tag_dialog.open(tag, self._reload_after_action)
+
+        return handler
+
+    def _make_rename_handler(self, tag):
+        def handler():
+            self._canvas.tag_rename_dialog.open([tag], self._reload_after_action)
+
+        return handler
+
+    def _make_delete_handler(self, tag, row, del_but):
+        def handler():
+            del_but.style.display = "none"
+
+            confirm_but = document.createElement("button")
+            confirm_but.type = "button"
+            confirm_but.innerText = "Confirm delete"
+            confirm_but.style.color = "red"
+
+            cancel_but = document.createElement("button")
+            cancel_but.type = "button"
+            cancel_but.innerText = "Cancel"
+
+            def do_delete():
+                self._canvas.tag_rename_dialog.rename_tag_in_records(tag, None)
+                self._reload_after_action()
+
+            def cancel():
+                row.removeChild(confirm_but)
+                row.removeChild(cancel_but)
+                del_but.style.display = ""
+
+            confirm_but.onclick = do_delete
+            cancel_but.onclick = cancel
+            row.appendChild(confirm_but)
+            row.appendChild(cancel_but)
+
+        return handler
+
+    def _make_accordion_toggle(self, body_id, button):
+        def handler():
+            target = document.getElementById(body_id)
+            is_visible = target.style.display != "none"
+            for bid in ["tmgmt-rename-body", "tmgmt-color-body", "tmgmt-priority-body"]:
+                document.getElementById(bid).style.display = "none"
+            for btn in [self._rename_toggle, self._color_toggle, self._priority_toggle]:
+                btn.style.fontWeight = "normal"
+                btn.style.boxShadow = "none"
+            if not is_visible:
+                target.style.display = "block"
+                button.style.fontWeight = "bold"
+                button.style.boxShadow = "inset 0 -2px 0 #555"
+
+        return handler
+
+    def _make_swatch_handler(self, swatch, hex):
+        swatch.onclick = lambda: self._set_bulk_color_from_swatch(hex)
+
+    def _set_bulk_color_from_swatch(self, hex):
+        self._bulk_color_input.value = hex
+        self._bulk_color_input.style.borderColor = hex
+
+    def _on_select_all_change(self):
+        checked = self._select_all_cb.checked
+        for i in range(self._list_div.children.length):
+            row = self._list_div.children[i]
+            if row.getAttribute("data-tag") is None:
+                continue
+            if row.style.display == "none":
+                continue
+            row.children[0].checked = checked
+        self._on_checkbox_change()
+
+    def _on_checkbox_change(self):
+        has_checked = False
+        all_visible_checked = True
+        has_visible = False
+        for i in range(self._list_div.children.length):
+            row = self._list_div.children[i]
+            if row.getAttribute("data-tag") is None:
+                continue
+            if row.style.display == "none":
+                continue
+            has_visible = True
+            cb = row.children[0]
+            if cb.checked:
+                has_checked = True
+            else:
+                all_visible_checked = False
+        self._rename_toggle.disabled = not has_checked
+        self._color_toggle.disabled = not has_checked
+        self._priority_toggle.disabled = not has_checked
+        self._select_all_cb.checked = has_visible and all_visible_checked and has_checked
+
+    def _on_search(self):
+        query = self._search_input.value.lower()
+        for i in range(self._list_div.children.length):
+            row = self._list_div.children[i]
+            if row.getAttribute("data-tag") is None:
+                continue
+            tag = row.getAttribute("data-tag")
+            if query in tag:
+                row.style.display = "flex"
+            else:
+                row.style.display = "none"
+        self._select_all_cb.checked = False
+        self._update_empty_state()
+
+    def _update_empty_state(self):
+        empty_id = "tag-mgmt-empty"
+        existing = document.getElementById(empty_id)
+        if existing:
+            existing.parentNode.removeChild(existing)
+
+        has_visible = False
+        for i in range(self._list_div.children.length):
+            row = self._list_div.children[i]
+            if row.getAttribute("data-tag") is None:
+                continue
+            if row.style.display != "none":
+                has_visible = True
+                break
+
+        if not has_visible:
+            empty = document.createElement("div")
+            empty.id = empty_id
+            empty.style.color = "#888"
+            empty.style.padding = "1em 0"
+            empty.innerText = "No tags found"
+            self._list_div.appendChild(empty)
+
+    def _reload_after_action(self):
+        self._search_input.value = ""
+        self._select_all_cb.checked = False
+        for bid in ["tmgmt-rename-body", "tmgmt-color-body", "tmgmt-priority-body"]:
+            el = document.getElementById(bid)
+            if el:
+                el.style.display = "none"
+        self._rename_toggle.disabled = True
+        self._color_toggle.disabled = True
+        self._priority_toggle.disabled = True
+        self._bulk_target.value = ""
+        self._bulk_button.innerText = "Rename"
+        self._bulk_button.onclick = self._bulk_rename
+        self._bulk_color_input.value = ""
+        self._bulk_color_input.style.borderColor = "#eee"
+        self._bulk_priority_select.value = "1"
+        self._load_tags()
+
+    def _get_selected_tags(self):
+        selected = []
+        for i in range(self._list_div.children.length):
+            row = self._list_div.children[i]
+            t = row.getAttribute("data-tag")
+            if t is None:
+                continue
+            cb = row.children[0]
+            if cb.checked:
+                selected.push(t)
+        return selected
+
+    def _bulk_set_default_color(self):
+        clr = window.front.COLORS.acc_clr
+        self._bulk_color_input.value = clr
+        self._bulk_color_input.style.borderColor = clr
+
+    def _bulk_set_random_color(self):
+        hex = Math.floor(Math.random() * 16777215).toString(16)
+        clr = "#" + ("000000" + hex).slice(-6)
+        self._bulk_color_input.value = clr
+        self._bulk_color_input.style.borderColor = clr
+
+    def _on_bulk_color_input(self):
+        clr = self._bulk_color_input.value.strip()
+        if clr:
+            self._bulk_color_input.style.borderColor = clr
+        else:
+            self._bulk_color_input.style.borderColor = "#eee"
+
+    def _bulk_set_color(self):
+        clr = self._bulk_color_input.value.strip()
+        selected = self._get_selected_tags()
+        if len(selected) == 0:
+            return
+        default_clr = window.front.COLORS.acc_clr
+        for tag in selected:
+            info = window.store.settings.get_tag_info(tag)
+            info["color"] = "" if clr == default_clr else clr
+            window.store.settings.set_tag_info(tag, info)
+        self._reload_after_action()
+
+    def _bulk_set_priority(self):
+        prio = int(self._bulk_priority_select.value)
+        selected = self._get_selected_tags()
+        if len(selected) == 0:
+            return
+        for tag in selected:
+            info = window.store.settings.get_tag_info(tag)
+            info["priority"] = 0 if prio == 1 else prio
+            window.store.settings.set_tag_info(tag, info)
+        self._reload_after_action()
+
+    def _bulk_rename(self):
+        target = self._bulk_target.value.strip()
+        if not target:
+            self._bulk_target.focus()
+            return
+
+        tags, _ = utils.get_tags_and_parts_from_string(target)
+        if len(tags) != 1:
+            self._bulk_target.style.borderColor = "red"
+            return
+        self._bulk_target.style.borderColor = ""
+        tag_to = tags[0]
+
+        selected = self._get_selected_tags()
+        if len(selected) == 0:
+            return
+
+        n = len(selected)
+        self._bulk_button.innerText = f"Confirm renaming {n} tag(s) to {tag_to}"
+        self._bulk_button.onclick = self._make_bulk_confirm_handler(selected, tag_to)
+
+    def _make_bulk_confirm_handler(self, selected, tag_to):
+        def handler():
+            if len(selected) == 1:
+                self._canvas.tag_rename_dialog.rename_tag_in_records(
+                    selected[0], tag_to
+                )
+            else:
+                mapping = {}
+                for tag_from in selected:
+                    mapping[tag_from] = tag_to
+                self._canvas.tag_rename_dialog.bulk_rename_tags_in_records(mapping)
+            self._reload_after_action()
+
+        return handler

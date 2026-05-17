@@ -352,5 +352,51 @@ def test_deleting_records():
     assert len(rs.get_stats(0, 1e15)) == 1
 
 
+def test_get_all_tags_stats():
+    import time
+
+    datastore = DataStoreStub()
+    rs = RecordStore(datastore)
+
+    # Empty store returns empty dict
+    assert rs.get_all_tags_stats() == {}
+
+    # Add two records for #p1
+    r1 = rs.create("2018-04-23 15:00:00", "2018-04-23 16:00:00", "#p1")  # 3600s
+    rs.put(r1)
+    r2 = rs.create("2018-04-23 17:00:00", "2018-04-23 17:30:00", "#p1")  # 1800s
+    rs.put(r2)
+
+    # Add one record for #p2
+    r3 = rs.create("2018-04-24 10:00:00", "2018-04-24 11:30:00", "#p2")  # 5400s
+    rs.put(r3)
+
+    stats = rs.get_all_tags_stats()
+    assert set(stats.keys()) == {"#p1", "#p2"}
+    assert stats["#p1"]["total_t"] == 3600 + 1800
+    assert stats["#p1"]["count"] == 2
+    assert stats["#p1"]["last_t2"] == r2["t2"]  # r2 ends later than r1
+    assert stats["#p2"]["total_t"] == 5400
+    assert stats["#p2"]["count"] == 1
+    assert stats["#p2"]["last_t2"] == r3["t2"]
+
+    # Untagged records do not appear in stats
+    rs.put(rs.create("2018-04-25 10:00:00", "2018-04-25 11:00:00", ""))
+    rs.put(rs.create("2018-04-25 12:00:00", "2018-04-25 13:00:00", "no tags here"))
+    stats = rs.get_all_tags_stats()
+    assert "#untagged" not in stats
+    assert len(stats) == 2
+
+    # Running record (t1 == t2): duration comes from current time, not zero
+    now = int(time.time())
+    running = rs.create(now, now, "#running")
+    rs.put(running)
+    stats = rs.get_all_tags_stats()
+    assert "#running" in stats
+    assert stats["#running"]["total_t"] >= 0
+    assert stats["#running"]["last_t2"] >= now
+    assert stats["#running"]["count"] == 1
+
+
 if __name__ == "__main__":
     run_tests(globals())
