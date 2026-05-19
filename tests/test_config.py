@@ -4,13 +4,19 @@ from pytest import raises
 from timetagger import config
 from timetagger._config import set_config
 
+import platformdirs
+
 
 def test_config():
     # Defaults
     default_bind = "127.0.0.1:8080"
     set_config([], {})
+
+    expected_default = str(
+        platformdirs.user_data_path(appname="timetagger", appauthor="Klein").resolve()
+    )
     assert config.bind == default_bind
-    assert config.datadir == "~/_timetagger"
+    assert config.datadir == expected_default
 
     # argv
     set_config(["--bind=localhost:8080"], {})

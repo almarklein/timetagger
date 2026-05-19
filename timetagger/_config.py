@@ -1,5 +1,7 @@
 import os
 import sys
+import importlib
+import platformdirs
 
 
 def to_bool(value):
@@ -24,7 +26,11 @@ class Config:
     """Object that holds config values.
 
     * `bind (str)`: the address and port to bind on. Default "127.0.0.1:8080".
-    * `datadir (str)`: the directory to store data. Default "~/_timetagger".
+    * `datadir (str)`: the directory to store data.
+      Default depends on the OS
+        - ~/.local/share/timetagger
+        - ~/Library/Application Support/timetagger
+        - C:\\Users\\<User>\\AppData\\Local\\Klein\\timetagger
       The user db's are stored in `datadir/users`.
     * `log_level (str)`: the log level for timetagger and asgineer
       (not the asgi server). Default "info".
@@ -57,7 +63,13 @@ class Config:
 
     _ITEMS = [
         ("bind", str, "127.0.0.1:8080"),
-        ("datadir", str, "~/_timetagger"),
+        (
+            "datadir",
+            str,
+            os.path.realpath(
+                platformdirs.user_data_dir(appname="timetagger", appauthor="Klein")
+            ),
+        ),
         ("log_level", str, "info"),
         ("credentials", str, ""),
         ("proxy_auth_enabled", to_bool, False),
@@ -123,3 +135,8 @@ def _update_config_from_env(env):
 
 # Init config
 set_config()
+
+# Run datadir migration
+importlib.import_module("timetagger.migrations.001_datadir_default_xdg").run(
+    config.datadir
+)
