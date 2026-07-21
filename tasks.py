@@ -76,7 +76,7 @@ def format(ctx):
 
 
 def black_wrapper(writeback):
-    """Helper function to invoke black programatically."""
+    """Helper function to invoke black programmatically."""
 
     check = [] if writeback else ["--check"]
     exclude = "|".join(["cangivefilenameshere"])
