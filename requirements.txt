@@ -7,3 +7,4 @@ jinja2
 markdown
 bcrypt
 iptools
+platformdirs
