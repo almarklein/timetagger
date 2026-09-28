@@ -1576,7 +1576,7 @@ class TopWidget(Widget):
                 self._canvas.notification_dialog.open(last_error, "Sync error")
             else:
                 msg = "This button shows the sync status. The current status is <b>OK</b>!"
-                msg += "<br><br>The app and server continiously exchange updates. "
+                msg += "<br><br>The app and server continuously exchange updates. "
                 msg += "When something is wrong, this button will change, "
                 msg += "and you can then click it to get more info."
                 self._canvas.notification_dialog.open(msg, "Sync status")
