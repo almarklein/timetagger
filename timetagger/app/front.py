@@ -1134,6 +1134,30 @@ class TopWidget(Widget):
             y3,
             None,
             h,
+            ["fas-\uf1ec"],
+            "duration_decimal",
+            (
+                "Show decimal hours [.]"
+                if not window.duration_decimal_mode
+                else "Show normal duration [.]"
+            ),
+            {
+                "ref": "topleft",
+                "color": (
+                    COLORS.button_text
+                    if not window.duration_decimal_mode
+                    else COLORS.acc_clr
+                ),
+            },
+        )
+        x += margin
+
+        x += self._draw_button(
+            ctx,
+            x,
+            y3,
+            None,
+            h,
             ["fas-\uf05a"],
             "guide",
             "Show guide [i]",
@@ -1547,6 +1571,8 @@ class TopWidget(Widget):
             self._handle_button_press("record_stopall")
         elif e.key.lower() == "r":
             self._handle_button_press("report")
+        elif e.key == ".":
+            self._handle_button_press("duration_decimal")
         elif e.key.lower() == "i":
             self._handle_button_press("guide")
         else:
@@ -1588,6 +1614,10 @@ class TopWidget(Widget):
 
         elif action == "guide":
             self._canvas.guide_dialog.open()
+
+        elif action == "duration_decimal":
+            dt.toggle_duration_decimal_mode()
+            self.update()
 
         elif action == "pomo":
             self._canvas.pomodoro_dialog.open()

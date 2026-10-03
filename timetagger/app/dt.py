@@ -304,8 +304,26 @@ def duration_string_colon(t, show_secs=False):
         return f"{sign}{m // 60:.0f}:{m % 60:02.0f}"
 
 
+def toggle_duration_decimal_mode():
+    PSCRIPT_OVERLOAD = False  # noqa
+    window.duration_decimal_mode = not window.duration_decimal_mode
+    return window.duration_decimal_mode
+
+
+def duration_string_decimal(t, show_secs=False):
+    PSCRIPT_OVERLOAD = False  # noqa
+    sign = "-" if t < 0 else ""
+    t = abs(t)
+    text = f"{sign}{t / 3600:0.2f}"
+    if show_secs == 2:
+        return (text, "")
+    return text
+
+
 def duration_string(t, show_secs=False, repr=None):
     PSCRIPT_OVERLOAD = False  # noqa
+    if window.duration_decimal_mode:
+        return duration_string_decimal(t, show_secs)
     if not repr:
         repr = "hms"
         if window.simplesettings:
