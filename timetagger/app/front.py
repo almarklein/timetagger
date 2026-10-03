@@ -1514,13 +1514,13 @@ class TopWidget(Widget):
         elif e.key.lower() == "backspace":
             self._handle_button_press("select_none")
         #
-        elif e.key.lower() == "arrowup" or e.key.lower() == "pageup":
+        elif e.key.lower() in ("arrowup", "pageup", "k"):
             self._handle_button_press("nav_backward")
-        elif e.key.lower() == "arrowdown" or e.key.lower() == "pagedown":
+        elif e.key.lower() in ("arrowdown", "pagedown", "j"):
             self._handle_button_press("nav_forward")
-        elif e.key.lower() == "arrowleft":
+        elif e.key.lower() in ("arrowleft", "h"):
             self._handle_button_press("nav_zoom_" + self._current_scale["out"])
-        elif e.key.lower() == "arrowright":
+        elif e.key.lower() in ("arrowright", "l"):
             self._handle_button_press("nav_zoom_" + self._current_scale["in"])
         elif e.key.lower() == "n" or e.key.lower() == "home" or e.key.lower() == "end":
             self._handle_button_press("nav_snap_now" + self._current_scale["now"])
