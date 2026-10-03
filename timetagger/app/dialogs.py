@@ -3976,6 +3976,7 @@ class SettingsDialog(BaseDialog):
                 <div>Show dates as:</div>
                 <select>
                     <option value='yyyy-mm-dd'>yyyy-mm-dd (ISO 8601)</option>
+                    <option value='dd.mm.yyyy'>dd.mm.yyyy</option>
                     <option value='dd-mm-yyyy'>dd-mm-yyyy (default)</option>
                     <option value='mm/dd/yyyy'>mm/dd/yyyy (US)</option>
                 </select>

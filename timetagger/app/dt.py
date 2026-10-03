@@ -183,6 +183,8 @@ def format_isodate(date, fmt=None):
         return dd + "-" + mm + "-" + yyyy
     elif fmt == "mm/dd/yyyy":
         return mm + "/" + dd + "/" + yyyy
+    elif fmt == "dd.mm.yyyy":
+        return dd + "." + mm + "." + yyyy
     else:
         return date
 
