@@ -4,7 +4,7 @@
 #
 # mypaas.service = timetagger.test1
 # mypaas.url = https://test1.timetagger.app
-# mypaas.volume = /root/_timetagger:/root/_timetagger
+# mypaas.volume = /root/.local/share/timetagger:/root/.local/share/timetagger
 # mypaas.maxmem = 256m
 # mypaas.env = TIMETAGGER_CREDENTIALS
 

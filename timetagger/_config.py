@@ -1,5 +1,21 @@
 import os
 import sys
+from pathlib import Path
+import platformdirs
+
+
+def get_default_datadir():
+    old_dir = Path.home() / "_timetagger"
+    new_dir = platformdirs.user_data_path(
+        appname="timetagger", appauthor="Klein"
+    ).resolve()
+
+    # keep using old ~/_timetagger if not empty
+    if old_dir.exists() and old_dir.is_dir() and any(old_dir.iterdir()):
+        return str(old_dir)
+
+    # use new location based on platformdirs
+    return str(new_dir)
 
 
 def to_bool(value):
@@ -24,7 +40,11 @@ class Config:
     """Object that holds config values.
 
     * `bind (str)`: the address and port to bind on. Default "127.0.0.1:8080".
-    * `datadir (str)`: the directory to store data. Default "~/_timetagger".
+    * `datadir (str)`: the directory to store data.
+      Default depends on the OS
+        - ~/.local/share/timetagger
+        - ~/Library/Application Support/timetagger
+        - C:\\Users\\<User>\\AppData\\Local\\Klein\\timetagger
       The user db's are stored in `datadir/users`.
     * `log_level (str)`: the log level for timetagger and asgineer
       (not the asgi server). Default "info".
@@ -57,7 +77,7 @@ class Config:
 
     _ITEMS = [
         ("bind", str, "127.0.0.1:8080"),
-        ("datadir", str, "~/_timetagger"),
+        ("datadir", str, get_default_datadir()),
         ("log_level", str, "info"),
         ("credentials", str, ""),
         ("proxy_auth_enabled", to_bool, False),

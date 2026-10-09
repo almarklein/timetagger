@@ -2,15 +2,22 @@ from _common import run_tests
 from pytest import raises
 
 from timetagger import config
-from timetagger._config import set_config
+from timetagger._config import set_config, get_default_datadir
+
+from pathlib import Path
+import platformdirs
 
 
 def test_config():
     # Defaults
     default_bind = "127.0.0.1:8080"
     set_config([], {})
+
     assert config.bind == default_bind
-    assert config.datadir == "~/_timetagger"
+    expected_new_default = str(
+        platformdirs.user_data_path(appname="timetagger", appauthor="Klein").resolve()
+    )
+    assert config.datadir == expected_new_default
 
     # argv
     set_config(["--bind=localhost:8080"], {})
@@ -90,6 +97,26 @@ def test_config():
 
     # Reset to normal (using sys.argv and os.environ)
     set_config()
+
+
+def test_datadir_fallback_legacy(tmp_path, monkeypatch):
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+
+    old_dir = tmp_path / "_timetagger"
+    old_dir.mkdir()
+    (old_dir / "timetagger.db").touch()
+
+    assert get_default_datadir() == str(old_dir)
+
+
+def test_datadir_fallback_new(tmp_path, monkeypatch):
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+
+    expected_new = str(
+        platformdirs.user_data_path(appname="timetagger", appauthor="Klein").resolve()
+    )
+
+    assert get_default_datadir() == expected_new
 
 
 if __name__ == "__main__":
