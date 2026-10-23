@@ -62,6 +62,17 @@
             async function calculate_result() {
                 let username = document.getElementById("input_u").value;
                 let pw = document.getElementById("input_p").value;
+                let passwordBytes = new TextEncoder().encode(pw).length;
+                let warning = document.getElementById("password_warning");
+                if (passwordBytes > 72) {
+                    warning.innerText = `Password is ${passwordBytes} UTF-8 bytes; BCrypt supports at most 72 bytes.`;
+                    window.results = ["", "", ""];
+                    for (let id of ["span_r1", "span_r2", "span_r3"]) {
+                        document.getElementById(id).innerText = "";
+                    }
+                    return;
+                }
+                warning.innerText = "";
                 let hash = dcodeIO.bcrypt.hashSync(pw, 8);
 
                 // Note that dollar signs need to be escaped for the replace function too
@@ -97,6 +108,7 @@
 
             <input id='input_u' type='text' placeholder='username' /><br />
             <input id='input_p' type='password' placeholder='password' /><br />
+            <p id='password_warning' role='alert'></p>
 
             <p>The raw credentials:</p>
             <div class='div_r'><span id='span_r1''>username:hash</span><button id='but_copy1'>Copy 📋</button></div>
