@@ -88,6 +88,7 @@ class AuthService(
     private val refreshTokens: RefreshTokenRepository,
     private val apiKeys: ApiKeyRepository,
     private val refreshLifetime: Duration = Duration.ofDays(30),
+    private val reuseGrace: Duration = Duration.ofSeconds(60),
 ) {
     suspend fun login(username: String, password: String, userAgent: String?): TokenPair {
         if (!passwords.verify(username, password)) throw Unauthorized("wrong username or password")
@@ -101,6 +102,14 @@ class AuthService(
         val current = refreshTokens.byHashForUpdate(session, Secrets.hash(token)) ?: throw Unauthorized("unknown refresh token")
         when {
             current.revokedAt != null -> throw Unauthorized("refresh token revoked")
+            // A retry of a rotation whose response never arrived (e.g. a laptop waking from sleep
+            // on a half-up network): retire the successor the client never saw and issue a new one.
+            current.usedAt != null && current.usedAt.plus(reuseGrace) > Instant.now() -> {
+                log.info("Refresh token of family {} reused within the grace window; reissuing", current.familyId)
+                refreshTokens.revokeUnusedSince(session, current.familyId, current.usedAt)
+                val user = users.byId(session, current.userId) ?: throw Unauthorized("no such user")
+                pair(session, user.id, user.username, current.familyId, userAgent ?: current.userAgent)
+            }
             current.usedAt != null -> {
                 log.warn("Refresh token of family {} used twice; revoking the family", current.familyId)
                 refreshTokens.revokeFamily(session, current.familyId)

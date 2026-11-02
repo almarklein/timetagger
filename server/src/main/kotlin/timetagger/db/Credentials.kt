@@ -43,6 +43,16 @@ class RefreshTokenRepository {
         session.update(queryOf("UPDATE refresh_tokens SET used_at = now() WHERE id = ?", id))
     }
 
+    /** Revokes the family's still-unused tokens issued at or after [since]. */
+    fun revokeUnusedSince(session: Session, familyId: UUID, since: Instant) {
+        session.update(
+            queryOf(
+                "UPDATE refresh_tokens SET revoked_at = now() WHERE family_id = ? AND used_at IS NULL AND revoked_at IS NULL AND created_at >= ?",
+                familyId, since,
+            ),
+        )
+    }
+
     fun revokeFamily(session: Session, familyId: UUID) {
         session.update(queryOf("UPDATE refresh_tokens SET revoked_at = now() WHERE family_id = ? AND revoked_at IS NULL", familyId))
     }
