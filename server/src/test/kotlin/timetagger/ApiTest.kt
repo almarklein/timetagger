@@ -103,9 +103,17 @@ class ApiTest {
         val second = refresh(refreshToken).obj()
         val refreshed = second["refreshToken"]!!.jsonPrimitive.content
         assertEquals(HttpStatusCode.OK, me(second["accessToken"]!!.jsonPrimitive.content).status)
-        // Presenting the spent one again looks like theft: the whole session ends.
-        assertEquals(HttpStatusCode.Unauthorized, refresh(refreshToken).status)
+        // Presenting the spent one again right away is a retry whose response was lost (a Mac
+        // waking from sleep): it gets a fresh pair, and the successor it never saw dies.
+        val retried = refresh(refreshToken)
+        assertEquals(HttpStatusCode.OK, retried.status)
+        val third = retried.obj()["refreshToken"]!!.jsonPrimitive.content
         assertEquals(HttpStatusCode.Unauthorized, refresh(refreshed).status)
+
+        // Outside the grace window a second use looks like theft: the whole session ends.
+        db.tx { it.execute(kotliquery.queryOf("UPDATE refresh_tokens SET used_at = now() - interval '5 minutes' WHERE used_at IS NOT NULL")) }
+        assertEquals(HttpStatusCode.Unauthorized, refresh(refreshToken).status)
+        assertEquals(HttpStatusCode.Unauthorized, refresh(third).status)
 
         // Logout ends a session for good.
         val other = login().obj()["refreshToken"]!!.jsonPrimitive.content
