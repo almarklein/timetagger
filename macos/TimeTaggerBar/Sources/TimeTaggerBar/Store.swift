@@ -175,8 +175,12 @@ final class Store: ObservableObject {
         showWorkTime && workTimeZone.secondsFromGMT() != TimeZone.current.secondsFromGMT()
     }
 
+    /// Today's total, with "today" counted in the work time zone (it starts at work-zone midnight),
+    /// so it matches the day the employer sees rather than the local calendar day.
     var todayTotal: Int {
-        let start = Int(Calendar.current.startOfDay(for: Date()).timeIntervalSince1970)
+        var cal = Calendar.current
+        cal.timeZone = workTimeZone
+        let start = Int(cal.startOfDay(for: Date()).timeIntervalSince1970)
         return lately.reduce(0) { $0 + max(0, ($1.isRunning ? now : $1.t2) - max($1.t1, start)) }
     }
 
