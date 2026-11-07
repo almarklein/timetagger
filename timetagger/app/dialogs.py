@@ -1847,12 +1847,19 @@ class RecordDialog(BaseDialog):
         tags_list = []
         for tag in tags:
             clr = window.store.settings.get_color_for_tag(tag)
-            tags_list.append(f"<b style='color:{clr};'>#</b>{tag[1:]}")
+            tags_list.append(
+                f"<span style='cursor:pointer;' "
+                f"onclick='window.canvas.tag_dialog.open(\"{tag}\", () => window.canvas.record_dialog._show_tags_from_ds())' "
+                f"title='Configure tag'>"
+                f"<b style='color:{clr};'>#</b>{tag[1:]}</span>"
+            )
         tags_html += "&nbsp; &nbsp;".join(tags_list)
         # Get hints
         hint_html = ""
         if not self._autocompleter.has_recent_tags():
             hint_html = "Use e.g. '&#35;meeting' to add one or more tags."
+        else:
+            hint_html = "Click a tag to configure its color and target."
         # Detect duplicate tags
         tag_counts = {}
         for part in parts:
