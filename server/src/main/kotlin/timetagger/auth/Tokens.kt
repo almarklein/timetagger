@@ -76,9 +76,8 @@ object Secrets {
 }
 
 /**
- * Logins, refresh-token rotation and API keys. A login starts a refresh-token family;
- * each refresh retires its token and issues the next. A retired token coming back
- * means it was copied, so the whole family is revoked.
+ * Logins, refresh tokens and API keys. A login issues one long-lived refresh token per
+ * session; it lasts until logout, a session revoke, a password change or 30 days unused.
  */
 class AuthService(
     private val db: Database,
@@ -88,7 +87,6 @@ class AuthService(
     private val refreshTokens: RefreshTokenRepository,
     private val apiKeys: ApiKeyRepository,
     private val refreshLifetime: Duration = Duration.ofDays(30),
-    private val reuseGrace: Duration = Duration.ofSeconds(60),
 ) {
     suspend fun login(username: String, password: String, userAgent: String?): TokenPair {
         if (!passwords.verify(username, password)) throw Unauthorized("wrong username or password")
@@ -98,31 +96,21 @@ class AuthService(
         }
     }
 
+    /**
+     * A new access token for a live refresh token. The refresh token itself is not rotated
+     * (the usual scheme for native clients that keep it in the OS keychain): a response lost
+     * to a sleeping laptop can then never sign it out. Each use slides its expiry forward.
+     */
     suspend fun refresh(token: String, userAgent: String?): TokenPair = db.tx { session ->
         val current = refreshTokens.byHashForUpdate(session, Secrets.hash(token)) ?: throw Unauthorized("unknown refresh token")
-        when {
-            current.revokedAt != null -> throw Unauthorized("refresh token revoked")
-            // A retry of a rotation whose response never arrived (e.g. a laptop waking from sleep
-            // on a half-up network): retire the successor the client never saw and issue a new one.
-            current.usedAt != null && current.usedAt.plus(reuseGrace) > Instant.now() -> {
-                log.info("Refresh token of family {} reused within the grace window; reissuing", current.familyId)
-                refreshTokens.revokeUnusedSince(session, current.familyId, current.usedAt)
-                val user = users.byId(session, current.userId) ?: throw Unauthorized("no such user")
-                pair(session, user.id, user.username, current.familyId, userAgent ?: current.userAgent)
-            }
-            current.usedAt != null -> {
-                log.warn("Refresh token of family {} used twice; revoking the family", current.familyId)
-                refreshTokens.revokeFamily(session, current.familyId)
-                null
-            }
-            current.expiresAt <= Instant.now() -> throw Unauthorized("refresh token expired")
-            else -> {
-                refreshTokens.markUsed(session, current.id)
-                val user = users.byId(session, current.userId) ?: throw Unauthorized("no such user")
-                pair(session, user.id, user.username, current.familyId, userAgent ?: current.userAgent)
-            }
-        }
-    } ?: throw Unauthorized("refresh token already used; the session has been signed out")
+        if (current.revokedAt != null) throw Unauthorized("refresh token revoked")
+        if (current.expiresAt <= Instant.now()) throw Unauthorized("refresh token expired")
+        val user = users.byId(session, current.userId) ?: throw Unauthorized("no such user")
+        val expiresAt = Instant.now().plus(refreshLifetime).truncatedTo(ChronoUnit.SECONDS)
+        refreshTokens.extend(session, current.id, expiresAt, userAgent?.take(200))
+        val (accessToken, accessExpiresAt) = access.issue(user.id, user.username)
+        TokenPair(accessToken, accessExpiresAt, token, expiresAt)
+    }
 
     /** Signs out the session the refresh token belongs to. Unknown tokens are ignored. */
     suspend fun logout(token: String) = db.tx { session ->

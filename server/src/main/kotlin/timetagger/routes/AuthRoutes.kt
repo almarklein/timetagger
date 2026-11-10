@@ -59,7 +59,7 @@ fun Route.accountRoutes(auth: AuthService) {
     route("auth/sessions") {
         get {
             requireAccessToken()
-            call.respond(SessionList(auth.sessions(call.auth.userId).map { SessionInfo(it.familyId.toString(), it.userAgent, it.createdAt, it.expiresAt) }))
+            call.respond(SessionList(auth.sessions(call.auth.userId).map { SessionInfo(it.familyId.toString(), it.userAgent, it.lastRefreshedAt ?: it.createdAt, it.expiresAt) }))
         }
         delete("{id}") {
             requireAccessToken()

@@ -9,11 +9,12 @@ import java.util.UUID
 data class RefreshToken(
     val id: Long, val userId: Long, val familyId: UUID, val userAgent: String?,
     val createdAt: Instant, val expiresAt: Instant, val usedAt: Instant?, val revokedAt: Instant?,
+    val lastRefreshedAt: Instant?,
 )
 
 /** Refresh tokens, looked up by the SHA-256 of the token; the token itself is never stored. */
 class RefreshTokenRepository {
-    private val select = "SELECT id, user_id, family_id, user_agent, created_at, expires_at, used_at, revoked_at FROM refresh_tokens"
+    private val select = "SELECT id, user_id, family_id, user_agent, created_at, expires_at, used_at, revoked_at, last_refreshed_at FROM refresh_tokens"
 
     private fun token(row: Row) = RefreshToken(
         id = row.long("id"),
@@ -24,6 +25,7 @@ class RefreshTokenRepository {
         expiresAt = row.instant("expires_at"),
         usedAt = row.instantOrNull("used_at"),
         revokedAt = row.instantOrNull("revoked_at"),
+        lastRefreshedAt = row.instantOrNull("last_refreshed_at"),
     )
 
     fun insert(session: Session, userId: Long, familyId: UUID, hash: String, userAgent: String?, expiresAt: Instant) {
@@ -39,17 +41,10 @@ class RefreshTokenRepository {
     fun byHashForUpdate(session: Session, hash: String): RefreshToken? =
         session.single(queryOf("$select WHERE token_hash = ? FOR UPDATE", hash), ::token)
 
-    fun markUsed(session: Session, id: Long) {
-        session.update(queryOf("UPDATE refresh_tokens SET used_at = now() WHERE id = ?", id))
-    }
-
-    /** Revokes the family's still-unused tokens issued at or after [since]. */
-    fun revokeUnusedSince(session: Session, familyId: UUID, since: Instant) {
+    /** Slides a live token's expiry forward on use. */
+    fun extend(session: Session, id: Long, expiresAt: Instant, userAgent: String?) {
         session.update(
-            queryOf(
-                "UPDATE refresh_tokens SET revoked_at = now() WHERE family_id = ? AND used_at IS NULL AND revoked_at IS NULL AND created_at >= ?",
-                familyId, since,
-            ),
+            queryOf("UPDATE refresh_tokens SET expires_at = ?, last_refreshed_at = now(), user_agent = COALESCE(?, user_agent) WHERE id = ?", expiresAt, userAgent, id),
         )
     }
 
