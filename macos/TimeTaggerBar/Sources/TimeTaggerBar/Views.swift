@@ -10,7 +10,7 @@ struct MenuView: View {
     @StateObject private var feed = DayFeed()
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 12) {
             if let err = store.error {
                 Text(err).font(.caption).foregroundStyle(.red).lineLimit(3)
             }
@@ -46,19 +46,24 @@ struct MenuView: View {
                     openWindow(id: "history")
                     NSApp.activate(ignoringOtherApps: true)
                 }
+                .keyboardShortcut("y", modifiers: .command)
                 Button("Report") {
                     openWindow(id: "report")
                     NSApp.activate(ignoringOtherApps: true)
                 }
+                .keyboardShortcut("r", modifiers: [.command, .shift])
                 Menu {
                     Button("Settings…") {
                         openWindow(id: "settings")
                         NSApp.activate(ignoringOtherApps: true)
                     }
+                    .keyboardShortcut(",", modifiers: .command)
                     Button("Refresh") { Task { await store.refresh() } }
+                        .keyboardShortcut("r", modifiers: .command)
                     Divider()
                     Button("Quit TimeTaggerBar") { NSApp.terminate(nil) }
-                } label: { Image(systemName: "gearshape") }
+                        .keyboardShortcut("q", modifiers: .command)
+                } label: { Image(systemName: "ellipsis.circle") }
                     .menuStyle(.borderlessButton)
                     .fixedSize()
                     .accessibilityLabel("More")
@@ -116,14 +121,16 @@ struct MenuView: View {
             if !r.isRunning {
                 Button { Task { await store.start(r.ds, tags: r.tags) } } label: { Image(systemName: "play.fill") }
                     .buttonStyle(.borderless)
+                    .help("Resume")
                     .accessibilityLabel("Resume \(r.ds)")
             }
         }
         .font(.callout)
         .padding(.horizontal, 6)
-        .frame(height: 32)
+        .frame(height: 26)
         .contentShape(Rectangle())
         .onTapGesture { editing = r }
+        .help("Click to edit")
         .contextMenu {
             Button("Edit…") { editing = r }
             Button("Resume") { Task { await store.start(r.ds, tags: r.tags) } }
@@ -147,22 +154,25 @@ struct MenuView: View {
             }
             .font(.callout).foregroundStyle(.secondary).monospacedDigit()
             Text(Store.format(r.duration(now: store.now)))
-                .font(.system(size: 44, weight: .light)).monospacedDigit()
+                .font(.system(.largeTitle, design: .rounded).weight(.light)).monospacedDigit()
             Text(r.ds.isEmpty ? "(no description)" : r.ds).font(.headline).lineLimit(2)
             TagLine(tags: r.tags).font(.callout)
             HStack(spacing: 8) {
                 Button { Task { await store.stop(r) } } label: {
                     Label("Stop", systemImage: "stop.fill").frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent).tint(.red).controlSize(.large)
+                .buttonStyle(.borderedProminent).tint(.red)
+                .keyboardShortcut(".", modifiers: .command)
+                .help("Stop (⌘.)")
                 Button { editing = r } label: { Image(systemName: "pencil") }
-                    .controlSize(.large)
+                    .keyboardShortcut("e", modifiers: .command)
+                    .help("Edit current record (⌘E)")
                     .accessibilityLabel("Edit current record")
             }
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.background, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .background(.background, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 
     private var idleCard: some View {
@@ -178,11 +188,12 @@ struct MenuView: View {
             Button(action: startDraft) {
                 Label("Start", systemImage: "play.fill").frame(maxWidth: .infinity)
             }
-            .buttonStyle(.borderedProminent).controlSize(.large)
+            .buttonStyle(.borderedProminent)
+            .disabled(draft.trimmingCharacters(in: .whitespaces).isEmpty && draftTags.isEmpty)
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.background, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .background(.background, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 
     private func taskField(_ prompt: String, icon: String?) -> some View {
@@ -199,9 +210,9 @@ struct MenuView: View {
                     .frame(width: 110)
                     .onSubmit(startDraft)
             }
-            .padding(.horizontal, 12)
-            .frame(height: 38)
-            .background(.quaternary.opacity(0.6), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .padding(.horizontal, 8)
+            .frame(height: 28)
+            .background(.quaternary.opacity(0.6), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
             TagSuggestions(text: $draftTags, tags: store.tags)
         }
     }
@@ -455,7 +466,7 @@ struct SettingsView: View {
         } detail: {
             detail
         }
-        .frame(width: 640, height: 440)
+        .frame(minWidth: 600, idealWidth: 640, minHeight: 400, idealHeight: 440)
         .onAppear { url = store.serverURL; username = store.username }
         .task(id: store.serverURL) { store.serverVersion = (try? await store.api.version()) ?? "unreachable" }
     }
@@ -475,6 +486,7 @@ struct SettingsView: View {
                         HStack {
                             if !status.isEmpty { Text(status).font(.caption).foregroundStyle(.red) }
                             Spacer()
+                            if busy { ProgressView().controlSize(.small) }
                             Button("Sign In", action: signIn)
                                 .keyboardShortcut(.defaultAction)
                                 .disabled(busy || url.isEmpty || username.isEmpty || password.isEmpty)
@@ -624,6 +636,7 @@ struct ReportView: View {
                                 }
                                 Button { rows.removeAll { $0.id == row.id } } label: { Image(systemName: "xmark") }
                                     .buttonStyle(.borderless)
+                                    .help("Remove row")
                                     .accessibilityLabel("Remove row")
                             }
                             .padding(.vertical, 3)
@@ -632,20 +645,24 @@ struct ReportView: View {
                     }
                     .monospacedDigit()
                     .padding(10)
-                    Button("+ Add row") {
+                    Button {
                         rows.append(ReportRow(isHeader: false, cells: Array(repeating: "", count: builder.columns.count)))
-                    }
+                    } label: { Label("Add Row", systemImage: "plus") }
                     .buttonStyle(.link)
                     .padding(.horizontal, 10)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
             .background(.background)
+            .overlay(alignment: .topTrailing) {
+                if loading { ProgressView().controlSize(.small).padding(10) }
+            }
         }
         .frame(minWidth: 900, minHeight: 560)
         .toolbar {
             ToolbarItem {
-                Button("Reset edits") { Task { await generate() } }
+                Button("Reset Edits") { Task { await generate() } }
+                    .help("Discard cell edits and rebuild the table")
             }
             ToolbarItem {
                 Button {
@@ -653,9 +670,11 @@ struct ReportView: View {
                     copied = true
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1) { copied = false }
                 } label: {
-                    Label(copied ? "Copied" : "Copy table", systemImage: copied ? "checkmark" : "doc.on.doc")
+                    Label(copied ? "Copied" : "Copy Table", systemImage: copied ? "checkmark" : "doc.on.doc")
                 }
                 .buttonStyle(.borderedProminent)
+                .keyboardShortcut("c", modifiers: [.command, .shift])
+                .help("Copy the table (⇧⌘C)")
             }
         }
         .navigationTitle("Report")
@@ -726,7 +745,9 @@ struct HistoryView: View {
                 Button {
                     let t = Int(Date().timeIntervalSince1970)
                     editing = Record(key: Record.newKey(), rev: 0, t1: t - 3600, t2: t, ds: "", deleted: 0)
-                } label: { Label("Add record", systemImage: "plus") }
+                } label: { Label("Add Record", systemImage: "plus") }
+                .keyboardShortcut("n", modifiers: .command)
+                .help("Add a record (⌘N)")
             }
         }
         .navigationTitle("History")
@@ -757,7 +778,7 @@ struct HistoryView: View {
             .frame(width: 150, alignment: .leading)
             Text(r.ds.isEmpty ? "(no description)" : r.ds).lineLimit(2)
             Spacer()
-            if r.isRunning { Image(systemName: "circle.fill").foregroundStyle(.red).font(.caption2) }
+            if r.isRunning { Image(systemName: "circle.fill").foregroundStyle(.red).font(.caption2).accessibilityLabel("Running") }
             Text(Store.format(r.duration(now: store.now), seconds: false)).monospacedDigit()
         }
         .padding(.vertical, 2)
