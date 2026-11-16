@@ -3,6 +3,15 @@
 <script src='./app/tools.js'></script>
 
 <script>
+function encode_base64_utf8(text) {
+    let bytes = new TextEncoder().encode(text);
+    let binary = "";
+    for (let i = 0; i < bytes.length; i += 0x8000) {
+        binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+    }
+    return btoa(binary);
+}
+
 async function login(payload, silent) {
 
     // Reset status
@@ -13,7 +22,7 @@ async function login(payload, silent) {
     await tools.sleepms(100);
 
     // The body is obfuscated with base64, but not encrypted.
-    let body = btoa(JSON.stringify(payload));
+    let body = encode_base64_utf8(JSON.stringify(payload));
 
     // Do request
     let url = tools.build_api_url("bootstrap_authentication");

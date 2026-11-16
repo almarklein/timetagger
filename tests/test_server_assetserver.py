@@ -85,6 +85,31 @@ print(cachename)
 """
 
 
+def test_login_page_encodes_auth_payload_as_utf8():
+    page = (
+        resources.files("timetagger.pages")
+        .joinpath("login.md")
+        .read_text(encoding="utf-8")
+    )
+    assert "function encode_base64_utf8(text)" in page
+    assert "new TextEncoder().encode(text)" in page
+    assert "encode_base64_utf8(JSON.stringify(payload))" in page
+    assert "btoa(JSON.stringify(payload))" not in page
+
+
+def test_credential_generator_warns_before_bcrypt_truncation():
+    page = (
+        resources.files("timetagger.common")
+        .joinpath("cred.html")
+        .read_text(encoding="utf-8")
+    )
+    assert "new TextEncoder().encode(pw).length" in page
+    assert "if (passwordBytes > 72)" in page
+    assert "BCrypt supports at most 72 bytes" in page
+    assert "role='alert'" in page
+    assert 'window.results = ["", "", ""]' in page
+
+
 def test_consistent_hash_for_sw():
     # It's important that the hash is consistent so let's validate this
 
