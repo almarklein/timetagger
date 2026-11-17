@@ -3421,6 +3421,38 @@ class AnalyticsWidget(Widget):
         bar.y1 = y
         bar.y2 = y + bar.height
 
+    def _select_best_target_matching_current_time_range(self, targets):
+        t1, t2 = self._canvas.range.get_range()
+        best_target = None
+        free_days_per_week = window.simplesettings.get("workdays")
+        free_hours_in_range = dt.get_free_hours_in_range(t1, t2, free_days_per_week)
+        work_hours_in_range = self._hours_in_range - free_hours_in_range
+        for period in ["day", "week", "month", "year"]:
+            target_hours = targets.get(period, 0)
+            if target_hours <= 0:
+                continue
+
+            # hours in period -> "day": 24, "week": 168, "month": 720, "year": 8760
+            if period == "day":
+                work_hours_in_period = 24
+            elif period == "week":
+                work_hours_in_period = 168 - free_days_per_week * 24
+            elif period == "month":  # ~4.33 weeks in a month
+                work_hours_in_period = 720 - free_days_per_week * 24 * 4.33
+            elif period == "year":
+                work_hours_in_period = 8760 - free_days_per_week * 24 * 52
+
+            factor = work_hours_in_range / work_hours_in_period
+            if factor > 0.93 or not best_target:
+                best_target = {
+                    "period": period,
+                    "factor": factor,
+                    "hours": target_hours,
+                }
+            else:
+                break
+        return best_target
+
     def _draw_container(self, ctx, total_time, x1, y1, x2, y2):
         PSCRIPT_OVERLOAD = False  # noqa
 
@@ -3517,35 +3549,10 @@ class AnalyticsWidget(Widget):
             # -- Row for target
             tx, ty = x_ref_labels, ymid - 2 + npixels * 0.85
 
-            # Select the target that best matches the current time range
-            best_target = None
-            free_days_per_week = window.simplesettings.get("workdays")
-            free_hours_in_range = dt.get_free_hours_in_range(t1, t2, free_days_per_week)
-            work_hours_in_range = self._hours_in_range - free_hours_in_range
-            for period in ["day", "week", "month", "year"]:
-                target_hours = self._current_targets.get(period, 0)
-                if target_hours <= 0:
-                    continue
+            best_target = self._select_best_target_matching_current_time_range(
+                self._current_targets
+            )
 
-                # hours in period -> "day": 24, "week": 168, "month": 720, "year": 8760
-                if period == "day":
-                    work_hours_in_period = 24
-                elif period == "week":
-                    work_hours_in_period = 168 - free_days_per_week * 24
-                elif period == "month":  # ~4.33 weeks in a month
-                    work_hours_in_period = 720 - free_days_per_week * 24 * 4.33
-                elif period == "year":
-                    work_hours_in_period = 8760 - free_days_per_week * 24 * 52
-
-                factor = work_hours_in_range / work_hours_in_period
-                if factor > 0.93 or not best_target:
-                    best_target = {
-                        "period": period,
-                        "factor": factor,
-                        "hours": target_hours,
-                    }
-                else:
-                    break
             # Show target info
             ctx.font = FONT.size + "px " + FONT.default
             ctx.textAlign = "left"
@@ -3734,6 +3741,34 @@ class AnalyticsWidget(Widget):
             ctx.textAlign = "left"
             ctx.fillStyle = COLORS.prim2_clr
             ctx.fillText(duration_sec, x_ref_duration + 1, ty)
+
+        # Draw target stats
+        tagz = sorted(bar.tagz.split(" "))
+        tag_info = window.store.settings.get_tag_info(tagz.join(" "))
+        best_target = self._select_best_target_matching_current_time_range(
+            tag_info.targets
+        )
+        ctx.font = (SMALLER * FONT.size) + "px " + FONT.default
+        ctx.textAlign = "right"
+        ctx.fillStyle = COLORS.prim2_clr
+        if best_target:
+            done_this_period = 0
+            # Add the time of all bars with matching tags into this period
+            for b in self._tag_bars_dict.values():
+                b_tagz = b.tagz.split(" ")
+                if all([t in b_tagz for t in tagz]):
+                    done_this_period += b.t
+            target_this_period = 3600 * best_target.hours * best_target.factor
+            left_this_period = target_this_period - done_this_period
+            duration_left = dt.duration_string(abs(left_this_period))
+            suffix = "left" if left_this_period >= 0 else "over"
+            if target_this_period > 0:
+                perc = 100 * done_this_period / target_this_period
+                text = f"{perc:0.0f}% ({duration_left} {suffix})"
+                ctx.fillText(
+                    text, x_ref_duration - ctx.measureText(duration_text).width - 12, ty
+                )
+
         # Draw tags
         tags = [tag for tag in bar.subtagz.split(" ")]
         opt = {
