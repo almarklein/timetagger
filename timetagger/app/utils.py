@@ -627,6 +627,7 @@ class SimpleSettings:
             "today_snap_offset": "",
             "today_end_offset": "",
             "show_stopwatch": True,
+            "split_overlapping_records": False,
         }
         # The data store for synced source
         self._store = None
