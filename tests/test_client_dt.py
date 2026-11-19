@@ -97,8 +97,9 @@ def test_time2str():
 
 
 def test_duration_string():
-    js = py2js(open(dt.__file__, "rb").read().decode(), docstrings=False)
-    js += "\n\nwindow = {};"
+    js = "window = {};\n" + py2js(
+        open(dt.__file__, "rb").read().decode(), docstrings=False
+    )
 
     js1 = evaljs(js, f"duration_string(5, false)")
     js2 = evaljs(js, f"duration_string(5, true)")
@@ -131,6 +132,18 @@ def test_duration_string():
     assert js4 == "0:01:05"
     assert js5 == "2:01"
     assert js6 == "2:01:05"
+
+    # Toggle decimal mode: durations render as decimal hours
+    js += "toggle_duration_decimal_mode();"
+    js1 = evaljs(js, f"duration_string(7265, false)")
+    js2 = evaljs(js, f"duration_string(7265, true)")
+    js3 = evaljs(js, f"duration_string(-7265, false)")
+    assert js1 == "2.02"
+    assert js2 == "2.02"
+    assert js3 == "-2.02"
+    js += "toggle_duration_decimal_mode();"
+    js4 = evaljs(js, f"duration_string(7265, false)")
+    assert js4 == "2h01m"
 
 
 if __name__ == "__main__":
