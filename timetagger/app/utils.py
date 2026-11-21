@@ -103,6 +103,12 @@ def color_from_name(name):
     return _lasthashedcolors[name]
 
 
+def color_random():
+    """Generate a random color"""
+    clr = "#" + Math.floor(Math.random() * 16777215).toString(16).padStart(6, "0")
+    return clr
+
+
 def create_palettes():
     # The Github color palette, consisting of 8 strong colors and 8 lighter variants.
     # The difference between these variants is pretty big.
@@ -627,6 +633,7 @@ class SimpleSettings:
             "today_snap_offset": "",
             "today_end_offset": "",
             "show_stopwatch": True,
+            "tag_color": "default",
         }
         # The data store for synced source
         self._store = None

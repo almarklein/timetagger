@@ -1582,6 +1582,7 @@ class RecordDialog(BaseDialog):
         super().__init__(canvas)
         self._record = None
         self._no_user_edit_yet = True
+        self._tag_color_timeout = None
 
         # Enable stopping a record via the notification
         if window.navigator.serviceWorker:
@@ -1676,6 +1677,7 @@ class RecordDialog(BaseDialog):
         )
 
         # Set some initial values
+        self._preview_tag_colors = {}
         self._ds_input.value = record.get("ds", "")
         self._show_tags_from_ds()
         self._delete_but2.style.display = "none"
@@ -1774,7 +1776,6 @@ class RecordDialog(BaseDialog):
     def _on_user_edit(self):
         self._mark_as_edited()
         self._autocompleter.init()
-        self._show_tags_from_ds()
         # If the str is too long, limit it
         if len(self._ds_input.value) >= stores.STR_MAX:
             self._ds_input.value = self._ds_input.value.slice(0, stores.STR_MAX)
@@ -1785,6 +1786,7 @@ class RecordDialog(BaseDialog):
             self._ds_input.style.setProperty("outline", "dashed 2px red")
             reset = lambda: self._ds_input.style.setProperty("outline", "")
             window.setTimeout(reset, 2000)
+        self._show_tags_from_ds(defer_colors=True)
 
     def show_presets(self, e):
         # Prevent that the click will hide the autocomp
@@ -1837,18 +1839,18 @@ class RecordDialog(BaseDialog):
             else:
                 self._set_mode("Edit")
 
-    def _show_tags_from_ds(self):
-        """Get all current tags. If different, update suggestions."""
-        # Show info about current tags in description
+    def _show_tags_from_ds(self, defer_colors=False):
+        self._cancel_tag_color_update()
         tags, parts = utils.get_tags_and_parts_from_string(self._ds_input.value)
-        tags_html = "Tags:&nbsp; &nbsp;"
         if len(tags) == 0:
             tags = ["#untagged"]
-        tags_list = []
-        for tag in tags:
-            clr = window.store.settings.get_color_for_tag(tag)
-            tags_list.append(f"<b style='color:{clr};'>#</b>{tag[1:]}")
-        tags_html += "&nbsp; &nbsp;".join(tags_list)
+        if defer_colors and window.simplesettings.get("tag_color") == "tag_name":
+            self._render_preview_tags(tags)
+            self._tag_color_timeout = window.setTimeout(
+                self._refresh_preview_tag_colors, 650, tags
+            )
+        else:
+            self._refresh_preview_tag_colors(tags)
         # Get hints
         hint_html = ""
         if not self._autocompleter.has_recent_tags():
@@ -1873,9 +1875,31 @@ class RecordDialog(BaseDialog):
                 hint_html += f"<br><a style='font-size:smaller;' href='{url}' target='_blank'>{url}</a>"
         # Apply
         self._tag_hints_div.innerHTML = hint_html
-        self._tags_div.innerHTML = tags_html
+
+    def _refresh_preview_tag_colors(self, tags):
+        self._tag_color_timeout = None
+        colors = {}
+        for tag in tags:
+            colors[tag] = window.store.settings.get_color_for_tag(tag)
+        self._preview_tag_colors = colors
+        self._render_preview_tags(tags)
+
+    def _render_preview_tags(self, tags):
+        tags_list = []
+        for tag in tags:
+            clr = self._preview_tag_colors.get(tag, "inherit")
+            tags_list.append(f"<b style='color:{clr};'>#</b>{tag[1:]}")
+        self._tags_div.innerHTML = "Tags:&nbsp; &nbsp;" + "&nbsp; &nbsp;".join(
+            tags_list
+        )
+
+    def _cancel_tag_color_update(self):
+        if self._tag_color_timeout is not None:
+            window.clearTimeout(self._tag_color_timeout)
+            self._tag_color_timeout = None
 
     def close(self, e=None):
+        self._cancel_tag_color_update()
         self._time_edit.close()
         self._autocompleter.close()
         super().close(e)
@@ -2124,9 +2148,6 @@ class TagDialog(BaseDialog):
         tags.sort()
         self._tagz = tagz = tags.join(" ")
 
-        self._default_color = window.front.COLORS.acc_clr
-        # self._default_color = utils.color_from_name(self._tagz)
-
         self.maindiv.innerHTML = f"""
             <h1><i class='fas'>\uf02b</i>&nbsp;&nbsp;Configure tag {tagz}
                 <button type='button'><i class='fas'>\uf00d</i></button>
@@ -2139,7 +2160,7 @@ class TagDialog(BaseDialog):
                 <option value='2'>Secondary (for "extra" tags)</option>
             </select>
             <h2><i class='fas'>\uf53f</i>&nbsp;&nbsp;Color</h2>
-            <input type='text' style='width: 100px; border: 5px solid #eee' spellcheck='false' />
+            <input type='text' style='width: 100px; border: 5px solid #eee' spellcheck='false' placeholder='Default' />
             <button type='button' style='margin-left: 2px'><i class='fas'>\uf12d</i> Default</button>
             <button type='button' style='margin-left: 2px'><i class='fas'>\uf2f1</i> Random</button>
             <br>
@@ -2212,19 +2233,22 @@ class TagDialog(BaseDialog):
         el.onclick = lambda: self._set_color(hex)
 
     def _set_default_color(self):
-        self._set_color(self._default_color)
+        self._set_color("")
 
     def _set_random_color(self):
-        clr = "#" + Math.floor(Math.random() * 16777215).toString(16)
+        clr = utils.color_random()
         self._set_color(clr)
 
     def _set_color(self, clr):
-        if not clr or clr.lower() in ["auto", "undefined", "null"]:
-            clr = self._default_color
+        clr = (clr or "").strip()
+        if clr.lower() in ["auto", "undefined", "null"]:
+            clr = ""
         if clr != self._color_input.value:
             self._color_input.value = clr
         self._color_input.style.borderColor = "rgba(0, 0, 0, 0)"
-        self._color_input.style.borderColor = clr
+        self._color_input.style.borderColor = (
+            clr or window.store.settings.get_default_color_for_tag(self._tagz)
+        )
 
     def _load_current(self):
         info = window.store.settings.get_tag_info(self._tagz)
@@ -2233,15 +2257,15 @@ class TagDialog(BaseDialog):
         self._set_color(info.get("color", ""))
 
     def submit(self):
-        info = {}
+        info = window.store.settings.get_tag_info(self._tagz)
         # Set target
         self._target.write_to_info(info)
         # Set priority
         prio = int(self._priority_select.value)
         info["priority"] = 0 if prio == 1 else prio
         # Set color
-        clr = self._color_input.value
-        info["color"] = "" if clr == self._default_color else clr
+        self._set_color(self._color_input.value)
+        info["color"] = self._color_input.value
         # Store
         window.store.settings.set_tag_info(self._tagz, info)
         super().submit()
@@ -4014,9 +4038,18 @@ class SettingsDialog(BaseDialog):
                 </select>
             </div>
             <h2><i class='fas'>\uf085</i>&nbsp;&nbsp;Misc</h2>
+            <div class='formlayout'>
+                <div>Default tag color:</div>
+                <select>
+                    <option value='default'>Yellow</option>
+                    <option value='tag_name'>From Name</option>
+                </select>
+            </div>
+            <div><small>Applies to all tags without a custom color already set.</small></div>
             <label>
                 <input type='checkbox' checked='true'></input>
-                Show elapsed time below start-button</label>
+                Show elapsed time below start-button
+            </label>
 
             <hr style='margin-top: 1em;' />
 
@@ -4065,6 +4098,8 @@ class SettingsDialog(BaseDialog):
             _,  # Time repr header
             self._repr_form,
             _,  # Misc header
+            self._tag_form,
+            _,  # Default color description
             self._stopwatch_label,
             _,  # hr
             _,  # Section: per device
@@ -4125,6 +4160,12 @@ class SettingsDialog(BaseDialog):
         self._today_end_offset = self._repr_form.children[13]
         self._today_end_offset.value = today_end_offset
         self._today_end_offset.onchange = self._on_today_end_offset_change
+
+        # Tag color
+        tag_color = window.simplesettings.get("tag_color")
+        self._tag_color = self._tag_form.children[1]
+        self._tag_color.value = "tag_name" if tag_color == "tag_name" else "default"
+        self._tag_color.onchange = self._on_tag_color_change
 
         # Stopwatch
         show_stopwatch = window.simplesettings.get("show_stopwatch")
@@ -4221,6 +4262,11 @@ class SettingsDialog(BaseDialog):
     def _on_stopwatch_check(self):
         show_stopwatch = bool(self._stopwatch_check.checked)
         window.simplesettings.set("show_stopwatch", show_stopwatch)
+
+    def _on_tag_color_change(self):
+        tag_color = self._tag_color.value
+        window.simplesettings.set("tag_color", tag_color)
+        self._canvas.update()
 
 
 class GuideDialog(BaseDialog):

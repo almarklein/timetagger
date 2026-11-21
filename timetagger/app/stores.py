@@ -355,7 +355,12 @@ class SettingsStore(BaseStore):
     def get_color_for_tag(self, tag):
         info = self.get_tag_info(tag)
         color = info.get("color", "")
-        return color or window.front.COLORS.acc_clr
+        return color or self.get_default_color_for_tag(tag)
+
+    def get_default_color_for_tag(self, tag):
+        if window.simplesettings.get("tag_color") == "tag_name":
+            return utils.color_from_name(tag)
+        return window.front.COLORS.acc_clr
 
 
 class RecordStore(BaseStore):
